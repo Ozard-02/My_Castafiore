@@ -37,6 +37,14 @@
    - In each view, a toggle between **grid** and **list** layout.
    - Remove the Favorited/Favorites section from the Playlists tab.
 
+9. **Virtualized grid** 🔮 improvement
+   - Grid view (Tracks tab, SearchMore, ShowAll) is a non-virtualized `flexWrap` ScrollView —
+     all items stay mounted. Fine while pagination keeps each grid ~100 items/page, but slow
+     on huge native lists (e.g. the full artist list).
+   - Better: `LegendList`/`FlatList` with `numColumns={2}` + a tile sized to fill its cell.
+     Requires decoupling `AllItem` from `flex:1, maxWidth:'50%'` (native) so it fits a
+     numColumns cell cleanly. Do only if perf is actually noticed.
+
    ### Plan
    - **A. Navigation** — `app/components/Navigation.js`: add `TracksStack` tab
      (`title: 'Tracks'`, icon `music`) between Search and Playlists. `BottomBar`/`SideBar`
