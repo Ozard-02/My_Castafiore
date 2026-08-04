@@ -68,7 +68,11 @@
         "Max bitrate Description": "Specify the maximum bit rate in kilobits per second for the stream to be played. Lower bit rates will consume less data but may result in lower audio quality.",
         "Play seed first": "Play seed song first",
         "Save last queue": "Save last queue",
-        "Save last queue Description": "Automatically save the last queue you played. You activate the 'Last queue' section on the home page to access it."
+        "Save last queue Description": "Automatically save the last queue you played. You activate the 'Last queue' section on the home page to access it.",
+        "Lyrics background": "Lyrics Background",
+        "Lyrics background Description": "Choose the background style for the lyrics view.",
+        "Album cover": "Album Cover",
+        "Solid color": "Solid Color"
       },
       "theme": {
         "Player Theme": "Player Theme"

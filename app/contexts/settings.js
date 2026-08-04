@@ -105,6 +105,9 @@ export const defaultSettings = {
 	maxBitRate: 0,
 	playSeedFirst: false,
 	repeatQueue: true,
+	// Lyrics settings
+	lyricsBackground: 'cover',
+
 	// Playlist settings
 	reversePlaylist: false,
 	orderPlaylist: 'title',

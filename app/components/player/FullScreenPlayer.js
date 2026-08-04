@@ -95,9 +95,7 @@ const CoverItem = ({ isPreview, song, setFullScreen, stars }) => {
 			<OptionsQueue queue={song.queue} indexOptions={indexOptions} setIndexOptions={setIndexOptions} closePlayer={() => setFullScreen(false)} />
 		</>
 	)
-	if (isPreview === preview.LYRICS) return (
-		<Lyric song={song} style={albumImage} />
-	)
+	if (isPreview === preview.LYRICS) return null
 }
 
 const TimeBar = () => {
@@ -160,6 +158,9 @@ const FullScreenPlayer = ({ setFullScreen }) => {
 			onRequestClose={() => setFullScreen(false)}
 		>
 			<View style={[mainStyles.contentMainContainer(insets), styles.mainContainer(insets, theme)]}>
+				{isPreview === preview.LYRICS && (
+					<Lyric song={song} style={StyleSheet.absoluteFill} />
+				)}
 				<View style={{ width: '100%', flexDirection: 'row' }}>
 					<OptionsPlayer
 						song={song.songInfo}
@@ -187,7 +188,7 @@ const FullScreenPlayer = ({ setFullScreen }) => {
 						onPress={() => setIsOpt(true)}
 					/>
 				</View>
-				<View style={styles.playerContainer}>
+				<View style={[styles.playerContainer, isPreview === preview.LYRICS && { justifyContent: 'flex-end' }]}>
 					<CoverItem isPreview={isPreview} song={song} setFullScreen={setFullScreen} stars={stars} />
 					<View style={{ flexDirection: 'row', marginTop: 15, width: '100%', alignItems: 'center', justifyContent: 'space-between' }}>
 						<View style={{ flex: 1 }}>
