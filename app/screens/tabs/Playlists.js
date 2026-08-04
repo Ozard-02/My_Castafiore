@@ -1,5 +1,5 @@
 import React from 'react'
-import { ScrollView, Text, TextInput, View, StyleSheet, Pressable } from 'react-native'
+import { ScrollView, Text, TextInput, View, StyleSheet } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useTranslation } from 'react-i18next'
 import Icon from 'react-native-vector-icons/FontAwesome'
@@ -11,21 +11,16 @@ import { useTheme } from '~/contexts/theme'
 import RotateIconButton from '~/components/button/RotateIconButton'
 import IconButton from '~/components/button/IconButton'
 import mainStyles from '~/styles/main'
-import SongsList from '~/components/lists/SongsList'
 import VerticalPlaylist from '~/components/lists/VerticalPlaylist'
 import size from '~/styles/size'
 
-const Playlists = ({ navigation }) => {
+const Playlists = () => {
 	const { t } = useTranslation()
 	const config = useConfig()
 	const insets = useSafeAreaInsets()
 	const settings = useSettings()
 	const theme = useTheme()
 	const [newPlaylist, setNewPlaylist] = React.useState(null)
-
-	const [favorited, refreshFavorited] = useCachedAndApi([], 'getStarred2', null, (json, setData) => {
-		setData(json?.starred2?.song)
-	}, [])
 
 	const [playlists, refreshPlaylists, setPlaylists] = useCachedAndApi([], 'getPlaylists', null, (json, setData) => {
 		setData([...(json?.playlists?.playlist || [])].sort(sortPlaylist))
@@ -37,7 +32,6 @@ const Playlists = ({ navigation }) => {
 
 	const onRefresh = (rotate) => {
 		rotate()
-		refreshFavorited()
 		refreshPlaylists()
 	}
 
@@ -86,18 +80,6 @@ const Playlists = ({ navigation }) => {
 						onPress={onRefresh}
 					/>
 			</View>
-			<Pressable
-				style={({ pressed }) => ([mainStyles.opacity({ pressed }), styles.subTitleParent, { marginTop: 0 }])}
-				onPress={() => navigation.navigate('Favorited')}
-			>
-				<Icon name="heart" size={size.icon.small} color={theme.primaryTouch} style={{ marginEnd: 10 }} />
-				<Text style={[mainStyles.subTitle(theme), { flex: 1 }]}>{t('Favorited')}</Text>
-				<Text style={{ color: theme.secondaryText, fontWeight: 'bold', fontSize: 15 }}>
-					{favorited?.length} <Icon name="chevron-right" size={15} color={theme.secondaryText} />
-				</Text>
-			</Pressable>
-			<SongsList songs={favorited?.slice(0, settings.previewFavorited)} listToPlay={favorited} />
-
 			<View style={[styles.subTitleParent, { marginTop: 10 }]}>
 				{
 					newPlaylist !== null ?
