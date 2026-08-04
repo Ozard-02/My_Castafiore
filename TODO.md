@@ -59,8 +59,8 @@
    - **G. Docs** — update STRUCTURE.md (Navigation, Stacks, Tracks screen, Explorer grid
      toggle) and `.log`.
 
-   ### Decisions to confirm
-   - Tab order: Home, Search, **Tracks**, Playlists, Settings.
+   ### Decisions
+   - Tab order: Home, Search, **Tracks**, Playlists, Settings. ✅ decided
    - Tab icon: `music` (FontAwesome).
    - Grid support also appears in the standalone Explorer screens (reachable from Search) —
      free, since the toggle lives in the Explorers themselves.
