@@ -1,13 +1,16 @@
 import React from 'react'
-import { View, Text, StyleSheet, ActivityIndicator } from 'react-native'
+import { View, Text, StyleSheet, ActivityIndicator, ScrollView } from 'react-native'
 import { LegendList } from '@legendapp/list'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useTranslation } from 'react-i18next'
 
 import { useTheme } from '~/contexts/theme'
+import { useSongDispatch } from '~/contexts/song'
 import { getApiNetworkFirst } from '~/utils/api'
 import { useConfig } from '~/contexts/config'
+import { playSong } from '~/utils/player'
 import SongItem from '~/components/item/SongItem'
+import AllItem from '~/components/item/AllItem'
 import mainStyles from '~/styles/main'
 import PresHeaderIcon from '~/components/PresHeaderIcon'
 import size from '~/styles/size'
@@ -15,11 +18,12 @@ import logger from '~/utils/logger'
 
 const PAGE_SIZE = 100
 
-const SongExplorer = () => {
+const SongExplorer = ({ layout = 'list', showHeader = true, title = null }) => {
 	const { t } = useTranslation()
 	const insets = useSafeAreaInsets()
 	const theme = useTheme()
 	const config = useConfig()
+	const songDispatch = useSongDispatch()
 	const [songs, setSongs] = React.useState([])
 	const [offset, setOffset] = React.useState(0)
 	const [isLoading, setIsLoading] = React.useState(false)
@@ -93,6 +97,25 @@ const SongExplorer = () => {
 		)
 	}
 
+	if (layout === 'grid') return (
+		<ScrollView
+			style={mainStyles.mainContainer(theme)}
+			contentContainerStyle={[mainStyles.contentMainContainer(insets, false), { minHeight: '100%' }]}
+			onScroll={({ nativeEvent }) => {
+				if (nativeEvent.contentOffset.y + nativeEvent.layoutMeasurement.height >= nativeEvent.contentSize.height - 100) handleEndReached()
+			}}
+			scrollEventThrottle={16}
+		>
+			{showHeader && <PresHeaderIcon title={title || t("Songs")} subTitle={t("Explore")} icon="music" />}
+			<View style={styles.gridContainer}>
+				{songs.map((item, index) => (
+					<AllItem key={index} item={item} type="song" onPress={() => playSong(config, songDispatch, songs, index)} />
+				))}
+			</View>
+			{renderFooter()}
+		</ScrollView>
+	)
+
 	return (
 		<LegendList
 			data={songs}
@@ -109,11 +132,7 @@ const SongExplorer = () => {
 			onEndReached={handleEndReached}
 			onEndReachedThreshold={0.1}
 			ListHeaderComponent={
-				<PresHeaderIcon
-					title={t("Songs")}
-					subTitle={t("Explore")}
-					icon="music"
-				/>
+				showHeader ? <PresHeaderIcon title={title || t("Songs")} subTitle={t("Explore")} icon="music" /> : null
 			}
 			ListFooterComponent={renderFooter}
 			renderItem={renderItem}
@@ -123,6 +142,13 @@ const SongExplorer = () => {
 }
 
 const styles = StyleSheet.create({
+	gridContainer: {
+		display: 'flex',
+		flexDirection: 'row',
+		flexWrap: 'wrap',
+		paddingStart: 20,
+		paddingEnd: 20,
+	},
 	titleSelector: (theme) => ({
 		color: theme.primaryText,
 		fontSize: size.text.medium,

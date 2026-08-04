@@ -1,5 +1,5 @@
 import React from 'react'
-import { View, Text } from 'react-native'
+import { View, Text, ScrollView, StyleSheet } from 'react-native'
 import { LegendList } from '@legendapp/list'
 import { useNavigation } from '@react-navigation/native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -8,12 +8,13 @@ import { useTranslation } from 'react-i18next'
 import { useTheme } from '~/contexts/theme'
 import { useCachedAndApi } from '~/utils/api'
 import ExplorerItem from '~/components/item/ExplorerItem'
+import AllItem from '~/components/item/AllItem'
 import mainStyles from '~/styles/main'
 import PresHeaderIcon from '~/components/PresHeaderIcon'
 import SideBarLetter from '~/components/button/SidebarLetter'
 import size from '~/styles/size'
 
-const ArtistExplorer = () => {
+const ArtistExplorer = ({ layout = 'list', showHeader = true, title = null }) => {
 	const { t } = useTranslation()
 	const insets = useSafeAreaInsets()
 	const theme = useTheme()
@@ -64,6 +65,23 @@ const ArtistExplorer = () => {
 		)
 	}, [theme, isFavorited])
 
+	if (layout === 'grid') {
+		const artistsGrid = artists.filter(item => typeof item !== 'string')
+		return (
+			<ScrollView
+				style={mainStyles.mainContainer(theme)}
+				contentContainerStyle={[mainStyles.contentMainContainer(insets, false), { minHeight: '100%' }]}
+			>
+				{showHeader && <PresHeaderIcon title={title || t("Artists")} subTitle={t("Explore")} icon="group" />}
+				<View style={styles.gridContainer}>
+					{artistsGrid.map((item, index) => (
+						<AllItem key={item.id || index} item={item} type="artist" onPress={() => navigation.navigate('Artist', { id: item.id, name: item.name })} />
+					))}
+				</View>
+			</ScrollView>
+		)
+	}
+
 	return (
 		<>
 			<SideBarLetter
@@ -85,16 +103,26 @@ const ArtistExplorer = () => {
 				recycleItems={true}
 				estimatedItemSize={80}
 				ListHeaderComponent={
-					<PresHeaderIcon
-						title={t("Artists")}
+					showHeader ? <PresHeaderIcon
+						title={title || t("Artists")}
 						subTitle={t("Explore")}
 						icon="group"
-					/>
+					/> : null
 				}
 				renderItem={renderItem}
 			/>
 		</>
 	)
 }
+
+const styles = StyleSheet.create({
+	gridContainer: {
+		display: 'flex',
+		flexDirection: 'row',
+		flexWrap: 'wrap',
+		paddingStart: 20,
+		paddingEnd: 20,
+	},
+})
 
 export default ArtistExplorer

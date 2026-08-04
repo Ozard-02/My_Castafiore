@@ -1,5 +1,5 @@
 import React from 'react'
-import { View, Text, StyleSheet, ActivityIndicator } from 'react-native'
+import { View, Text, StyleSheet, ActivityIndicator, ScrollView } from 'react-native'
 import { LegendList } from '@legendapp/list'
 import { useNavigation } from '@react-navigation/native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -13,12 +13,13 @@ import PresHeaderIcon from '~/components/PresHeaderIcon'
 import Selector from '~/components/Selector'
 import size from '~/styles/size'
 import ExplorerItem from '~/components/item/ExplorerItem'
+import AllItem from '~/components/item/AllItem'
 import logger from '~/utils/logger'
 
 const TYPES = ['newest', 'highest', 'frequent', 'recent', 'starred', 'random', 'alphabeticalByName', 'alphabeticalByArtist']
 const PAGE_SIZE = 100
 
-const AlbumExplorer = () => {
+const AlbumExplorer = ({ layout = 'list', showHeader = true, title = null }) => {
 	const { t } = useTranslation()
 	const insets = useSafeAreaInsets()
 	const theme = useTheme()
@@ -93,6 +94,27 @@ const AlbumExplorer = () => {
 		)
 	}
 
+	if (layout === 'grid') return (
+		<ScrollView
+			style={mainStyles.mainContainer(theme)}
+			contentContainerStyle={[mainStyles.contentMainContainer(insets, false), { minHeight: '100%' }]}
+			onScroll={({ nativeEvent }) => {
+				if (nativeEvent.contentOffset.y + nativeEvent.layoutMeasurement.height >= nativeEvent.contentSize.height - 100) handleEndReached()
+			}}
+			scrollEventThrottle={16}
+		>
+			{showHeader && <PresHeaderIcon title={title || t("Albums")} subTitle={t("Explore")} icon="book" />}
+			<Text style={styles.titleSelector(theme)}>Type</Text>
+			<Selector current={type} items={TYPES} setData={setType} />
+			<View style={styles.gridContainer}>
+				{albums.map((item, index) => (
+					<AllItem key={index} item={item} type="album" onPress={() => navigation.navigate('Album', item)} />
+				))}
+			</View>
+			{renderFooter()}
+		</ScrollView>
+	)
+
 	return (
 		<LegendList
 			data={albums}
@@ -110,11 +132,11 @@ const AlbumExplorer = () => {
 			onEndReachedThreshold={0.1}
 			ListHeaderComponent={
 				<View style={{ flex: 1 }}>
-					<PresHeaderIcon
-						title={t("Albums")}
+					{showHeader && <PresHeaderIcon
+						title={title || t("Albums")}
 						subTitle={t("Explore")}
 						icon="book"
-					/>
+					/>}
 
 					<Text style={styles.titleSelector(theme)}>Type</Text>
 					<Selector current={type} items={TYPES} setData={setType} />
@@ -128,6 +150,13 @@ const AlbumExplorer = () => {
 }
 
 const styles = StyleSheet.create({
+	gridContainer: {
+		display: 'flex',
+		flexDirection: 'row',
+		flexWrap: 'wrap',
+		paddingStart: 20,
+		paddingEnd: 20,
+	},
 	titleSelector: (theme) => ({
 		color: theme.primaryText,
 		fontSize: size.text.medium,
