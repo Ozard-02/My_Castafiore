@@ -8,7 +8,7 @@
    - Separate "up next" queue from the full playback queue
 	 - Shuffle should  act only on actual queue not up next
 
-2. **Whole Album Play Next**
+2. **Whole Album Play Next** ✅ done
    - Add "Play next" option for entire albums (queue all album tracks after current song)
    - Add to context menu on Album screens and album-level options
 
@@ -27,7 +27,7 @@
 6. **Lyrics Background** ✅ done
    - when showing lyrics use album art as background but with some transparency blur effect
 
-7. **Search Grid (not list)**
+7. **Search Grid (not list)** ✅ done
    - Add grid view option for search results (artists, albums, songs)
    - Toggle between list and grid view for search results
 

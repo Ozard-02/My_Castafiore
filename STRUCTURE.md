@@ -192,7 +192,7 @@ Playback state enum: `Playing`, `Paused`, `Stopped`, `Loading`, `Error`, `None`.
 | EditPlaylist.js | Form to edit playlist name, public flag, and comment. |
 | FreshReleases.js | Fetch fresh releases from ListenBrainz API. |
 | Info.js | Song/album/artist info display with cache status and deletion. |
-| SearchMore.js | Paginated search results for artists, albums, or songs. |
+| SearchMore.js | Paginated search results for artists, albums, or songs. Toggle between list (ExplorerItem) and grid (AllItem) view. |
 | UpdateRadio.js | Create or update an internet radio station. |
 | ShowAll.native.js | Shows all items for a given home section (albums, artists). |
 | ShowAll.web.js | Web equivalent of ShowAll. |
@@ -207,7 +207,7 @@ Playback state enum: `Playing`, `Paused`, `Stopped`, `Loading`, `Error`, `None`.
 | Player.js | Top-level player container. Shows `BoxPlayer` or `FullScreenPlayer` based on state. |
 | BoxPlayer.js | Mini player (mobile, fixed at bottom). Cover, title, play/next buttons. |
 | BoxDesktopPlayer.js | Mini player for desktop layout (fixed sidebar). Includes progress bar and volume. |
-| FullScreenPlayer.js | Full-screen modal player with cover, queue list, lyrics. |
+| FullScreenPlayer.js | Full-screen modal player with cover, queue list, lyrics. Lyrics background fills the whole screen. |
 | FullScreenHorizontalPlayer.js | Full-screen horizontal layout of player (desktop). |
 | Lyric.js | Synchronized lyrics display. Fetches from server, caches locally, falls back to LrcLib API. |
 
@@ -274,7 +274,7 @@ Playback state enum: `Playing`, `Paused`, `Stopped`, `Loading`, `Error`, `None`.
 ### Other Components
 | File | Description |
 |---|---|
-| Header.js | Back arrow + title header used in sub-screens. |
+| Header.js | Back arrow + title header used in sub-screens. Optional `right` slot for a trailing action (e.g. list/grid toggle). |
 | PresHeader.js | Header for Pres screens with cover image, buttons, and content below. |
 | PresHeaderIcon.js | Header with icon above title, used in Explorer and Favorited screens. |
 | SectionTitle.js | Section title with optional "show all" button. |
@@ -293,7 +293,7 @@ Playback state enum: `Playing`, `Paused`, `Stopped`, `Loading`, `Error`, `None`.
 |---|---|
 | OptionsSongsList.js | Context menu for songs (queue, play next, star, go to artist/album, etc.). |
 | OptionsPlaylist.js | Options for playlists (play, shuffle, delete, edit, etc.). |
-| OptionsAlbum.js | Album context menu (play, go to artist, star, etc.). |
+| OptionsAlbum.js | Album context menu (play, play next whole album, go to artist, star, etc.). |
 | OptionsArtist.js | Artist context menu (play shuffled, star, etc.). |
 | OptionsMultiArtists.js | Multi-artist selection for navigation. |
 | OptionsAlbums.js | Multi-album selection for batch operations. |
