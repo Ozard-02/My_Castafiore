@@ -38,12 +38,13 @@ A `PlayerEvent` component within `AppProvider` wires `Player.useEvent()` to sync
 
 ## Navigation (app/components/Navigation.js)
 
-- Uses `@react-navigation/bottom-tabs` with 4 main tabs: **Home**, **Search**, **Playlists**, **Settings**.
+- Uses `@react-navigation/bottom-tabs` with 5 main tabs: **Home**, **Search**, **Tracks**, **Playlists**, **Settings**.
 - `TabBar` component conditionally renders `SideBar` (desktop) or `BottomBar` (mobile).
 - Tab bar also renders the mini `Player` component at the bottom.
 - Each tab has its own native stack navigator defined in `app/screens/Stacks.js`:
   - **HomeStack**: Home, ShowAll, FreshReleases, UpdateRadio, Album, Artist, ArtistAlbums, EditPlaylist, Genre, GenreAlbum, GenreSong, Info, Playlist, Songs
   - **SearchStack**: Search, SearchMore, plus Pres/Explorer screens
+  - **TracksStack**: Tracks (Songs/Albums/Artists explorer with grid/list toggle), plus Pres screens
   - **PlaylistsStack**: Playlists, Favorited, plus shared Pres screens
   - **SettingsStack**: Settings, Connect, AddServer, sub-settings screens
 
@@ -148,7 +149,8 @@ Playback state enum: `Playing`, `Paused`, `Stopped`, `Loading`, `Error`, `None`.
 |---|---|
 | Home.js | Renders home feed from `homeSections` config. Random song button, server scan trigger, refresh. |
 | Search.js | Search box with debounced Subsonic `search3` call. History persisted in AsyncStorage. Results render via `SearchResult` sub-component. |
-| Playlists.js | Lists user playlists (sorted, with pin filtering). Favorited songs preview. Add playlist inline. |
+| Tracks.js | 5th tab. Top Selector switches among Songs/Albums/Artists views; grid/list toggle; embeds the Explorer screens (`showHeader={false}`). |
+| Playlists.js | Lists user playlists (sorted, with pin filtering). Add playlist inline. Favorites section removed. |
 | Settings.js | Master settings screen with navigation to sub-screens. App version, connect status, theme/language/cache/player/home/playlists/shares settings. |
 
 ### Pres Screens (app/screens/Pres/)
@@ -167,9 +169,9 @@ Playback state enum: `Playing`, `Paused`, `Stopped`, `Loading`, `Error`, `None`.
 ### Explorer Screens (app/screens/Explorer/)
 | File | Description |
 |---|---|
-| AlbumExplorer.js | Paginated album browser with type selector (newest, highest, frequent, etc.). |
-| ArtistExplorer.js | Artist browser with sidebar letter index, favorited filtering. |
-| SongExplorer.js | Paginated song browser. |
+| AlbumExplorer.js | Paginated album browser with type selector (newest, highest, frequent, etc.). Accepts `layout` ('list'\|'grid') and `showHeader` props; grid reuses `AllItem`. |
+| ArtistExplorer.js | Artist browser with sidebar letter index (list mode), favorited filtering. Grid mode hides the sidebar. |
+| SongExplorer.js | Paginated song browser. Accepts `layout` and `showHeader` props; grid uses `AllItem`. |
 
 ### Settings Screens (app/screens/Settings/)
 | File | Description |

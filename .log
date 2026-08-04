@@ -1,21 +1,25 @@
 # Castafiore - Session Log
 
 ## 2026-08-04
-- Lyrics background: on mobile FullScreenPlayer the lyrics now render as a full-screen
-  layer (`Lyric` style=`StyleSheet.absoluteFill`) behind the controls; `CoverItem` returns
-  null for the LYRICS preview. Controls are pushed to the bottom in lyrics mode.
-  Desktop FullScreenHorizontalPlayer already had a full-screen background; unchanged.
-  Backed by the existing cover/solid-color background setting in Player settings.
-- Search results: added a list/grid view toggle to SearchMore. Grid reuses the existing
-  `AllItem` tile in a flexWrap container (native: 2 columns via `flex:1, maxWidth:'50%'`,
-  web: auto-fill). Infinite scroll kept via `onScroll` near-bottom detection in grid mode.
-  Added an optional `right` slot to the shared `Header` for the toggle button.
-- Whole album Play next: added a "Play next" option to OptionsAlbum that inserts all album
-  tracks right after the current song. Uses `addToQueue(songDispatch, track, song.index + 1)`
-  in reverse order to preserve album track order (the reducer inserts at `index` and shifts).
+- Tracks tab implemented (5th bottom-bar element between Search and Playlists).
+  - `Navigation.js`: added `TracksStack` tab (`title: 'Tracks'`, icon `music`).
+  - `Stacks.js`: new `TracksStack` (Tracks + shared Pres screens).
+  - `app/screens/tabs/Tracks.js`: header "Tracks" + layout toggle (grid/list), `Selector`
+    switches Songs/Alubums/Artists; embeds SongExplorer/AlbumExplorer/ArtistExplorer with
+    `showHeader={false}` and the chosen `layout`.
+- Explorer screens (`SongExplorer`, `AlbumExplorer`, `ArtistExplorer`) now accept
+  `layout` ('list'|'grid') and `showHeader` props. Grid reuses `AllItem` in a flexWrap
+  ScrollView (native 2-col, web auto-fill) + `onScroll` pagination for songs/albums; the
+  artist sidebar shows only in list mode.
+- Removed the Favorited/Favorites section from the Playlists tab (`Playlists.js`); dropped
+  unused `SongsList` import and `navigation` prop. The `Favorited` screen and desktop
+  SideBar entry remain (SideBar still navigates to `PlaylistsStack`/`Favorited`).
+- i18n: added `tabs.Tracks` and top-level `Tracks` to en.json.
 
-## Tips / gotchas
+## tips / gotchas
+- The three Explorer screens are used both as standalone screens (from Search) and embedded
+  in the Tracks tab. Layout state lives in `Tracks.js` and is passed down as a prop.
+- Grid view is non-virtualized (flexWrap ScrollView) — same trade-off as SearchMore grid.
 - `addToQueue(songDispatch, track, index)` inserts at `index`; inserting at the same
   `index` repeatedly reverses order, so insert in reverse to keep wanted order.
-- No `.log` existed before this session — started this one per AGENTS.md.
-- eslint: `npx eslint <files> -c eslint.config.mjs`.
+- eslint: `npx eslint app -c eslint.config.mjs`.

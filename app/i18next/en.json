@@ -3,6 +3,7 @@
     "tabs": {
       "Home": "Home",
       "Search": "Search",
+      "Tracks": "Tracks",
       "Playlists": "Playlists",
       "Settings": "Settings"
     },
@@ -119,6 +120,7 @@
     "Artists": "Artists",
     "Cache all songs": "Cache all songs",
     "Cache": "Cache",
+    "Tracks": "Tracks",
     "Cancel": "Cancel",
     "Clear": "Clear",
     "Connect": "Connect",

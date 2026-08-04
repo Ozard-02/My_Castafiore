@@ -31,7 +31,7 @@
    - Add grid view option for search results (artists, albums, songs)
    - Toggle between list and grid view for search results
 
-8. **Tracks Tab (5th bottom bar element)** ✅ planned — no implementation yet
+8. **Tracks Tab (5th bottom bar element)** ✅ done
    - Add a fifth element "Tracks" to the bottom bar. Pressing it opens a page with all tracks.
    - On top of that page: buttons to switch between **Songs / Albums / Artists** views.
    - In each view, a toggle between **grid** and **list** layout.
