@@ -31,6 +31,40 @@
    - Add grid view option for search results (artists, albums, songs)
    - Toggle between list and grid view for search results
 
+8. **Tracks Tab (5th bottom bar element)** ✅ planned — no implementation yet
+   - Add a fifth element "Tracks" to the bottom bar. Pressing it opens a page with all tracks.
+   - On top of that page: buttons to switch between **Songs / Albums / Artists** views.
+   - In each view, a toggle between **grid** and **list** layout.
+   - Remove the Favorited/Favorites section from the Playlists tab.
+
+   ### Plan
+   - **A. Navigation** — `app/components/Navigation.js`: add `TracksStack` tab
+     (`title: 'Tracks'`, icon `music`) between Search and Playlists. `BottomBar`/`SideBar`
+     render routes dynamically, so the 5th item appears automatically.
+   - **B. Stack** — `app/screens/Stacks.js`: new `TracksStack` = `Tracks` screen +
+     shared Pres screens (Album, Artist, ArtistAlbums, Genre, GenreAlbum, GenreSong, Info, Songs, EditPlaylist).
+   - **C. New screen** — `app/screens/tabs/Tracks.js`: header title "Tracks", a
+     `Selector` with Songs / Albums / Artists, a list/grid toggle icon (same pattern as
+     SearchMore), and the matching Explorer screen embedded below (conditional render).
+   - **D. Grid support in Explorers** — `SongExplorer`, `AlbumExplorer`, `ArtistExplorer`:
+     add `layout` state ('list'|'grid') + toggle in the header; grid reuses `AllItem` in a
+     flexWrap container (native 2-col, web auto-fill), same as SearchMore. Accept optional
+     `title`/embed props so Tracks can override the header. ArtistExplorer letter sidebar
+     only shows in list mode.
+   - **E. Remove Favorites from Playlists tab** — `app/screens/tabs/Playlists.js`: drop the
+     Favorited header + preview `SongsList` block and the `getStarred2` fetch/refresh; remove
+     unused imports (`SongsList`). Keep the `Favorited` screen itself (still reachable from
+     the desktop SideBar). `previewFavorited` setting becomes unused → remove later.
+   - **F. i18n** — add `tabs.Tracks` to locale JSONs (at least en).
+   - **G. Docs** — update STRUCTURE.md (Navigation, Stacks, Tracks screen, Explorer grid
+     toggle) and `.log`.
+
+   ### Decisions to confirm
+   - Tab order: Home, Search, **Tracks**, Playlists, Settings.
+   - Tab icon: `music` (FontAwesome).
+   - Grid support also appears in the standalone Explorer screens (reachable from Search) —
+     free, since the toggle lives in the Explorers themselves.
+
 ---
 
 ## Build & Release (local APK)
