@@ -1,5 +1,5 @@
 import React from 'react'
-import { View, Text, StyleSheet, ActivityIndicator } from 'react-native'
+import { View, Text, StyleSheet, ActivityIndicator, ScrollView } from 'react-native'
 import { LegendList } from '@legendapp/list'
 import { useNavigation } from '@react-navigation/native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -13,6 +13,8 @@ import { useSongDispatch } from '~/contexts/song'
 import mainStyles from '~/styles/main'
 import size from '~/styles/size'
 import ExplorerItem from '~/components/item/ExplorerItem'
+import AllItem from '~/components/item/AllItem'
+import IconButton from '~/components/button/IconButton'
 import logger from '~/utils/logger'
 import Header from '~/components/Header'
 
@@ -28,6 +30,16 @@ const SearchMore = ({ route: { params: { query, results, type } } }) => {
 	const [items, setItems] = React.useState(results || [])
 	const [offset, setOffset] = React.useState(results?.length || 0)
 	const [isLoading, setIsLoading] = React.useState(false)
+	const [view, setView] = React.useState('list')
+
+	const viewButton = (
+		<IconButton
+			icon={view === 'grid' ? 'list' : 'th-large'}
+			size={22}
+			color={theme.primaryText}
+			onPress={() => setView(view === 'grid' ? 'list' : 'grid')}
+		/>
+	)
 
 	const getParams = (type) => {
 		if (type === 'album') return { query, artistCount: 0, songCount: 0, albumCount: PAGE_SIZE, albumOffset: offset }
@@ -105,31 +117,59 @@ const SearchMore = ({ route: { params: { query, results, type } } }) => {
 	}
 
 	return (
-		<LegendList
-			data={items}
-			keyExtractor={(_, index) => index}
-			style={mainStyles.mainContainer(theme)}
-			contentContainerStyle={[mainStyles.contentMainContainer(insets, false), { minHeight: 80 * items.length + 100 + 80 }]}
-			waitForInitialLayout={false}
-			recycleItems={true}
-			estimatedItemSize={80}
-			maintainVisibleContentPosition={{
-				minIndexForVisible: 0,
-				itemVisiblePercentThreshold: 50,
-			}}
-			onEndReached={handleEndReached}
-			onEndReachedThreshold={0.1}
-			ListHeaderComponent={
-				<Header title={t("Search")} />
-			}
-			ListFooterComponent={renderFooter}
-			renderItem={renderItem}
-			ListEmptyComponent={renderActivityIndicator}
-		/>
+		<View style={[mainStyles.mainContainer(theme), { flex: 1 }]}>
+			{view === 'grid' ? (
+				<ScrollView
+					style={mainStyles.mainContainer(theme)}
+					contentContainerStyle={[mainStyles.contentMainContainer(insets, false), { minHeight: '100%' }]}
+					onScroll={({ nativeEvent }) => {
+						if (nativeEvent.contentOffset.y + nativeEvent.layoutMeasurement.height >= nativeEvent.contentSize.height - 100) handleEndReached()
+					}}
+					scrollEventThrottle={16}
+				>
+					<Header title={t("Search")} right={viewButton} />
+					<View style={styles.gridContainer}>
+						{items.map((item, index) => (
+							<AllItem key={index} item={item} type={type} onPress={(i) => goTo(i, index)} />
+						))}
+					</View>
+					{renderFooter()}
+				</ScrollView>
+			) : (
+				<LegendList
+					data={items}
+					keyExtractor={(_, index) => index}
+					style={mainStyles.mainContainer(theme)}
+					contentContainerStyle={[mainStyles.contentMainContainer(insets, false), { minHeight: 80 * items.length + 100 + 80 }]}
+					waitForInitialLayout={false}
+					recycleItems={true}
+					estimatedItemSize={80}
+					maintainVisibleContentPosition={{
+						minIndexForVisible: 0,
+						itemVisiblePercentThreshold: 50,
+					}}
+					onEndReached={handleEndReached}
+					onEndReachedThreshold={0.1}
+					ListHeaderComponent={
+						<Header title={t("Search")} right={viewButton} />
+					}
+					ListFooterComponent={renderFooter}
+					renderItem={renderItem}
+					ListEmptyComponent={renderActivityIndicator}
+				/>
+			)}
+		</View>
 	)
 }
 
 const styles = StyleSheet.create({
+	gridContainer: {
+		display: 'flex',
+		flexDirection: 'row',
+		flexWrap: 'wrap',
+		paddingStart: 20,
+		paddingEnd: 20,
+	},
 	titleSelector: (theme) => ({
 		color: theme.primaryText,
 		fontSize: size.text.medium,

@@ -6,7 +6,7 @@ import { useTheme } from '~/contexts/theme'
 import IconButton from '~/components/button/IconButton'
 import size from '~/styles/size'
 
-const Header = ({ title, marginBottom = 30 }) => {
+const Header = ({ title, marginBottom = 30, right = null }) => {
 	const navigation = useNavigation()
 	const theme = useTheme()
 
@@ -22,6 +22,7 @@ const Header = ({ title, marginBottom = 30 }) => {
 				style={styles.backButton}
 				onPress={() => navigation.goBack()}
 			/>
+			{right}
 		</View>
 	)
 }
@@ -46,7 +47,15 @@ const styles = StyleSheet.create({
 		top: 0,
 		paddingHorizontal: 20,
 		height: 70,
-	}
+	},
+	rightButton: {
+		position: 'absolute',
+		right: 0,
+		top: 0,
+		paddingHorizontal: 20,
+		height: 70,
+		justifyContent: 'center',
+	},
 })
 
 export default Header
