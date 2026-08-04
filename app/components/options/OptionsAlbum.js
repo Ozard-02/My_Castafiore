@@ -46,6 +46,18 @@ const OptionsAlbum = ({ album, isOpen, onClose }) => {
 					onPress: playSimilarSongs
 				},
 				{
+					name: t('Play next'),
+					icon: 'play-circle',
+					onPress: () => {
+						refOption.current.close()
+						const songs = album.song || []
+						for (let i = songs.length - 1; i >= 0; i--) {
+							addToQueue(songDispatch, songs[i], song.index + 1)
+						}
+					},
+					hidden: !song.queue?.length
+				},
+				{
 					name: t('Add to queue'),
 					icon: 'list-ul',
 					onPress: () => {
