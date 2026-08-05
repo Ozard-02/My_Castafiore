@@ -38,15 +38,16 @@ A `PlayerEvent` component within `AppProvider` wires `Player.useEvent()` to sync
 
 ## Navigation (app/components/Navigation.js)
 
-- Uses `@react-navigation/bottom-tabs` with 5 main tabs: **Home**, **Search**, **Tracks**, **Playlists**, **Settings**.
+- Uses `@react-navigation/bottom-tabs` with 4 main tabs: **Home**, **Music**, **Playlists**, **Settings**.
 - `TabBar` component conditionally renders `SideBar` (desktop) or `BottomBar` (mobile).
 - Tab bar also renders the mini `Player` component at the bottom.
 - Each tab has its own native stack navigator defined in `app/screens/Stacks.js`:
   - **HomeStack**: Home, ShowAll, FreshReleases, UpdateRadio, Album, Artist, ArtistAlbums, EditPlaylist, Genre, GenreAlbum, GenreSong, Info, Playlist, Songs
-  - **SearchStack**: Search, SearchMore, plus Pres/Explorer screens
-  - **TracksStack**: Tracks (Songs/Albums/Artists explorer with grid/list toggle), plus Pres screens
+  - **TracksStack**: Tracks (search bar + Songs/Albums/Artists explorer with grid/list toggle), SearchMore, AlbumExplorer, ArtistExplorer, SongExplorer, plus Pres screens
   - **PlaylistsStack**: Playlists, Favorited, plus shared Pres screens
-  - **SettingsStack**: Settings, Connect, AddServer, sub-settings screens
+  - **SettingsStack**: Settings, Connect, AddServer, sub-settings screens (incl. Settings/Downloads)
+- `TabBar` also mounts the `DownloadBanner` (mobile) above the mini player when downloads are active.
+- Search is embedded inline in the Music tab (search bar on top; typing swaps the explorer for results). No separate Search tab.
 
 ---
 
@@ -121,6 +122,12 @@ Playback state enum: `Playing`, `Paused`, `Stopped`, `Loading`, `Error`, `None`.
 | `cache.native.js` | AsyncStorage for API cache; `expo-file-system` for song cache (downloads folder). `initCacheSong()` sets up `global.listCacheSong`. |
 | `cache.web.js` | Uses browser `Cache` API and service worker. API cache handled by SW fetch handler. |
 
+### app/utils/downloadManager.js (platform-resolved) — Downloads
+| Platform | Implementation |
+|---|---|
+| `downloadManager.native.js` | Spotify-style download manager: serial queue engine built on `DownloadResumable` (pause/resume survives restarts), per-server persistence (`downloadQueue:/downloadIndex:/downloadCollections:` keys in AsyncStorage), rolling 10s speed tracker, collection records (one album/playlist = removable unit). Exposes `useDownloads()` (useSyncExternalStore), `enqueueSong`, `enqueueCollection`, `pauseDownload`, `resumeDownload`, `retryDownload`, `cancelDownload`, `cancelCollection`, `resumeCollection`, `removeSong`, `removeSource`, `clearAllDownloads`, `getCollectionState`, `getSongState`, `getDownloadedSongs`, `getDownloadSpeed`, `formatSpeed`, `formatBytes`. Initialized in `config.js` alongside `initCacheSong()`. |
+| `downloadManager.web.js` | No-op stub (offline handled by the service worker). Same exports + `useDownloads`. |
+
 ### Other Utils
 - **url.js**: `urlCover()` resolves cover art URLs (handles navidrome/ampache/generic Subsonic types). `urlStream()` resolves audio stream URLs.
 - **tools.js**: `shuffle()`, `nextRandomIndex()`, `prevRandomIndex()`, `saveQueue()`.
@@ -148,8 +155,7 @@ Playback state enum: `Playing`, `Paused`, `Stopped`, `Loading`, `Error`, `None`.
 | File | Description |
 |---|---|
 | Home.js | Renders home feed from `homeSections` config. Random song button, server scan trigger, refresh. |
-| Search.js | Search box with debounced Subsonic `search3` call. History persisted in AsyncStorage. Results render via `SearchResult` sub-component. |
-| Tracks.js | 5th tab. Top Selector switches among Songs/Albums/Artists views; grid/list toggle; embeds the Explorer screens (`showHeader={false}`). |
+| Tracks.js | Music tab (4th tab position, no separate Search tab). Search bar on top; when empty shows the Selector (Songs/Albums/Artists) + explorer; typing swaps to inline `SearchResults`. Grid/list toggle persists `gridView`. |
 | Playlists.js | Lists user playlists (sorted, with pin filtering). Add playlist inline. Favorites section removed. |
 | Settings.js | Master settings screen with navigation to sub-screens. App version, connect status, theme/language/cache/player/home/playlists/shares settings. |
 
@@ -179,6 +185,7 @@ Playback state enum: `Playing`, `Paused`, `Stopped`, `Loading`, `Error`, `None`.
 | AddServer.js | Form to add/edit a server connection. Supports Navidrome, Subsonic, LMS, Ampache types. |
 | Cache.js | Cache management: view stats, clear API cache, clear song cache. |
 | Connect.js | Server connection management: select from saved servers, ping for status, delete servers. |
+| Downloads.js | Download manager UI: live speed/active/queued stats card, active downloads with progress + pause/resume/retry/cancel, downloaded collections removable individually, individual songs bucket, clear all. |
 | Home.js | Configure which home sections are enabled and their order. |
 | Informations.js | App/system information display. |
 | Language.js | Language selector. |
@@ -216,9 +223,14 @@ Playback state enum: `Playing`, `Paused`, `Stopped`, `Loading`, `Error`, `None`.
 ### Bar Components (app/components/bar/)
 | File | Description |
 |---|---|
-| TabBar.js | Wrapper that renders `SideBar` or `BottomBar` based on `settings.isDesktop`, plus `Player`. |
+| TabBar.js | Wrapper that renders `SideBar` or `BottomBar` based on `settings.isDesktop`, plus `Player`, plus `DownloadBanner` (mobile). |
 | BottomBar.js | Bottom tab navigation bar for mobile. |
 | SideBar.js | Vertical sidebar tab navigation for desktop. |
+
+### Banner Components (app/components/banner/)
+| File | Description |
+|---|---|
+| DownloadBanner.js | Slim status banner above the mini player when downloads are active: title of the active download, bytes, thin progress line. Tap → `Settings/Downloads`. |
 
 ### List Components (app/components/lists/)
 | File | Description |
@@ -256,6 +268,7 @@ Playback state enum: `Playing`, `Paused`, `Stopped`, `Loading`, `Error`, `None`.
 | BackButton.js | Back navigation button. |
 | RotateIconButton.js | Icon button with optional rotation animation on press. |
 | RandomButton.js | Shuffle play button. |
+| DownloadButton.js | Spotify-style download toggle for an album/playlist/favorited: idle → enqueue, queued spinner, downloading ring with %, paused/error states, done/partial filled circle (tap removes with confirm). Uses `getCollectionState`. |
 | SlideBar.js | Progress/slider bar component. |
 | SlideControl.js | Wrapper for controlled sliding interaction. |
 | SidebarLetter.js | Letter index sidebar for artist navigation. |
@@ -282,6 +295,11 @@ Playback state enum: `Playing`, `Paused`, `Stopped`, `Loading`, `Error`, `None`.
 | SectionTitle.js | Section title with optional "show all" button. |
 | ImageError.js | Image component with fallback handling (icon or placeholder). |
 | Selector.js | Horizontal scrollable selector for choosing a value (e.g., album list type). |
+
+### Search Components (app/components/search/)
+| File | Description |
+|---|---|
+| SearchResults.js | Inline search results used by the Music tab: debounced `search3` fetch, state machine, history (AsyncStorage `search.history`), Artists/Albums/Songs sections (link to SearchMore) + explorer shortcuts. Takes `{ query, setQuery }`. |
 
 ### Popup Components (app/components/popup/)
 | File | Description |

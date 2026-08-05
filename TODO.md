@@ -20,9 +20,29 @@
    - Dedicated Downloads screen in settings: list cached songs, pause/resume, remove individually or in bulk
    - Show download progress in player/queue UI
 	 - Select download quality
+   - ⏳ **In progress**: Spotify-style downloads (substreamer inspo) — status banner (DownloadBanner)
+     tap → Downloads detail screen (Settings/Downloads) with live speed, per-collection downloads
+     that can be removed individually (delete one playlist, keep an album), pause/resume/cancel,
+     persistence per server via AsyncStorage.
+     - ✅ Done: `downloadManager.native.js` (queue engine, DownloadResumable pause/resume that
+       survives restarts, rolling speed tracker, collection/index persistence, `useDownloads`),
+       `downloadManager.web.js` stub, `DownloadButton` (ring/percent/done states),
+       `DownloadBanner` in TabBar, `Settings/Downloads` screen + stack registration + Settings row,
+       `Download` option replacing "Cache all songs" in OptionsAlbum/Playlist/Favorited, per-song
+       Download action in OptionsSongsList + state icon in SongItem, player `downloadSong`/
+       `downloadNextSong` routed through the manager, i18n en/de.
+     - Deferred (documented): drag-reorder in queue, true headless background download,
+       per-collection quality selector (reuses global streamFormat/maxBitRate).
 
-5. **Local WiFi Management**
+5. **Local WiFi Management** ✅ done
    - I can already insert more than onw server, nut i have to swhich manually, i want this to be network specific, not just wifi/data but select a spsecific wifi network and it will switch automatically
+   - ✅ Done: optional "Network (WiFi)" per server in AddServer (type name or tap a chip: current
+     SSID first, then previously used networks); "Only connect on this network" switch; app
+     auto-switches to the matching server on launch / on network change (AppState).
+     `expo-network` added; permissions `ACCESS_WIFI_STATE`+`ACCESS_FINE_LOCATION` added manually
+     (do NOT prebuild). See `plans/local-wifi-management.md`.
+   - Known ceiling: current-SSID detection on Android 10+ needs location permission/services;
+     manual name + history always work. Runtime location prompt deferred.
 
 6. **Lyrics Background** ✅ done
    - when showing lyrics use album art as background but with some transparency blur effect

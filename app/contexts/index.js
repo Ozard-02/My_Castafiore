@@ -7,6 +7,7 @@ import { ConfigProvider } from '~/contexts/config'
 import { SongProvider } from '~/contexts/song'
 import { UpdateApiProvider } from '~/contexts/updateApi'
 import { useSong, useSongDispatch } from '~/contexts/song'
+import NetworkAutoSwitch from '~/contexts/networkAutoSwitch'
 import Player from '~/utils/player'
 
 const PlayerEvent = () => {
@@ -25,6 +26,7 @@ const AppProvider = ({ children }) => {
 						<UpdateApiProvider>
 							<RemoteProvider>
 								<PlayerEvent />
+								<NetworkAutoSwitch />
 								{children}
 							</RemoteProvider>
 						</UpdateApiProvider>

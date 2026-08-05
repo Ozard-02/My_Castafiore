@@ -9,6 +9,7 @@ import { useTheme } from '~/contexts/theme'
 import { useCachedAndApi } from '~/utils/api'
 import ExplorerItem from '~/components/item/ExplorerItem'
 import AllItem from '~/components/item/AllItem'
+import OptionsArtists from '~/components/options/OptionsArtists'
 import mainStyles from '~/styles/main'
 import PresHeaderIcon from '~/components/PresHeaderIcon'
 import SideBarLetter from '~/components/button/SidebarLetter'
@@ -20,6 +21,7 @@ const ArtistExplorer = ({ layout = 'list', showHeader = true, title = null }) =>
 	const theme = useTheme()
 	const navigation = useNavigation()
 	const [alpha, setAlpha] = React.useState([])
+	const [indexOptions, setIndexOptions] = React.useState(-1)
 	const refScroll = React.useRef(null)
 
 	const [artists] = useCachedAndApi([], 'getArtists', null, (json, setData) => {
@@ -38,7 +40,7 @@ const ArtistExplorer = ({ layout = 'list', showHeader = true, title = null }) =>
 		return favorited.some(fav => fav.id === id)
 	}, [favorited])
 
-	const renderItem = React.useCallback(({ item }) => {
+	const renderItem = React.useCallback(({ item, index }) => {
 		if (typeof item === 'string') return (
 			<View style={{
 				flex: 1,
@@ -58,6 +60,7 @@ const ArtistExplorer = ({ layout = 'list', showHeader = true, title = null }) =>
 				title={item.name}
 				subTitle={`${item.albumCount} ${t('albums')}`}
 				onPress={() => navigation.navigate('Artist', { id: item.id, name: item.name })}
+				onLongPress={() => setIndexOptions(index)}
 				borderRadius={size.radius.circle}
 				iconError="group"
 				isFavorited={isFavorited(item.id)}
@@ -68,17 +71,24 @@ const ArtistExplorer = ({ layout = 'list', showHeader = true, title = null }) =>
 	if (layout === 'grid') {
 		const artistsGrid = artists.filter(item => typeof item !== 'string')
 		return (
-			<ScrollView
-				style={mainStyles.mainContainer(theme)}
-				contentContainerStyle={[mainStyles.contentMainContainer(insets, false), { minHeight: '100%' }]}
-			>
-				{showHeader && <PresHeaderIcon title={title || t("Artists")} subTitle={t("Explore")} icon="group" />}
-				<View style={styles.gridContainer}>
-					{artistsGrid.map((item, index) => (
-						<AllItem key={item.id || index} item={item} type="artist" onPress={() => navigation.navigate('Artist', { id: item.id, name: item.name })} />
-					))}
-				</View>
-			</ScrollView>
+			<>
+				<ScrollView
+					style={mainStyles.mainContainer(theme)}
+					contentContainerStyle={[mainStyles.contentMainContainer(insets, false), { minHeight: '100%' }]}
+				>
+					{showHeader && <PresHeaderIcon title={title || t("Artists")} subTitle={t("Explore")} icon="group" />}
+					<View style={styles.gridContainer}>
+						{artistsGrid.map((item, index) => (
+							<AllItem key={item.id || index} item={item} type="artist" onPress={() => navigation.navigate('Artist', { id: item.id, name: item.name })} onLongPress={() => setIndexOptions(artists.indexOf(item))} />
+						))}
+					</View>
+				</ScrollView>
+				<OptionsArtists
+					artists={artists}
+					indexOptions={indexOptions}
+					setIndexOptions={setIndexOptions}
+				/>
+			</>
 		)
 	}
 
@@ -110,6 +120,11 @@ const ArtistExplorer = ({ layout = 'list', showHeader = true, title = null }) =>
 					/> : null
 				}
 				renderItem={renderItem}
+			/>
+			<OptionsArtists
+				artists={artists}
+				indexOptions={indexOptions}
+				setIndexOptions={setIndexOptions}
 			/>
 		</>
 	)

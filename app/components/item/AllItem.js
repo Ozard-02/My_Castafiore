@@ -1,5 +1,5 @@
 import React from 'react'
-import { Pressable, Text, StyleSheet, Platform } from 'react-native'
+import { Pressable, Text, StyleSheet } from 'react-native'
 
 import { useConfig } from '~/contexts/config'
 import { useTheme } from '~/contexts/theme'
@@ -8,14 +8,16 @@ import ImageError from '~/components/ImageError'
 import mainStyles from '~/styles/main'
 import size from '~/styles/size'
 
-const AllItem = ({ item, type, onPress }) => {
+const AllItem = ({ item, type, onPress, onLongPress = () => { } }) => {
 	const config = useConfig()
 	const theme = useTheme()
 
 	return (
 		<Pressable
 			style={({ pressed }) => ([mainStyles.opacity({ pressed }), styles.item])}
-			onPress={() => onPress(item)}>
+			onPress={() => onPress(item)}
+			delayLongPress={200}
+			onLongPress={() => onLongPress(item)}>
 			<ImageError
 				style={styles.cover(type)}
 				source={{ uri: urlCover(config, item) }}
@@ -28,16 +30,11 @@ const AllItem = ({ item, type, onPress }) => {
 }
 
 const styles = StyleSheet.create({
-	item: Platform.select({
-		native: {
-			flex: 1,
-			maxWidth: "50%",
-		},
-		web: {
-			minWidth: size.image.large,
-			maxWidth: 245,
-		}
-	}),
+	item: {
+		width: "50%",
+		paddingHorizontal: 5,
+		marginBottom: 10,
+	},
 	cover: (type) => ({
 		width: "100%",
 		aspectRatio: 1,

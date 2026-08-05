@@ -14,6 +14,7 @@ import Selector from '~/components/Selector'
 import size from '~/styles/size'
 import ExplorerItem from '~/components/item/ExplorerItem'
 import AllItem from '~/components/item/AllItem'
+import OptionsAlbums from '~/components/options/OptionsAlbums'
 import logger from '~/utils/logger'
 
 const TYPES = ['newest', 'highest', 'frequent', 'recent', 'starred', 'random', 'alphabeticalByName', 'alphabeticalByArtist']
@@ -29,6 +30,7 @@ const AlbumExplorer = ({ layout = 'list', showHeader = true, title = null }) => 
 	const [type, setType] = React.useState('newest')
 	const [offset, setOffset] = React.useState(0)
 	const [isLoading, setIsLoading] = React.useState(false)
+	const [indexOptions, setIndexOptions] = React.useState(-1)
 
 	React.useEffect(() => {
 		setIsLoading(true)
@@ -57,12 +59,13 @@ const AlbumExplorer = ({ layout = 'list', showHeader = true, title = null }) => 
 		}
 	}
 
-	const renderItem = React.useCallback(({ item }) => (
+	const renderItem = React.useCallback(({ item, index }) => (
 		<ExplorerItem
 			item={item}
 			title={item.name || item.album || item.title}
 			subTitle={`${item.artist || 'Unknown Artist'} · ${item.year || ''}`}
 			onPress={() => navigation.navigate('Album', item)}
+			onLongPress={() => setIndexOptions(index)}
 			isFavorited={item.starred}
 		/>
 	), [])
@@ -95,57 +98,71 @@ const AlbumExplorer = ({ layout = 'list', showHeader = true, title = null }) => 
 	}
 
 	if (layout === 'grid') return (
-		<ScrollView
-			style={mainStyles.mainContainer(theme)}
-			contentContainerStyle={[mainStyles.contentMainContainer(insets, false), { minHeight: '100%' }]}
-			onScroll={({ nativeEvent }) => {
-				if (nativeEvent.contentOffset.y + nativeEvent.layoutMeasurement.height >= nativeEvent.contentSize.height - 100) handleEndReached()
-			}}
-			scrollEventThrottle={16}
-		>
-			{showHeader && <PresHeaderIcon title={title || t("Albums")} subTitle={t("Explore")} icon="book" />}
-			<Text style={styles.titleSelector(theme)}>Type</Text>
-			<Selector current={type} items={TYPES} setData={setType} />
-			<View style={styles.gridContainer}>
-				{albums.map((item, index) => (
-					<AllItem key={index} item={item} type="album" onPress={() => navigation.navigate('Album', item)} />
-				))}
-			</View>
-			{renderFooter()}
-		</ScrollView>
+		<>
+			<ScrollView
+				style={mainStyles.mainContainer(theme)}
+				contentContainerStyle={[mainStyles.contentMainContainer(insets, false), { minHeight: '100%' }]}
+				onScroll={({ nativeEvent }) => {
+					if (nativeEvent.contentOffset.y + nativeEvent.layoutMeasurement.height >= nativeEvent.contentSize.height - 100) handleEndReached()
+				}}
+				scrollEventThrottle={16}
+			>
+				{showHeader && <PresHeaderIcon title={title || t("Albums")} subTitle={t("Explore")} icon="book" />}
+				<Text style={styles.titleSelector(theme)}>Type</Text>
+				<Selector current={type} items={TYPES} setData={setType} />
+				<View style={styles.gridContainer}>
+					{albums.map((item, index) => (
+						<AllItem key={index} item={item} type="album" onPress={() => navigation.navigate('Album', item)} onLongPress={() => setIndexOptions(index)} />
+					))}
+				</View>
+				{renderFooter()}
+			</ScrollView>
+			<OptionsAlbums
+				albums={albums}
+				indexOptions={indexOptions}
+				setIndexOptions={setIndexOptions}
+			/>
+		</>
 	)
 
 	return (
-		<LegendList
-			data={albums}
-			keyExtractor={(_, index) => index}
-			style={mainStyles.mainContainer(theme)}
-			contentContainerStyle={[mainStyles.contentMainContainer(insets, false), { minHeight: 80 * albums.length + 410 }]}
-			waitForInitialLayout={false}
-			recycleItems={true}
-			estimatedItemSize={80}
-			maintainVisibleContentPosition={{
-				minIndexForVisible: 0,
-				itemVisiblePercentThreshold: 50,
-			}}
-			onEndReached={handleEndReached}
-			onEndReachedThreshold={0.1}
-			ListHeaderComponent={
-				<View style={{ flex: 1 }}>
-					{showHeader && <PresHeaderIcon
-						title={title || t("Albums")}
-						subTitle={t("Explore")}
-						icon="book"
-					/>}
+		<>
+			<LegendList
+				data={albums}
+				keyExtractor={(_, index) => index}
+				style={mainStyles.mainContainer(theme)}
+				contentContainerStyle={[mainStyles.contentMainContainer(insets, false), { minHeight: 80 * albums.length + 410 }]}
+				waitForInitialLayout={false}
+				recycleItems={true}
+				estimatedItemSize={80}
+				maintainVisibleContentPosition={{
+					minIndexForVisible: 0,
+					itemVisiblePercentThreshold: 50,
+				}}
+				onEndReached={handleEndReached}
+				onEndReachedThreshold={0.1}
+				ListHeaderComponent={
+					<View style={{ flex: 1 }}>
+						{showHeader && <PresHeaderIcon
+							title={title || t("Albums")}
+							subTitle={t("Explore")}
+							icon="book"
+						/>}
 
-					<Text style={styles.titleSelector(theme)}>Type</Text>
-					<Selector current={type} items={TYPES} setData={setType} />
-				</View>
-			}
-			ListFooterComponent={renderFooter}
-			renderItem={renderItem}
-			ListEmptyComponent={renderActivityIndicator}
-		/>
+						<Text style={styles.titleSelector(theme)}>Type</Text>
+						<Selector current={type} items={TYPES} setData={setType} />
+					</View>
+				}
+				ListFooterComponent={renderFooter}
+				renderItem={renderItem}
+				ListEmptyComponent={renderActivityIndicator}
+			/>
+			<OptionsAlbums
+				albums={albums}
+				indexOptions={indexOptions}
+				setIndexOptions={setIndexOptions}
+			/>
+		</>
 	)
 }
 

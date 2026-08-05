@@ -40,6 +40,23 @@ const OptionsAlbums = ({ albums, indexOptions, setIndexOptions }) => {
 					onPress: playSimilarSongs
 				},
 				{
+					name: t('Play next'),
+					icon: 'play-circle',
+					onPress: () => {
+						refOption.current.close()
+						getApiCacheFirst(config, 'getAlbum', { id: albums[indexOptions].id })
+							.then((json) => {
+								if (json.album?.song?.length) {
+									for (let i = json.album.song.length - 1; i >= 0; i--) {
+										addToQueue(songDispatch, json.album.song[i], song.index + 1)
+									}
+								}
+							})
+							.catch(() => { })
+					},
+					hidden: !song.queue?.length
+				},
+				{
 					name: t('Add to queue'),
 					icon: 'list-ul',
 					onPress: () => {

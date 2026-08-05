@@ -11,6 +11,7 @@ import { useConfig } from '~/contexts/config'
 import { playSong } from '~/utils/player'
 import SongItem from '~/components/item/SongItem'
 import AllItem from '~/components/item/AllItem'
+import OptionsSongsList from '~/components/options/OptionsSongsList'
 import mainStyles from '~/styles/main'
 import PresHeaderIcon from '~/components/PresHeaderIcon'
 import size from '~/styles/size'
@@ -27,6 +28,7 @@ const SongExplorer = ({ layout = 'list', showHeader = true, title = null }) => {
 	const [songs, setSongs] = React.useState([])
 	const [offset, setOffset] = React.useState(0)
 	const [isLoading, setIsLoading] = React.useState(false)
+	const [indexOptions, setIndexOptions] = React.useState(-1)
 
 	React.useEffect(() => {
 		setIsLoading(true)
@@ -64,6 +66,7 @@ const SongExplorer = ({ layout = 'list', showHeader = true, title = null }) => {
 			queue={songs}
 			index={index}
 			isFavorited={item.starred}
+			setIndexOptions={setIndexOptions}
 			style={{
 				paddingHorizontal: 20,
 			}}
@@ -98,46 +101,60 @@ const SongExplorer = ({ layout = 'list', showHeader = true, title = null }) => {
 	}
 
 	if (layout === 'grid') return (
-		<ScrollView
-			style={mainStyles.mainContainer(theme)}
-			contentContainerStyle={[mainStyles.contentMainContainer(insets, false), { minHeight: '100%' }]}
-			onScroll={({ nativeEvent }) => {
-				if (nativeEvent.contentOffset.y + nativeEvent.layoutMeasurement.height >= nativeEvent.contentSize.height - 100) handleEndReached()
-			}}
-			scrollEventThrottle={16}
-		>
-			{showHeader && <PresHeaderIcon title={title || t("Songs")} subTitle={t("Explore")} icon="music" />}
-			<View style={styles.gridContainer}>
-				{songs.map((item, index) => (
-					<AllItem key={index} item={item} type="song" onPress={() => playSong(config, songDispatch, songs, index)} />
-				))}
-			</View>
-			{renderFooter()}
-		</ScrollView>
+		<>
+			<ScrollView
+				style={mainStyles.mainContainer(theme)}
+				contentContainerStyle={[mainStyles.contentMainContainer(insets, false), { minHeight: '100%' }]}
+				onScroll={({ nativeEvent }) => {
+					if (nativeEvent.contentOffset.y + nativeEvent.layoutMeasurement.height >= nativeEvent.contentSize.height - 100) handleEndReached()
+				}}
+				scrollEventThrottle={16}
+			>
+				{showHeader && <PresHeaderIcon title={title || t("Songs")} subTitle={t("Explore")} icon="music" />}
+				<View style={styles.gridContainer}>
+					{songs.map((item, index) => (
+						<AllItem key={index} item={item} type="song" onPress={() => playSong(config, songDispatch, songs, index)} onLongPress={() => setIndexOptions(index)} />
+					))}
+				</View>
+				{renderFooter()}
+			</ScrollView>
+			<OptionsSongsList
+				songs={songs}
+				indexOptions={indexOptions}
+				setIndexOptions={setIndexOptions}
+			/>
+		</>
 	)
 
 	return (
-		<LegendList
-			data={songs}
-			keyExtractor={(_, index) => index}
-			style={mainStyles.mainContainer(theme)}
-			contentContainerStyle={[mainStyles.contentMainContainer(insets, false), { minHeight: 60 * songs.length + 410 }]}
-			waitForInitialLayout={false}
-			recycleItems={true}
-			estimatedItemSize={80}
-			maintainVisibleContentPosition={{
-				minIndexForVisible: 0,
-				itemVisiblePercentThreshold: 50,
-			}}
-			onEndReached={handleEndReached}
-			onEndReachedThreshold={0.1}
-			ListHeaderComponent={
-				showHeader ? <PresHeaderIcon title={title || t("Songs")} subTitle={t("Explore")} icon="music" /> : null
-			}
-			ListFooterComponent={renderFooter}
-			renderItem={renderItem}
-			ListEmptyComponent={renderActivityIndicator}
-		/>
+		<>
+			<LegendList
+				data={songs}
+				keyExtractor={(_, index) => index}
+				style={mainStyles.mainContainer(theme)}
+				contentContainerStyle={[mainStyles.contentMainContainer(insets, false), { minHeight: 60 * songs.length + 410 }]}
+				waitForInitialLayout={false}
+				recycleItems={true}
+				estimatedItemSize={80}
+				maintainVisibleContentPosition={{
+					minIndexForVisible: 0,
+					itemVisiblePercentThreshold: 50,
+				}}
+				onEndReached={handleEndReached}
+				onEndReachedThreshold={0.1}
+				ListHeaderComponent={
+					showHeader ? <PresHeaderIcon title={title || t("Songs")} subTitle={t("Explore")} icon="music" /> : null
+				}
+				ListFooterComponent={renderFooter}
+				renderItem={renderItem}
+				ListEmptyComponent={renderActivityIndicator}
+			/>
+			<OptionsSongsList
+				songs={songs}
+				indexOptions={indexOptions}
+				setIndexOptions={setIndexOptions}
+			/>
+		</>
 	)
 }
 

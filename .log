@@ -1,5 +1,82 @@
 # Castafiore - Session Log
 
+## 2026-08-05 (3rd)
+- Long-press options gaps fixed (Home album long-press missing "Play next"; Music tab long-press did nothing).
+  - `AllItem.js`: optional `onLongPress` + `delayLongPress={200}`.
+  - `SongExplorer`/`AlbumExplorer`/`ArtistExplorer`: `indexOptions` state; list mode passes
+    `setIndexOptions` (SongItem) / `onLongPress` (ExplorerItem), grid mode passes `onLongPress`
+    (AllItem); each mounts its `OptionsSongsList`/`OptionsAlbums`/`OptionsArtists` popup.
+    ArtistExplorer grid maps back via `artists.indexOf(item)` (grid drops string headers).
+  - `OptionsAlbums.js`: added "Play next" (fetches `getAlbum`, reverse-loop
+    `addToQueue(songDispatch, song, song.index + 1)`, `hidden: !song.queue?.length`).
+  - Plan: `plans/longpress-options.md` → COMPLETED.
+- Local WiFi management (per-server optional network + auto-switch).
+  - Added `expo-network` (`npx expo install`, v7.1.5; compiled clean under pnpm autolinking).
+  - `app/utils/network.{native,web}.js`: `getCurrentNetwork()` → stripped SSID or null (web no-op).
+  - `app/contexts/networkAutoSwitch.js` (`<NetworkAutoSwitch/>` in `contexts/index.js`): on mount +
+    AppState 'active', if current SSID matches a saved server's `network` (not the active one) →
+    persist + `setConfig` + `Player.resetAudio`.
+  - `AddServer.js`: "Network (WiFi)" input + chips (current SSID first, then `settings.networks`
+    history) + "Only connect on this network" switch; `network` saved on the server + pushed to
+    history (dedup, cap 10). `defaultSettings.networks` added.
+  - `Connect.js`: wifi icon on network-bound server rows.
+  - AndroidManifest: added `ACCESS_WIFI_STATE` + `ACCESS_FINE_LOCATION` manually (no prebuild).
+  - i18n en/de: Network, Network Placeholder, Current, Network only.
+  - Plan: `plans/local-wifi-management.md` → DONE.
+- Fixed Downloads "Clear all" row alignment: `optionsContainer` is `flexDirection:'column'` so the
+  trash icon stacked above the text → added `clearAllRow` (`flexDirection:'row'`, `alignItems:'center'`,
+  `paddingVertical:8`).
+- eslint clean; APK rebuilt (`:app:assembleRelease`, success) + installed + launched on R5CY71GYKWF.
+
+## 2026-08-05 (2nd)
+- Search tab removed; search moved inline on the Music tab.
+  - `Navigation.js`: dropped the `SearchStack` tab → 4 tabs (Home, Music, Playlists, Settings);
+    `BottomBar`/`SideBar` iterate `state.routes` so it disappeared from both automatically.
+  - `app/components/search/SearchResults.js` (NEW): extracted the debounced `search3` + history +
+    results logic from the old `Search.js`; takes `{ query, setQuery }`, renders Artists/Albums/Songs
+    sections (→ SearchMore), explorer shortcut buttons, history, error/empty states.
+  - `Tracks.js`: search `TextInput` on top; `query` non-empty swaps the Selector + explorer for
+    `<SearchResults/>`; cleared restores the normal Music view. No autoFocus (desktop tab would
+    steal focus).
+  - Deleted `app/screens/tabs/Search.js` + `SearchStack`; folded `SearchMore`, `AlbumExplorer`,
+    `ArtistExplorer`, `SongExplorer` into `TracksStack`.
+- Fixed `DownloadButton` Ring centering: track border previously lived on the outer container while
+  the half-mask circles were laid out against the border's content box (`top:0,bottom:0` halves +
+  `height:size` circle) → arc rotated about a center offset by `strokeWidth`. Now the container is
+  borderless (exact size), track is a separate absolute circle, halves are exactly `size/2 × size`;
+  also appended a `justifyContent/alignItems: 'center'` override after caller style (presStyles.button
+  set `justifyContent:'start'`).
+- eslint clean; APK rebuilt + installed on R5CY71GYKWF.
+
+## 2026-08-05
+- Spotify-style download management (substreamer inspo) wired end-to-end.
+  - `app/utils/downloadManager.native.js` (NEW): serial queue engine on
+    `expo-file-system` `DownloadResumable` (pause/resume survives restarts via resumeData),
+    rolling 10s speed tracker, per-server AsyncStorage persistence
+    (`downloadQueue:/downloadIndex:/downloadCollections:`), collection records so one
+    album/playlist can be removed while keeping another. `useDownloads()` via
+    `useSyncExternalStore`. `downloadManager.web.js` = no-op stub (service worker handles
+    offline).
+  - `DownloadButton.js` (NEW): Spotify-style states via `getCollectionState` — idle
+    cloud-download, queued spinner, dependency-free ring + % (two half-circle rotation),
+    paused/error, done/partial filled circle. Mounted in `Album.js` + `Playlist.js` Pres
+    headers; "Cache all songs" options in `OptionsAlbum`/`OptionsPlaylist`/`OptionsFavorited`
+    replaced by `Download` → `enqueueCollection`.
+  - `DownloadBanner.js` (NEW): slim status bar above mini player (TabBar), tap →
+    `Settings/Downloads`.
+  - `Settings/Downloads.js` (NEW): stats card (speed/active/in queue), active downloads
+    w/ progress + pause/resume/retry/cancel, downloaded collections removable individually,
+    individual songs bucket, clear all. Registered in `SettingsStack`.
+  - Per-song: `OptionsSongsList` Download action now enqueues via manager on native (kept
+    mp3 file-download on web); `SongItem` Cached indicator shows per-song download state
+    (%/queued/paused/error icons) via `getSongState`.
+  - `playerLocal.native.js` `downloadSong(url, id)` → `downloadSong(song, source)` routing
+    through the manager; `downloadNextSong` auto-cache now enqueues (source null). Removed
+    the old FileSystem download path + unused imports.
+  - i18n: `Downloads` + `settings.downloads.*` block added to en/de.
+- Fixed `resumeCollection` to also restart `error` items (DownloadButton error-state tap was a no-op).
+- eslint clean. Docs updated (TODO #4, STRUCTURE.md). APK not rebuilt yet.
+
 ## 2026-08-04
 - Tracks tab implemented (5th bottom-bar element between Search and Playlists).
   - `Navigation.js`: added `TracksStack` tab (`title: 'Tracks'`, icon `music`).
@@ -23,3 +100,5 @@
 - `addToQueue(songDispatch, track, index)` inserts at `index`; inserting at the same
   `index` repeatedly reverses order, so insert in reverse to keep wanted order.
 - eslint: `npx eslint app -c eslint.config.mjs`.
+- `rg -rn` is a landmine: `-r` is ripgrep's `--replace`, so `rg -rn <pat>` replaces every
+  match with the literal `n`. Use `rg -n` or `--no-config`.

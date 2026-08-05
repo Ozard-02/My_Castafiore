@@ -112,6 +112,7 @@ const Connect = ({ navigation }) => {
 								<Text numberOfLines={1} style={[mainStyles.mediumText(theme.primaryText), { marginRight: 10, textTransform: 'uppercase', flex: 1, overflow: 'hidden' }]}>
 									{server.name?.length ? server.name : server.url}
 								</Text>
+								{server.network && <Icon name="wifi" size={size.icon.tiny} color={theme.secondaryText} style={{ marginEnd: 10 }} />}
 								{(server.query === config.query && server.url === config.url && config.name === server.name) && <Icon name="check" size={size.icon.tiny} color={theme.primaryTouch} />}
 							</Pressable>
 						))

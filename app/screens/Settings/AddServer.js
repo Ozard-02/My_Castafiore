@@ -1,5 +1,5 @@
 import React from 'react'
-import { Text, View, ScrollView, Platform } from 'react-native'
+import { Text, View, ScrollView, Platform, Pressable } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useTranslation } from 'react-i18next'
 import AsyncStorage from '@react-native-async-storage/async-storage'
@@ -11,6 +11,7 @@ import { useSetConfig } from '~/contexts/config'
 import { useSettings, useSetSettings } from '~/contexts/settings'
 import { useSongDispatch } from '~/contexts/song'
 import { useTheme } from '~/contexts/theme'
+import { getCurrentNetwork } from '~/utils/network'
 import ButtonSwitch from '~/components/settings/ButtonSwitch'
 import ButtonText from '~/components/settings/ButtonText'
 import Header from '~/components/Header'
@@ -37,6 +38,20 @@ const AddServer = ({ navigation }) => {
 	const [info, setInfo] = React.useState(null)
 	const [showPassword, setShowPassword] = React.useState(false)
 	const [lowSecurity, setLowSecurity] = React.useState(false)
+	const [network, setNetwork] = React.useState('')
+	const [currentNetwork, setCurrentNetwork] = React.useState('')
+
+	React.useEffect(() => {
+		getCurrentNetwork().then((ssid) => setCurrentNetwork(ssid || ''))
+	}, [])
+
+	const suggestions = React.useMemo(() => {
+		const list = currentNetwork ? [currentNetwork] : []
+		for (const n of settings.networks || []) {
+			if (!list.some((s) => s.toLowerCase() === n.toLowerCase())) list.push(n)
+		}
+		return list
+	}, [currentNetwork, settings.networks])
 
 	const upConfig = (conf) => {
 		AsyncStorage.setItem('config', JSON.stringify(conf))
@@ -64,10 +79,13 @@ const AddServer = ({ navigation }) => {
 			.then((json) => {
 				if (json?.status == 'ok') {
 					setInfo(json)
-					const conf = { name, url: uri, username, query, type: json.type }
+					const conf = { name, url: uri, username, query, type: json.type, network }
 					upConfig(conf)
 					setError('')
-					setSettings({ ...settings, servers: [...settings.servers, conf] })
+					const networks = network
+						? [network, ...(settings.networks || []).filter((n) => n.toLowerCase() !== network.toLowerCase())].slice(0, 10)
+						: settings.networks
+					setSettings({ ...settings, networks, servers: [...settings.servers, conf] })
 					navigation.goBack()
 					navigation.navigate('HomeStack')
 				} else {
@@ -148,6 +166,44 @@ const AddServer = ({ navigation }) => {
 						isPassword={true}
 						secureTextEntry={!showPassword}
 						autoComplete="current-password"
+						isLast
+					/>
+				</View>
+				<View style={[settingStyles.optionsContainer(theme), { marginTop: 10, marginBottom: 5 }]}>
+					<OptionInput
+						title={t("settings.addServer.Network")}
+						placeholder={t("settings.addServer.Network Placeholder")}
+						value={network}
+						placeholderTextColor={theme.primaryText}
+						onChangeText={network => setNetwork(network)}
+					/>
+					{suggestions.length > 0 && (
+						<View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, padding: 15 }}>
+							{suggestions.map((ssid) => (
+								<Pressable
+									key={ssid}
+									style={({ pressed }) => ([mainStyles.opacity({ pressed }), {
+										flexDirection: 'row',
+										alignItems: 'center',
+										paddingVertical: 6,
+										paddingHorizontal: 12,
+										borderRadius: 15,
+										backgroundColor: ssid === network ? theme.primaryTouch : theme.innerTouch,
+									}])}
+									onPress={() => setNetwork(ssid)}
+								>
+									<Icon name="wifi" size={size.icon.tiny} color={ssid === network ? theme.innerTouch : theme.primaryText} style={{ marginEnd: 5 }} />
+									<Text style={{ color: ssid === network ? theme.innerTouch : theme.primaryText, fontSize: size.text.small }}>
+										{ssid === currentNetwork ? t('settings.addServer.Current') + ' · ' : ''}{ssid}
+									</Text>
+								</Pressable>
+							))}
+						</View>
+					)}
+					<ButtonSwitch
+						title={t("settings.addServer.Network only")}
+						value={network === currentNetwork && !!currentNetwork}
+						onPress={() => setNetwork(currentNetwork)}
 						isLast
 					/>
 				</View>
