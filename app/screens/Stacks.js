@@ -3,7 +3,6 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack'
 
 import Home from '~/screens/tabs/Home'
 import Playlists from '~/screens/tabs/Playlists'
-import Search from '~/screens/tabs/Search'
 import Settings from '~/screens/tabs/Settings'
 import Tracks from '~/screens/tabs/Tracks'
 
@@ -32,6 +31,7 @@ import SearchMore from '~/screens/SearchMore'
 import AddServer from '~/screens/Settings/AddServer'
 import CacheSettings from '~/screens/Settings/Cache'
 import Connect from '~/screens/Settings/Connect'
+import DownloadsSettings from '~/screens/Settings/Downloads'
 import HomeSettings from '~/screens/Settings/Home'
 import InformationsSettings from '~/screens/Settings/Informations'
 import LanguageSettings from '~/screens/Settings/Language'
@@ -78,38 +78,6 @@ export const HomeStack = () => {
 	)
 }
 
-export const SearchStack = () => {
-	const theme = useTheme()
-
-	return (
-		<Stack.Navigator
-			screenOptions={{
-				headerShown: false,
-				tabBarStyle: {
-					backgroundColor: theme.secondaryBack,
-					borderTopColor: theme.secondaryBack,
-					tabBarActiveTintColor: theme.primaryTouch,
-				}
-			}}
-		>
-			<Stack.Screen name="Search" component={Search} />
-			<Stack.Screen name="SearchMore" component={SearchMore} />
-			<Stack.Screen name="AlbumExplorer" component={AlbumExplorer} />
-			<Stack.Screen name="ArtistExplorer" component={ArtistExplorer} />
-			<Stack.Screen name="SongExplorer" component={SongExplorer} />
-			{/* Pres */}
-			<Stack.Screen name="Album" component={Album} />
-			<Stack.Screen name="Artist" component={Artist} />
-			<Stack.Screen name="ArtistAlbums" component={ArtistAlbums} />
-			<Stack.Screen name="Genre" component={Genre} />
-			<Stack.Screen name="GenreAlbum" component={GenreAlbum} />
-			<Stack.Screen name="GenreSong" component={GenreSong} />
-			<Stack.Screen name="Info" component={Info} />
-			<Stack.Screen name="Songs" component={Songs} />
-		</Stack.Navigator>
-	)
-}
-
 export const TracksStack = () => {
 	const theme = useTheme()
 
@@ -125,6 +93,10 @@ export const TracksStack = () => {
 			}}
 		>
 			<Stack.Screen name="Tracks" component={Tracks} />
+			<Stack.Screen name="SearchMore" component={SearchMore} />
+			<Stack.Screen name="AlbumExplorer" component={AlbumExplorer} />
+			<Stack.Screen name="ArtistExplorer" component={ArtistExplorer} />
+			<Stack.Screen name="SongExplorer" component={SongExplorer} />
 			{/* Pres */}
 			<Stack.Screen name="Album" component={Album} />
 			<Stack.Screen name="Artist" component={Artist} />
@@ -191,6 +163,7 @@ export const SettingsStack = () => {
 			<Stack.Screen name="Settings/Home" component={HomeSettings} />
 			<Stack.Screen name="Settings/Playlists" component={PlaylistsSettings} />
 			<Stack.Screen name="Settings/Cache" component={CacheSettings} />
+			<Stack.Screen name="Settings/Downloads" component={DownloadsSettings} />
 			<Stack.Screen name="Settings/Theme" component={ThemeSettings} />
 			<Stack.Screen name="Settings/Informations" component={InformationsSettings} />
 			<Stack.Screen name="Settings/Player" component={PlayerSettings} />

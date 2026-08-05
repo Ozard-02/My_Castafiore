@@ -46,12 +46,12 @@ const ShowAll = ({ navigation, route: { params: { section } } }) => {
 			<Header title={t(`homeSection.${section.title}`)} />
 			<View
 				style={{
-					display: 'grid',
-					gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
+					display: 'flex',
+					flexDirection: 'row',
+					flexWrap: 'wrap',
 					paddingStart: 20,
 					paddingEnd: 20,
-					columnGap: 10,
-					rowGap: 13,
+					paddingTop: 10,
 				}}>
 				{
 					list.map((item, index) => (

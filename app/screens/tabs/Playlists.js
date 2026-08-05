@@ -6,19 +6,22 @@ import Icon from 'react-native-vector-icons/FontAwesome'
 
 import { useConfig } from '~/contexts/config'
 import { useCachedAndApi, getApi } from '~/utils/api'
-import { useSettings } from '~/contexts/settings'
+import { useSettings, useSetSettings } from '~/contexts/settings'
 import { useTheme } from '~/contexts/theme'
 import RotateIconButton from '~/components/button/RotateIconButton'
 import IconButton from '~/components/button/IconButton'
 import mainStyles from '~/styles/main'
 import VerticalPlaylist from '~/components/lists/VerticalPlaylist'
+import AllItem from '~/components/item/AllItem'
 import size from '~/styles/size'
 
-const Playlists = () => {
+const Playlists = ({ navigation }) => {
 	const { t } = useTranslation()
 	const config = useConfig()
 	const insets = useSafeAreaInsets()
 	const settings = useSettings()
+	const setSettings = useSetSettings()
+	const [layout, setLayout] = React.useState(settings.gridView ? 'grid' : 'list')
 	const theme = useTheme()
 	const [newPlaylist, setNewPlaylist] = React.useState(null)
 
@@ -72,13 +75,26 @@ const Playlists = () => {
 		>
 			<View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginEnd: 20, marginTop: 30, marginBottom: 20 }}>
 				<Text style={[mainStyles.mainTitle(theme), { marginBottom: 0, marginTop: 0 }]}>{t('Your Playlists')}</Text>
-				<RotateIconButton
+				<View style={{ flexDirection: 'row', alignItems: 'center' }}>
+					<IconButton
+						icon={layout === 'grid' ? 'list' : 'th-large'}
+						size={size.icon.small}
+						color={theme.primaryText}
+						style={{ padding: 10 }}
+						onPress={() => {
+							const next = layout === 'list' ? 'grid' : 'list'
+							setLayout(next)
+							setSettings({ ...settings, gridView: next === 'grid' })
+						}}
+					/>
+					<RotateIconButton
 						icon="refresh"
 						size={size.icon.large}
 						color={theme.primaryText}
 						style={{ paddingHorizontal: 10 }}
 						onPress={onRefresh}
 					/>
+				</View>
 			</View>
 			<View style={[styles.subTitleParent, { marginTop: 10 }]}>
 				{
@@ -119,7 +135,14 @@ const Playlists = () => {
 						</>
 				}
 			</View>
-			<VerticalPlaylist playlists={playlists} onRefresh={refreshPlaylists} />
+			{layout === 'grid' ?
+				<View style={styles.gridContainer}>
+					{playlists.map((item) => (
+						<AllItem key={item.id} item={item} type="playlist" onPress={() => navigation.navigate('Playlist', { playlist: item })} />
+					))}
+				</View> :
+				<VerticalPlaylist playlists={playlists} onRefresh={refreshPlaylists} />
+			}
 		</ScrollView>
 	)
 }
@@ -131,6 +154,13 @@ const styles = StyleSheet.create({
 		marginTop: 10,
 		marginBottom: 17,
 		...mainStyles.stdVerticalMargin
+	},
+	gridContainer: {
+		display: 'flex',
+		flexDirection: 'row',
+		flexWrap: 'wrap',
+		paddingStart: 20,
+		paddingEnd: 20,
 	},
 })
 

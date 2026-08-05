@@ -9,7 +9,7 @@ const Selector = ({ current, items, setData }) => {
 		<ScrollView
 			horizontal={true}
 			showsHorizontalScrollIndicator={false}
-			style={{ marginBottom: 30, flex: 1 }}
+			style={{ marginBottom: 30 }}
 			contentContainerStyle={{ flexDirection: 'row', gap: 10, paddingHorizontal: 20 }}
 		>
 			{items.map((item, index) => (
