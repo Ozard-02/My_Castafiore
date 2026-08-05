@@ -1,5 +1,24 @@
 # Castafiore - Session Log
 
+## 2026-08-05 (4th)
+- WiFi feature broken on device → diagnosed and fixed.
+  - Root cause 1: i18n keys added under `settings.connect.*` but code read `settings.addServer.*` →
+    literal `settings.addServer.Network` rendered.
+  - Root cause 2: `expo-network` **v7.1.5 removed `getWifiSsid()`** → `Network.getWifiSsid()` was
+    `undefined`, every call threw, `getCurrentNetwork` always returned `null` → toggle no-op'd,
+    current-network chip never showed.
+  - Fix: `npx expo install @react-native-community/netinfo` (v11.4.1), `npm uninstall expo-network`.
+    `network.native.js`: `getCurrentNetwork()` = `NetInfo.fetch('wifi')` → `details.ssid`
+    (stripped); `requestLocationPermission()` = `PermissionsAndroid.request(ACCESS_FINE_LOCATION)`.
+  - Toggle reworked per user: "Use current network" requests location (first time), detects SSID,
+    fills the network field; failure → inline hint (`Network permission` / `Network not detected`).
+  - Auto-switch now bidirectional: NetInfo `addEventListener` + AppState 'active' + mount. Match →
+    switch to bound server (remembering manual server as `lastFallback` in AsyncStorage); no match +
+    active bound to another network → switch to `lastFallback` (else first non-bound server).
+  - i18n en/de: `Network only` renamed `Use current network`; added hint keys.
+- Committed + pushed prior session work (lyrics-background revert, download management, inline search,
+  long-press options, v1 wifi, docs). APK rebuilt (4m) + installed + launched on R5CY71GYKWF.
+
 ## 2026-08-05 (3rd)
 - Long-press options gaps fixed (Home album long-press missing "Play next"; Music tab long-press did nothing).
   - `AllItem.js`: optional `onLongPress` + `delayLongPress={200}`.

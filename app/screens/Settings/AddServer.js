@@ -11,7 +11,7 @@ import { useSetConfig } from '~/contexts/config'
 import { useSettings, useSetSettings } from '~/contexts/settings'
 import { useSongDispatch } from '~/contexts/song'
 import { useTheme } from '~/contexts/theme'
-import { getCurrentNetwork } from '~/utils/network'
+import { getCurrentNetwork, requestLocationPermission } from '~/utils/network'
 import ButtonSwitch from '~/components/settings/ButtonSwitch'
 import ButtonText from '~/components/settings/ButtonText'
 import Header from '~/components/Header'
@@ -40,10 +40,26 @@ const AddServer = ({ navigation }) => {
 	const [lowSecurity, setLowSecurity] = React.useState(false)
 	const [network, setNetwork] = React.useState('')
 	const [currentNetwork, setCurrentNetwork] = React.useState('')
+	const [networkHint, setNetworkHint] = React.useState('')
+
+	const detectNetwork = React.useCallback(async (prompt = false) => {
+		if (prompt && !(await requestLocationPermission())) {
+			setNetworkHint(t('settings.connect.Network permission'))
+			return null
+		}
+		const ssid = await getCurrentNetwork()
+		if (ssid) {
+			setCurrentNetwork(ssid)
+			setNetworkHint('')
+			return ssid
+		}
+		if (prompt) setNetworkHint(t('settings.connect.Network not detected'))
+		return null
+	}, [t])
 
 	React.useEffect(() => {
-		getCurrentNetwork().then((ssid) => setCurrentNetwork(ssid || ''))
-	}, [])
+		detectNetwork()
+	}, [detectNetwork])
 
 	const suggestions = React.useMemo(() => {
 		const list = currentNetwork ? [currentNetwork] : []
@@ -171,8 +187,8 @@ const AddServer = ({ navigation }) => {
 				</View>
 				<View style={[settingStyles.optionsContainer(theme), { marginTop: 10, marginBottom: 5 }]}>
 					<OptionInput
-						title={t("settings.addServer.Network")}
-						placeholder={t("settings.addServer.Network Placeholder")}
+						title={t("settings.connect.Network")}
+						placeholder={t("settings.connect.Network Placeholder")}
 						value={network}
 						placeholderTextColor={theme.primaryText}
 						onChangeText={network => setNetwork(network)}
@@ -194,19 +210,27 @@ const AddServer = ({ navigation }) => {
 								>
 									<Icon name="wifi" size={size.icon.tiny} color={ssid === network ? theme.innerTouch : theme.primaryText} style={{ marginEnd: 5 }} />
 									<Text style={{ color: ssid === network ? theme.innerTouch : theme.primaryText, fontSize: size.text.small }}>
-										{ssid === currentNetwork ? t('settings.addServer.Current') + ' · ' : ''}{ssid}
+										{ssid === currentNetwork ? t('settings.connect.Current') + ' · ' : ''}{ssid}
 									</Text>
 								</Pressable>
 							))}
 						</View>
 					)}
 					<ButtonSwitch
-						title={t("settings.addServer.Network only")}
+						title={t("settings.connect.Use current network")}
 						value={network === currentNetwork && !!currentNetwork}
-						onPress={() => setNetwork(currentNetwork)}
+						onPress={async () => {
+							const ssid = await detectNetwork(true)
+							if (ssid) setNetwork(ssid)
+						}}
 						isLast
 					/>
 				</View>
+				{networkHint.length > 0 && (
+					<Text style={settingStyles.description(theme)}>
+						{networkHint}
+					</Text>
+				)}
 				<View style={[settingStyles.optionsContainer(theme), { marginTop: 10, marginBottom: 5 }]}>
 					<ButtonSwitch
 						title={t("settings.connect.Show Password")}

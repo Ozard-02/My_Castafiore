@@ -37,12 +37,14 @@
 5. **Local WiFi Management** ✅ done
    - I can already insert more than onw server, nut i have to swhich manually, i want this to be network specific, not just wifi/data but select a spsecific wifi network and it will switch automatically
    - ✅ Done: optional "Network (WiFi)" per server in AddServer (type name or tap a chip: current
-     SSID first, then previously used networks); "Only connect on this network" switch; app
-     auto-switches to the matching server on launch / on network change (AppState).
-     `expo-network` added; permissions `ACCESS_WIFI_STATE`+`ACCESS_FINE_LOCATION` added manually
-     (do NOT prebuild). See `plans/local-wifi-management.md`.
+     SSID first, then previously used networks); "Use current network" switch fills the field with
+     the connected SSID (requests location permission on first use); app auto-switches to the matching
+     server on launch / on network change, and returns to the last manually-used server when you leave
+     the bound network. `@react-native-community/netinfo` added (expo-network removed — its
+     `getWifiSsid()` was deleted in v7). Permissions `ACCESS_WIFI_STATE`+`ACCESS_FINE_LOCATION` added
+     manually (do NOT prebuild). See `plans/local-wifi-management.md`.
    - Known ceiling: current-SSID detection on Android 10+ needs location permission/services;
-     manual name + history always work. Runtime location prompt deferred.
+     manual name + history always work.
 
 6. **Lyrics Background** ✅ done
    - when showing lyrics use album art as background but with some transparency blur effect
