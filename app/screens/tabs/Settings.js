@@ -91,6 +91,11 @@ const Settings = ({ navigation }) => {
 					title={t("Cache")}
 					icon="database"
 					onPress={() => navigation.navigate('Settings/Cache')}
+				/>
+				<ButtonMenu
+					title={t("Downloads")}
+					icon="cloud-download"
+					onPress={() => navigation.navigate('Settings/Downloads')}
 					isLast
 				/>
 			</View>

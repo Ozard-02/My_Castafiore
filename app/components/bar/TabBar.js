@@ -5,6 +5,7 @@ import { useSettings } from '~/contexts/settings'
 import Player from '~/components/player/Player'
 import BottomBar from '~/components/bar/BottomBar'
 import SideBar from '~/components/bar/SideBar'
+import DownloadBanner from '~/components/banner/DownloadBanner'
 
 const TabBar = ({ state, descriptors, navigation }) => {
 	const config = useConfig()
@@ -23,6 +24,7 @@ const TabBar = ({ state, descriptors, navigation }) => {
 					<SideBar state={state} descriptors={descriptors} navigation={navigation} />
 					: <BottomBar state={state} descriptors={descriptors} navigation={navigation} />
 			}
+			{!settings.isDesktop && <DownloadBanner navigation={navigation} />}
 			<Player state={state} />
 		</>
 	)

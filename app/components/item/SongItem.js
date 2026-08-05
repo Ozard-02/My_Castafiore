@@ -9,6 +9,7 @@ import { useSettings } from '~/contexts/settings'
 import { useSongDispatch } from '~/contexts/song'
 import { useTheme } from '~/contexts/theme'
 import { urlCover } from '~/utils/url'
+import { useDownloads, getSongState } from '~/utils/downloadManager'
 import FavoritedButton from '~/components/button/FavoritedButton'
 import ImageError from '~/components/ImageError'
 import mainStyles from '~/styles/main'
@@ -19,22 +20,39 @@ const Cached = ({ song }) => {
 	const theme = useTheme()
 	const settings = useSettings()
 	const config = useConfig()
+	useDownloads()
+	const { status, progress } = getSongState(song.id)
 
 	React.useEffect(() => {
-		cached(song)
+		if (!settings.showCache) return
+		isSongCached(config, song.id, settings.streamFormat, settings.maxBitrate)
 			.then((res) => {
 				setIsCached(res)
 			})
 	}, [song.id, settings.showCache])
 
-	const cached = async (song) => {
-		if (!settings.showCache) return false
-		const cache = await isSongCached(config, song.id, settings.streamFormat, settings.maxBitrate)
-		if (cache) return true
-		return false
-	}
-
-	if (isCached) return (
+	if (status === 'downloading') return (
+		<Text style={[mainStyles.smallText(theme.secondaryText), { paddingHorizontal: 5 }]}>
+			{Math.round(progress * 100)}%
+		</Text>
+	)
+	if (status === 'queued' || status === 'paused') return (
+		<Icon
+			name={status === 'queued' ? 'clock-o' : 'pause'}
+			size={14}
+			color={theme.secondaryText}
+			style={{ paddingHorizontal: 5 }}
+		/>
+	)
+	if (status === 'error') return (
+		<Icon
+			name="exclamation-circle"
+			size={14}
+			color="red"
+			style={{ paddingHorizontal: 5 }}
+		/>
+	)
+	if ((status === 'done' || isCached) && settings.showCache) return (
 		<Icon
 			name="cloud-download"
 			size={14}

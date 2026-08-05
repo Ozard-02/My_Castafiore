@@ -1,11 +1,10 @@
 import TrackPlayer, { AppKilledPlaybackBehavior, Capability, RepeatMode, State, useProgress, Event, useTrackPlayerEvents } from 'react-native-track-player'
-import * as FileSystem from 'expo-file-system'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 
 import { urlCover, urlStream } from '~/utils/url'
 import { isSongCached, getPathSong } from '~/utils/cache'
+import { enqueueSong } from '~/utils/downloadManager'
 import MyState from '~/utils/playerState'
-import logger from '~/utils/logger'
 
 let isConnected = true
 
@@ -98,49 +97,8 @@ const stopSong = async () => {
 	await TrackPlayer.stop()
 }
 
-const getHeader = (headers, key) => {
-	if (!headers || !key) return null
-	const header = Object.keys(headers).find(h => h.toLowerCase() === key.toLowerCase())
-	return header ? headers[header] : null
-}
-
-const returnFail = async (partUri, urlStream, id) => {
-	global.songsDownloading = global.songsDownloading.filter(songId => songId !== id)
-	await FileSystem.deleteAsync(partUri)
-	return urlStream
-}
-
-const downloadSong = async (urlStream, id) => {
-	if (global.songsDownloading.indexOf(id) >= 0) return urlStream
-	const fileUri = getPathSong(id, global.streamFormat)
-	const partUri = `${fileUri}.part`
-	global.songsDownloading.push(id)
-
-	if (await isSongCached(null, id, global.streamFormat, global.maxBitRate)) return fileUri
-	try {
-		const res = await FileSystem.downloadAsync(urlStream, partUri)
-		const contentType = getHeader(res?.headers, 'content-type')
-		const contentLength = parseInt(getHeader(res?.headers, 'content-length'), 10)
-		const realSize = await FileSystem.getInfoAsync(partUri).then(info => info.size)
-
-		if (res?.status !== 200) {
-			logger.error('downloadSong', `Error downloading song, status not 200 (${res?.status})`)
-			return await returnFail(partUri, urlStream, id)
-		} else if (!contentType?.includes('audio')) {
-			logger.error('downloadSong', `Error downloading song, content-type not audio (${contentType})`)
-			return await returnFail(partUri, urlStream, id)
-		} else if ((!isNaN(contentLength) && realSize !== contentLength) || realSize === 0) {
-			logger.error('downloadSong', `Error downloading song, size mismatch (real: ${realSize} / content-length: ${contentLength})`)
-			return await returnFail(partUri, urlStream, id)
-		} else {
-			await FileSystem.moveAsync({ from: partUri, to: fileUri })
-			global.listCacheSong.push(`${id}.${global.streamFormat}`)
-			return fileUri
-		}
-	} catch (error) {
-		logger.error('downloadSong', error)
-		return await returnFail(partUri, urlStream, id)
-	}
+const downloadSong = async (song, source = null) => {
+	await enqueueSong(song, source)
 }
 
 const downloadNextSong = async (queue, currentIndex) => {
@@ -149,8 +107,9 @@ const downloadNextSong = async (queue, currentIndex) => {
 
 	for (let i = -1; i < maxIndex; i++) {
 		const index = (currentIndex + queue.length + i) % queue.length
-		if (!queue[index].isLiveStream && queue[index].id.match(/^[a-zA-Z0-9-]*$/)) {
-			await downloadSong(urlStream(global.config, queue[index].id, global.streamFormat, global.maxBitRate), queue[index].id)
+		const track = queue[index]
+		if (track && !track.isLiveStream && track.id.match(/^[a-zA-Z0-9-]*$/)) {
+			await enqueueSong(track, null)
 		}
 	}
 }

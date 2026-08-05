@@ -10,6 +10,7 @@ import FavoritedButton from '~/components/button/FavoritedButton'
 import mainStyles from '~/styles/main'
 import presStyles from '~/styles/pres'
 import RandomButton from '~/components/button/RandomButton'
+import DownloadButton from '~/components/button/DownloadButton'
 import SongsList from '~/components/lists/SongsList'
 import size from '~/styles/size'
 import PresHeader from '~/components/PresHeader'
@@ -56,6 +57,16 @@ const Album = ({ navigation, route: { params } }) => {
 			>
 				<FavoritedButton id={params.id} isFavorited={isStarred} style={[presStyles.button, { paddingEnd: 0 }]} size={size.icon.medium} />
 				<RandomButton songList={songs} size={size.icon.medium} />
+				<DownloadButton
+					type="album"
+					id={album?.id || params.id}
+					name={album?.name || album?.album || album?.title || params.name || params.album || params.title}
+					artist={album?.artist || params.artist || '-'}
+					cover={urlCover(config, album || params)}
+					songs={songs}
+					size={size.icon.medium}
+					style={presStyles.button}
+				/>
 			</PresHeader>
 			<OptionsAlbum
 				album={album || params}

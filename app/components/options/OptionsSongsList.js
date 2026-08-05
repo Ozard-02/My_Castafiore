@@ -11,6 +11,7 @@ import { playSong, addToQueue } from '~/utils/player'
 import { useSettings } from '~/contexts/settings'
 import { useSong, useSongDispatch } from '~/contexts/song'
 import { urlCover } from '~/utils/url'
+import { enqueueSong } from '~/utils/downloadManager'
 import OptionsPopup from '~/components/popup/OptionsPopup'
 import size from '~/styles/size'
 
@@ -130,19 +131,24 @@ const OptionsSongsList = ({ songs, indexOptions, setIndexOptions, onUpdate = () 
 	}
 
 	const downloadSong = async () => {
+		const track = songs[indexOptions]
 		refOption.current.close()
-		fetch(urlStream(config, songs[indexOptions].id))
-			.then((res) => res.blob())
-			.then((data) => {
-				const a = document.createElement('a')
-				a.download = `${songs[indexOptions].artist} - ${songs[indexOptions].title}.mp3`
-				a.href = URL.createObjectURL(data)
-				a.addEventListener('click', () => {
-					setTimeout(() => URL.revokeObjectURL(a.href), 1 * 1000)
+		if (Platform.OS === 'web') {
+			fetch(urlStream(config, track.id))
+				.then((res) => res.blob())
+				.then((data) => {
+					const a = document.createElement('a')
+					a.download = `${track.artist} - ${track.title}.mp3`
+					a.href = URL.createObjectURL(data)
+					a.addEventListener('click', () => {
+						setTimeout(() => URL.revokeObjectURL(a.href), 1 * 1000)
+					})
+					a.click()
 				})
-				a.click()
-			})
-			.catch(() => { })
+				.catch(() => { })
+		} else {
+			enqueueSong(track, null)
+		}
 	}
 
 	const shareSong = () => {
@@ -226,8 +232,7 @@ const OptionsSongsList = ({ songs, indexOptions, setIndexOptions, onUpdate = () 
 				{
 					name: t('Download'),
 					icon: 'download',
-					onPress: downloadSong,
-					hidden: Platform.OS !== 'web'
+					onPress: downloadSong
 				},
 				{
 					name: t('Share'),

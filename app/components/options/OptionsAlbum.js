@@ -5,10 +5,10 @@ import { useTranslation } from 'react-i18next'
 
 import { useConfig } from '~/contexts/config'
 import { getApi, getApiNetworkFirst } from '~/utils/api'
-import { urlStream } from '~/utils/url'
-import { playSong, downloadSong, addToQueue } from '~/utils/player'
+import { urlCover } from '~/utils/url'
+import { playSong, addToQueue } from '~/utils/player'
 import { useSong, useSongDispatch } from '~/contexts/song'
-import { useSettings } from '~/contexts/settings'
+import { enqueueCollection } from '~/utils/downloadManager'
 import OptionsPopup from '~/components/popup/OptionsPopup'
 
 const OptionsAlbum = ({ album, isOpen, onClose }) => {
@@ -16,7 +16,6 @@ const OptionsAlbum = ({ album, isOpen, onClose }) => {
 	const config = useConfig()
 	const navigation = useNavigation()
 	const refOption = React.useRef()
-	const settings = useSettings()
 	const songDispatch = useSongDispatch()
 	const song = useSong()
 
@@ -69,13 +68,18 @@ const OptionsAlbum = ({ album, isOpen, onClose }) => {
 					hidden: !song.queue?.length
 				},
 				{
-					name: t('Cache all songs'),
+					name: t('Download'),
 					icon: 'cloud-download',
 					onPress: async () => {
 						refOption.current.close()
-						for (const song of album.song) {
-							await downloadSong(urlStream(config, song.id, settings.streamFormat, settings.maxBitRate), song.id)
-						}
+						enqueueCollection({
+							type: 'album',
+							id: album.id,
+							name: album.name || album.album || album.title,
+							artist: album.artist,
+							cover: urlCover(config, album),
+							songs: album.song || [],
+						})
 					}
 				},
 				{

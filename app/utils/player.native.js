@@ -67,8 +67,8 @@ export const stopSong = async () => {
 	return getPlayer().stopSong()
 }
 
-export const downloadSong = async (urlStream, id) => {
-	return getPlayer().downloadSong(urlStream, id)
+export const downloadSong = async (song, source = null) => {
+	return getPlayer().downloadSong(song, source)
 }
 
 export const downloadNextSong = async (queue, currentIndex) => {

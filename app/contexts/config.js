@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { initCacheSong } from '~/utils/cache'
+import { initDownloads } from '~/utils/downloadManager'
 import React from 'react'
 
 const getConfig = async () => {
@@ -27,6 +28,7 @@ export const ConfigProvider = ({ children }) => {
 		const folderCache = config.url.replace(/[^a-zA-Z0-9]/g, '_')
 		global.config = { ...config, folderCache }
 		initCacheSong()
+		initDownloads()
 		global.songsDownloading = []
 	}, [config])
 

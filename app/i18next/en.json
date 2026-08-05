@@ -3,7 +3,7 @@
     "tabs": {
       "Home": "Home",
       "Search": "Search",
-      "Tracks": "Tracks",
+      "Music": "Music",
       "Playlists": "Playlists",
       "Settings": "Settings"
     },
@@ -33,6 +33,10 @@
         "Show Password": "Show Password",
         "Legacy authentication": "Legacy Authentication",
         "Legacy Description": "Legacy authentication sends the password in plain text without any hashing.",
+        "Network": "Network (WiFi)",
+        "Network Placeholder": "Optional",
+        "Current": "Current",
+        "Network only": "Only connect on this network",
         "Connect": "Connect",
         "Alert Delete Title": "Delete Server",
         "Alert Delete Message": "Are you sure you want to delete this server?",
@@ -69,11 +73,7 @@
         "Max bitrate Description": "Specify the maximum bit rate in kilobits per second for the stream to be played. Lower bit rates will consume less data but may result in lower audio quality.",
         "Play seed first": "Play seed song first",
         "Save last queue": "Save last queue",
-        "Save last queue Description": "Automatically save the last queue you played. You activate the 'Last queue' section on the home page to access it.",
-        "Lyrics background": "Lyrics Background",
-        "Lyrics background Description": "Choose the background style for the lyrics view.",
-        "Album cover": "Album Cover",
-        "Solid color": "Solid Color"
+        "Save last queue Description": "Automatically save the last queue you played. You activate the 'Last queue' section on the home page to access it."
       },
       "theme": {
         "Player Theme": "Player Theme"
@@ -89,6 +89,25 @@
         "Clear cache alert message": "Are you sure you want to clear the cache?",
         "Cache stats": "Cache stats",
         "No cache": "No cache"
+      },
+      "downloads": {
+        "Active downloads": "Active downloads",
+        "Downloaded": "Downloaded",
+        "Individual songs": "Individual songs",
+        "Remove download": "Remove download",
+        "Remove download alert": "Do you want to delete this download?",
+        "Clear all": "Clear all",
+        "Clear all alert": "Do you want to delete all downloads?",
+        "Speed": "Speed",
+        "Active": "Active",
+        "In queue": "In queue",
+        "Paused": "Paused",
+        "Queued": "Queued",
+        "Failed": "Failed",
+        "No downloads": "No downloads",
+        "Items queued": "Items queued",
+        "Cancel download": "Cancel download",
+        "Cancel download alert": "Do you want to cancel this download?"
       },
       "shares": {
         "No shares found": "No shares found",
@@ -120,7 +139,7 @@
     "Artists": "Artists",
     "Cache all songs": "Cache all songs",
     "Cache": "Cache",
-    "Tracks": "Tracks",
+    "Music": "Music",
     "Cancel": "Cancel",
     "Clear": "Clear",
     "Connect": "Connect",
@@ -134,6 +153,7 @@
     "Disable repeat queue": "Disable repeat queue",
     "Disconnect": "Disconnect",
     "Download": "Download",
+    "Downloads": "Downloads",
     "Edit playlist": "Edit playlist",
     "Edit radio": "Edit radio",
     "Enable repeat queue": "Enable repeat queue",

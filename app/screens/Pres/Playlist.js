@@ -13,6 +13,7 @@ import mainStyles from '~/styles/main'
 import OptionsSongsList from '~/components/options/OptionsSongsList'
 import presStyles from '~/styles/pres'
 import RandomButton from '~/components/button/RandomButton'
+import DownloadButton from '~/components/button/DownloadButton'
 import SongItem from '~/components/item/SongItem'
 import OptionsPlaylist from '~/components/options/OptionsPlaylist'
 
@@ -65,6 +66,14 @@ const Playlist = ({ route: { params } }) => {
 							}}
 						>
 							<RandomButton songList={songs} style={presStyles.button} />
+							<DownloadButton
+								type="playlist"
+								id={info?.id || params.playlist.id}
+								name={info?.name || params.playlist.name}
+								cover={urlCover(config, params.playlist)}
+								songs={songs}
+								style={presStyles.button}
+							/>
 						</PresHeader>
 						<OptionsPlaylist
 							playlist={info}

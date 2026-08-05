@@ -5,9 +5,8 @@ import { useTranslation } from 'react-i18next'
 
 import { useConfig } from '~/contexts/config'
 import { getApi } from '~/utils/api'
-import { urlStream } from '~/utils/url'
-import { downloadSong } from '~/utils/player'
-import { useSettings } from '~/contexts/settings'
+import { urlCover } from '~/utils/url'
+import { enqueueCollection } from '~/utils/downloadManager'
 import OptionsPopup from '~/components/popup/OptionsPopup'
 
 const OptionsPlaylist = ({ playlist, open, onClose, onRefresh }) => {
@@ -15,7 +14,6 @@ const OptionsPlaylist = ({ playlist, open, onClose, onRefresh }) => {
 	const navigation = useNavigation()
 	const config = useConfig()
 	const refOption = React.useRef()
-	const settings = useSettings()
 
 	if (!playlist) return null
 	return (
@@ -26,13 +24,17 @@ const OptionsPlaylist = ({ playlist, open, onClose, onRefresh }) => {
 			item={playlist}
 			options={[
 				{
-					name: t('Cache all songs'),
+					name: t('Download'),
 					icon: 'cloud-download',
 					onPress: async () => {
 						refOption.current.close()
-						for (const song of playlist.entry) {
-							await downloadSong(urlStream(config, song.id, settings.streamFormat, settings.maxBitRate), song.id)
-						}
+						enqueueCollection({
+							type: 'playlist',
+							id: playlist.id,
+							name: playlist.name,
+							cover: urlCover(config, playlist),
+							songs: playlist.entry || [],
+						})
 					}
 				},
 				{
