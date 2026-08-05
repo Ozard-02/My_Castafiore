@@ -65,6 +65,7 @@ export const demoServers = [
 
 export const defaultSettings = {
 	isDesktop: false,
+	networks: [],
 	servers: [
 		{
 			name: 'Demo',
@@ -105,9 +106,8 @@ export const defaultSettings = {
 	maxBitRate: 0,
 	playSeedFirst: false,
 	repeatQueue: true,
-	// Lyrics settings
-	lyricsBackground: 'cover',
-
+	// View settings
+	gridView: false,
 	// Playlist settings
 	reversePlaylist: false,
 	orderPlaylist: 'title',

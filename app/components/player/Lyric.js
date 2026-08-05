@@ -1,15 +1,12 @@
 import React from 'react'
-import { Text, FlatList, Pressable, View, StyleSheet } from 'react-native'
+import { Text, FlatList, Pressable } from 'react-native'
 import { useTranslation } from 'react-i18next'
 
 import { useTheme } from '~/contexts/theme'
 import { useConfig } from '~/contexts/config'
-import { useSettings } from '~/contexts/settings'
 import { getApi } from '~/utils/api'
 import { parseLrc } from '~/utils/lrc'
-import { urlCover } from '~/utils/url'
 import Player from '~/utils/player'
-import ImageError from '~/components/ImageError'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 
 const Lyric = ({ song, style, color = null, sizeText = 23 }) => {
@@ -18,7 +15,6 @@ const Lyric = ({ song, style, color = null, sizeText = 23 }) => {
 	const [lyrics, setLyrics] = React.useState([])
 	const [isLayout, setIsLayout] = React.useState(false)
 	const config = useConfig()
-	const settings = useSettings()
 	const refScroll = React.useRef(null)
 	const theme = useTheme()
 	const time = Player.updateTime()
@@ -95,50 +91,35 @@ const Lyric = ({ song, style, color = null, sizeText = 23 }) => {
 	}
 
 	return (
-		<View style={[style, { borderRadius: null, overflow: 'hidden' }]}>
-			{settings.lyricsBackground === 'cover' ? (
-				<ImageError
-					source={{ uri: urlCover(config, song?.songInfo) }}
-					style={StyleSheet.absoluteFill}
-					blurRadius={30}
-				/>
-			) : (
-				<View style={[StyleSheet.absoluteFill, { backgroundColor: theme.secondaryBack }]} />
-			)}
-			<View style={[StyleSheet.absoluteFill, {
-				backgroundColor: theme.primaryBack,
-				opacity: theme.barStyle === 'light' ? 0.3 : 0.7,
-			}]} />
-			<FlatList
-				ref={refScroll}
-				style={{ borderRadius: null }}
-				contentContainerStyle={{ gap: 30 }}
-				showsVerticalScrollIndicator={false}
-				onScrollToIndexFailed={() => { }}
-				initialNumToRender={lyrics.length}
-				data={lyrics}
-				onLayout={() => setIsLayout(true)}
-				keyExtractor={(item, index) => index}
-				renderItem={({ item, index }) => {
-					return (
-						<Pressable
-							onPress={() => {
-								Player.setPosition(item.time)
-							}}
-						>
-							<Text
-								style={{
-									color: index === indexCurrent ? color?.active || theme.primaryText : color?.inactive || theme.secondaryText,
-									fontSize: sizeText,
-									textAlign: 'center',
-								}}>
-								{item.text.length ? item.text : '...'}
-							</Text>
-						</Pressable>
-					)
-				}}
-			/>
-		</View>
+		<FlatList
+			ref={refScroll}
+			style={[style, { borderRadius: null }]}
+			contentContainerStyle={{ gap: 30 }}
+			showsVerticalScrollIndicator={false}
+			onScrollToIndexFailed={() => { }}
+			initialNumToRender={lyrics.length}
+			data={lyrics}
+			onLayout={() => setIsLayout(true)}
+			keyExtractor={(item, index) => index}
+			renderItem={({ item, index }) => {
+				return (
+					<Pressable
+						onPress={() => {
+							Player.setPosition(item.time)
+						}}
+					>
+						<Text
+							style={{
+								color: index === indexCurrent ? color?.active || theme.primaryText : color?.inactive || theme.secondaryText,
+								fontSize: sizeText,
+								textAlign: 'center',
+							}}>
+							{item.text.length ? item.text : '...'}
+						</Text>
+					</Pressable>
+				)
+			}}
+		/>
 	)
 }
 

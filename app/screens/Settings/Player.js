@@ -108,24 +108,6 @@ const PlayerSettings = () => {
 					/>
 				</View>
 				<Text style={settingStyles.description(theme)}>{t('settings.player.Save last queue Description')}</Text>
-
-				<Text style={settingStyles.titleContainer(theme)}>{t('settings.player.Lyrics background')}</Text>
-				<View style={settingStyles.optionsContainer(theme)}>
-					<SelectItem
-						text={t('settings.player.Album cover')}
-						icon={'image'}
-						isSelect={settings.lyricsBackground === 'cover'}
-						onPress={() => { setSettings({ ...settings, lyricsBackground: 'cover' }) }}
-					/>
-					<SelectItem
-						text={t('settings.player.Solid color')}
-						icon={'paint-brush'}
-						isSelect={settings.lyricsBackground === 'color'}
-						onPress={() => { setSettings({ ...settings, lyricsBackground: 'color' }) }}
-						isLast
-					/>
-				</View>
-				<Text style={settingStyles.description(theme)}>{t('settings.player.Lyrics background Description')}</Text>
 			</View>
 		</ScrollView>
 	)
