@@ -2,11 +2,22 @@
 
 ## Planned Features
 
-1. **Different Queue Management**
+1. **Different Queue Management** ✅ done
    - Add queue reordering via drag-and-drop
    - Show queue as a modal/list with move-to-top, move-to-bottom, remove options
    - Separate "up next" queue from the full playback queue
 	 - Shuffle should  act only on actual queue not up next
+   - ✅ Done: new persisted `upNext` array in the song reducer. "Play next" inserts at the front of
+     "up next" (`addToUpNext(atStart=true)`); "Add to queue" still appends to the main queue.
+     `nextSong` drains up next first (shuffle/repeat/random never touch it). Tapping a queue song
+     or starting a new queue clears up next. Auto-advance syncs through the local player
+     (`PlaybackActiveTrackChanged` → new `syncGlobal` reducer case) and end-of-queue stop checks
+     (servicePlayback/cast/upnp) skip stopping while up next is non-empty.
+   - QUEUE view (full-screen + desktop) splits into an "Up next" section + the main queue.
+   - Reordering: drag-and-drop via a grab handle (`QueueDragRow`, PanResponder + Animated, edge
+     autoscroll, scroll-compensated) plus Move to top/up/down/bottom + remove in the long-press
+     menu (`OptionsQueue`, new `OptionsUpNext`).
+   - Plan: `plans/queue-management.md`.
 
 2. **Whole Album Play Next** ✅ done
    - Add "Play next" option for entire albums (queue all album tracks after current song)

@@ -24,7 +24,7 @@ const useEvent = (song, songDispatch, nextSong) => {
 				.catch(() => { })
 			if (global.song.actionEndOfSong === 'repeat') {
 				UPNP.seek(device, 0)
-			} else if (!global.repeatQueue && global.song.index === global.song.queue.length - 1) {
+			} else if (!global.repeatQueue && global.song.index === global.song.queue.length - 1 && !global.song.upNext?.length) {
 				UPNP.stop(device)
 			} else nextSong(global.config, global.song, songDispatch)
 		}))

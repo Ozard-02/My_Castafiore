@@ -63,7 +63,7 @@ const Cached = ({ song }) => {
 	return null
 }
 
-const SongItem = ({ song, queue, index, isIndex = false, isPlaying = false, setIndexOptions = () => { }, onPress = () => true, style = {} }) => {
+const SongItem = ({ song, queue, index, isIndex = false, isPlaying = false, setIndexOptions = () => { }, onPress = () => true, style = {}, handle = null }) => {
 	const songDispatch = useSongDispatch()
 	const theme = useTheme()
 	const config = useConfig()
@@ -122,6 +122,7 @@ const SongItem = ({ song, queue, index, isIndex = false, isPlaying = false, setI
 				rating={song?.userRating ?? song?.rating ?? 0}
 				style={{ padding: 5, paddingStart: 10 }}
 			/>
+			{handle}
 		</Pressable>
 	)
 }

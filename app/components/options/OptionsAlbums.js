@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next'
 import { getApi } from '~/utils/api'
 import { useConfig } from '~/contexts/config'
 import OptionsPopup from '~/components/popup/OptionsPopup'
-import { playSong, addToQueue } from '~/utils/player'
+import { playSong, addToQueue, addToUpNext } from '~/utils/player'
 import { useSong, useSongDispatch } from '~/contexts/song'
 import { getApiNetworkFirst, getApiCacheFirst } from '~/utils/api'
 
@@ -47,9 +47,7 @@ const OptionsAlbums = ({ albums, indexOptions, setIndexOptions }) => {
 						getApiCacheFirst(config, 'getAlbum', { id: albums[indexOptions].id })
 							.then((json) => {
 								if (json.album?.song?.length) {
-									for (let i = json.album.song.length - 1; i >= 0; i--) {
-										addToQueue(songDispatch, json.album.song[i], song.index + 1)
-									}
+									addToUpNext(songDispatch, json.album.song, true)
 								}
 							})
 							.catch(() => { })

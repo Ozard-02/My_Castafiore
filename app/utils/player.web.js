@@ -215,6 +215,12 @@ export const setIndex = async (config, songDispatch, queue, index) => {
 }
 
 export const nextSong = async (config, song, songDispatch) => {
+	if (song.upNext?.length) {
+		const track = song.upNext[0]
+		songDispatch({ type: 'nextUpNext' })
+		await loadSong(config, [track], 0)
+		return
+	}
 	if (song.queue) {
 		if (song.actionEndOfSong === 'random') await setIndex(config, songDispatch, song.queue, nextRandomIndex())
 		else {
@@ -333,6 +339,23 @@ export const addToQueue = (songDispatch, track, index = null) => {
 	songDispatch({ type: 'addToQueue', track, index })
 }
 
+// atStart: insert at the front of the "up next" list (play next), else append (add to queue)
+export const addToUpNext = (songDispatch, track, atStart = false) => {
+	songDispatch({ type: 'addToUpNext', track, atStart })
+}
+
+export const removeFromUpNext = async (songDispatch, index) => {
+	songDispatch({ type: 'removeFromUpNext', index })
+}
+
+export const moveUpNext = async (songDispatch, from, to) => {
+	songDispatch({ type: 'moveUpNext', from, to })
+}
+
+export const moveInQueue = async (songDispatch, from, to) => {
+	songDispatch({ type: 'moveInQueue', from, to })
+}
+
 export default {
 	initService,
 	initPlayer,
@@ -356,6 +379,10 @@ export default {
 	resetAudio,
 	addToQueue,
 	removeFromQueue,
+	addToUpNext,
+	removeFromUpNext,
+	moveUpNext,
+	moveInQueue,
 	setIndex,
 	State,
 }

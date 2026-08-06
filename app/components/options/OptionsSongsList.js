@@ -7,7 +7,7 @@ import { useConfig } from '~/contexts/config'
 import { getApi, getApiNetworkFirst } from '~/utils/api'
 import { urlStream } from '~/utils/url'
 import { isSongCached } from '~/utils/cache'
-import { playSong, addToQueue } from '~/utils/player'
+import { playSong, addToQueue, addToUpNext } from '~/utils/player'
 import { useSettings } from '~/contexts/settings'
 import { useSong, useSongDispatch } from '~/contexts/song'
 import { urlCover } from '~/utils/url'
@@ -55,7 +55,7 @@ const OptionsSongsList = ({ songs, indexOptions, setIndexOptions, onUpdate = () 
 
 	const playNext = () => {
 		if (song.queue) {
-			addToQueue(songDispatch, songs[indexOptions], song.index + 1)
+			addToUpNext(songDispatch, songs[indexOptions], true)
 		} else {
 			playSong(config, songDispatch, [songs[indexOptions]], 0)
 		}

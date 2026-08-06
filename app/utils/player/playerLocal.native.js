@@ -74,7 +74,10 @@ const useEvent = (song, songDispatch, _nextSong) => {
 			if (event.type === Event.PlaybackState) {
 				songDispatch({ type: 'setState', state: convertState(event.state) })
 			} else if (event.type === Event.PlaybackActiveTrackChanged) {
-				if (global.song.index != undefined && song.index != global.song.index) {
+				const current = global.song
+				if (current?.songInfo && (song.songInfo?.id !== current.songInfo.id || (song.upNext?.length || 0) !== (current.upNext?.length || 0))) {
+					songDispatch({ type: 'syncGlobal', song: current })
+				} else if (global.song.index != undefined && song.index != global.song.index) {
 					songDispatch({ type: 'setIndex', index: global.song.index })
 				}
 			}

@@ -7,7 +7,7 @@ import { useConfig } from '~/contexts/config'
 import { getApi } from '~/utils/api'
 import { useSong, useSongDispatch } from '~/contexts/song'
 import { urlCover } from '~/utils/url'
-import { removeFromQueue } from '~/utils/player'
+import { removeFromQueue, moveInQueue } from '~/utils/player'
 import size from '~/styles/size'
 import OptionsPopup from '~/components/popup/OptionsPopup'
 
@@ -118,6 +118,42 @@ const OptionsQueue = ({ queue, indexOptions, setIndexOptions, closePlayer }) => 
 						Linking.openURL(queue[indexOptions].homePageUrl)
 					},
 					hidden: indexOptions >= 0 && !queue[indexOptions].homePageUrl
+				},
+				{
+					name: t('Move to top'),
+					icon: 'angle-double-up',
+					onPress: () => {
+						moveInQueue(songDispatch, indexOptions, 0)
+						refOption.current.close()
+					},
+					hidden: song.index === indexOptions || indexOptions === 0
+				},
+				{
+					name: t('Move up'),
+					icon: 'angle-up',
+					onPress: () => {
+						moveInQueue(songDispatch, indexOptions, indexOptions - 1)
+						refOption.current.close()
+					},
+					hidden: song.index === indexOptions || indexOptions === 0
+				},
+				{
+					name: t('Move down'),
+					icon: 'angle-down',
+					onPress: () => {
+						moveInQueue(songDispatch, indexOptions, indexOptions + 1)
+						refOption.current.close()
+					},
+					hidden: song.index === indexOptions || indexOptions === queue.length - 1
+				},
+				{
+					name: t('Move to bottom'),
+					icon: 'angle-double-down',
+					onPress: () => {
+						moveInQueue(songDispatch, indexOptions, queue.length - 1)
+						refOption.current.close()
+					},
+					hidden: song.index === indexOptions || indexOptions === queue.length - 1
 				},
 				{
 					name: t('Remove from queue'),

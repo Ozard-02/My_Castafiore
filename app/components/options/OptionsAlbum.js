@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next'
 import { useConfig } from '~/contexts/config'
 import { getApi, getApiNetworkFirst } from '~/utils/api'
 import { urlCover } from '~/utils/url'
-import { playSong, addToQueue } from '~/utils/player'
+import { playSong, addToQueue, addToUpNext } from '~/utils/player'
 import { useSong, useSongDispatch } from '~/contexts/song'
 import { enqueueCollection } from '~/utils/downloadManager'
 import OptionsPopup from '~/components/popup/OptionsPopup'
@@ -49,10 +49,7 @@ const OptionsAlbum = ({ album, isOpen, onClose }) => {
 					icon: 'play-circle',
 					onPress: () => {
 						refOption.current.close()
-						const songs = album.song || []
-						for (let i = songs.length - 1; i >= 0; i--) {
-							addToQueue(songDispatch, songs[i], song.index + 1)
-						}
+						addToUpNext(songDispatch, album.song || [], true)
 					},
 					hidden: !song.queue?.length
 				},

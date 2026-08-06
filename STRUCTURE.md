@@ -26,7 +26,7 @@ ConfigProvider -> SongProvider -> SettingsProvider -> ThemeProvider -> UpdateApi
 ```
 
 - **ConfigProvider**: Loads server connection config from AsyncStorage into `global.config`.
-- **SongProvider**: Music playback state via a reducer (`songReducer`). Holds queue, current index, playback state, action-on-end-of-song mode, random indices.
+- **SongProvider**: Music playback state via a reducer (`songReducer`). Holds main queue (`queue`), a separate "up next" list (`upNext`), current index, playback state, action-on-end-of-song mode, random indices.
 - **SettingsProvider**: App settings (theme, language, home layout, cache, player prefs). Persists to AsyncStorage. Exports `defaultSettings` and `homeSections`.
 - **ThemeProvider**: Resolves theme object from `settings.theme` + `settings.themePlayer`. Sets `window` background on web.
 - **UpdateApiProvider**: Lightweight pub/sub for cache invalidation -- fires `updateApi` changes so other components can re-read their cache.
@@ -216,8 +216,9 @@ Playback state enum: `Playing`, `Paused`, `Stopped`, `Loading`, `Error`, `None`.
 | Player.js | Top-level player container. Shows `BoxPlayer` or `FullScreenPlayer` based on state. |
 | BoxPlayer.js | Mini player (mobile, fixed at bottom). Cover, title, play/next buttons. PanResponder swipe: horizontal = next/prev song, vertical up = expand. |
 | BoxDesktopPlayer.js | Mini player for desktop layout (fixed sidebar). Includes progress bar and volume. |
-| FullScreenPlayer.js | Full-screen modal player with cover, queue list, lyrics. Lyrics background fills the whole screen. |
-| FullScreenHorizontalPlayer.js | Full-screen horizontal layout of player (desktop). |
+| FullScreenPlayer.js | Full-screen modal player with cover, queue list ("Up next" + main queue), lyrics. Lyrics background fills the whole screen. |
+| FullScreenHorizontalPlayer.js | Full-screen horizontal layout of player (desktop); same queue view. |
+| QueueDragRow.js | Wraps a queue row with a PanResponder drag handle (Animated translateY, edge autoscroll); drop → `moveInQueue`/`moveUpNext`. |
 | Lyric.js | Synchronized lyrics display. Fetches from server, caches locally, falls back to LrcLib API. |
 
 ### Bar Components (app/components/bar/)
@@ -321,7 +322,8 @@ Playback state enum: `Playing`, `Paused`, `Stopped`, `Loading`, `Error`, `None`.
 | OptionsPlaylists.js | Multi-playlist selection for batch operations. |
 | OptionsFavorited.js | Options for the Favorited screen. |
 | OptionsPlayer.js | Player options (queue, lyrics, etc.). |
-| OptionsQueue.js | Queue management options (remove from queue, etc.). |
+| OptionsQueue.js | Main-queue management (move to top/up/down/bottom, remove from queue, go to artist/album, add to playlist). |
+| OptionsUpNext.js | "Up next" management (move to top/up/down/bottom, remove from up next). |
 
 ---
 

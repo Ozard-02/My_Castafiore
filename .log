@@ -1,5 +1,27 @@
 # Castafiore - Session Log
 
+## 2026-08-05 (8th)
+- TODO #1 Queue Management done (all 4 parts). Plan: `plans/queue-management.md`.
+- Separate "up next" queue: `song.upNext` (persisted) in the song reducer.
+  - New reducer cases: `addToUpNext`, `nextUpNext`, `removeFromUpNext`, `moveUpNext`,
+    `moveInQueue`, `syncGlobal`. `setIndex`/`setQueue` clear `upNext`. defaultSong/restore carry it.
+  - "Play next" (`OptionsSongsList`, `OptionsAlbums`, `OptionsAlbum`) now inserts into up next front
+    instead of `song.index + 1` in the main queue. "Add to queue" still appends to the main queue.
+  - `nextSong` (native+web) drains up next first → shuffle/repeat/random never touch it (item 4).
+  - Auto-advance: local player `PlaybackActiveTrackChanged` dispatches the new `syncGlobal` case
+    (the playback service runs the reducer on `global.song`; the app catches up on track change);
+    end-of-queue stop checks in `servicePlayback.js` + cast/upnp `useEvent` now skip stopping while
+    up next is non-empty.
+- QUEUE view (FullScreenPlayer + FullScreenHorizontalPlayer): split into "Up next" section
+  (maxHeight ≈3 rows, own FlatList) + the main queue list — keeps `getItemLayout`/`scrollToIndex`
+  exact. `isPlaying` highlight only when the current song is in the main queue.
+- Drag-and-drop reorder: `app/components/player/QueueDragRow.js` — PanResponder on a `reorder`
+  handle (injected via new optional `handle` prop on `SongItem`), Animated translateY with
+  scroll-compensation + edge autoscroll, drop → `moveInQueue`/`moveUpNext`.
+- Move to top/up/down/bottom + remove added to `OptionsQueue`; new `OptionsUpNext` for up next rows.
+- i18n en/de: Up next, Queue (de), Move to top/up/down/bottom, Remove from up next.
+- eslint clean; APK rebuilt (38s) + installed on R5CY71GYKWF.
+
 ## 2026-08-05 (7th)
 - Mini-player swipe fixes (TODO #3 follow-up):
   - **Bug fix**: horizontal swipe worked only once — the `PanResponder` (created once via

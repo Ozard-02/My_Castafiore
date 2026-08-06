@@ -58,7 +58,7 @@ module.exports = async () => {
 		if (global.song.actionEndOfSong === 'repeat') {
 			Player.setPosition(0)
 			Player.resumeSong()
-		} else if (!global.repeatQueue && global.song.index === global.song.queue.length - 1) {
+		} else if (!global.repeatQueue && global.song.index === global.song.queue.length - 1 && !global.song.upNext?.length) {
 			Player.stopSong()
 		} else Player.nextSong(global.config, global.song, fakeSongDispatch)
 	})
