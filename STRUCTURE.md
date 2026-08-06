@@ -175,9 +175,9 @@ Playback state enum: `Playing`, `Paused`, `Stopped`, `Loading`, `Error`, `None`.
 ### Explorer Screens (app/screens/Explorer/)
 | File | Description |
 |---|---|
-| AlbumExplorer.js | Paginated album browser with type selector (newest, highest, frequent, etc.). Accepts `layout` ('list'\|'grid') and `showHeader` props; grid reuses `AllItem`. |
-| ArtistExplorer.js | Artist browser with sidebar letter index (list mode), favorited filtering. Grid mode hides the sidebar. |
-| SongExplorer.js | Paginated song browser. Accepts `layout` and `showHeader` props; grid uses `AllItem`. |
+| AlbumExplorer.js | Paginated album browser with type selector (newest, highest, frequent, etc.). Accepts `layout` ('list'\|'grid') and `showHeader` props; grid mode is a virtualized `LegendList numColumns={2}`. |
+| ArtistExplorer.js | Artist browser with sidebar letter index (list mode), favorited filtering. Grid mode hides the sidebar (virtualized `LegendList numColumns={2}`). |
+| SongExplorer.js | Paginated song browser. Accepts `layout` and `showHeader` props; grid mode is a virtualized `LegendList numColumns={2}`. |
 
 ### Settings Screens (app/screens/Settings/)
 | File | Description |
@@ -201,7 +201,7 @@ Playback state enum: `Playing`, `Paused`, `Stopped`, `Loading`, `Error`, `None`.
 | EditPlaylist.js | Form to edit playlist name, public flag, and comment. |
 | FreshReleases.js | Fetch fresh releases from ListenBrainz API. |
 | Info.js | Song/album/artist info display with cache status and deletion. |
-| SearchMore.js | Paginated search results for artists, albums, or songs. Toggle between list (ExplorerItem) and grid (AllItem) view. |
+| SearchMore.js | Paginated search results for artists, albums, or songs. Toggle between list (ExplorerItem) and grid (AllItem, virtualized `LegendList numColumns={2}`) view. |
 | UpdateRadio.js | Create or update an internet radio station. |
 | ShowAll.native.js | Shows all items for a given home section (albums, artists). |
 | ShowAll.web.js | Web equivalent of ShowAll. |
@@ -213,8 +213,9 @@ Playback state enum: `Playing`, `Paused`, `Stopped`, `Loading`, `Error`, `None`.
 ### Player Components (app/components/player/)
 | File | Description |
 |---|---|
-| Player.js | Top-level player container. Shows `BoxPlayer` or `FullScreenPlayer` based on state. |
-| BoxPlayer.js | Mini player (mobile, fixed at bottom). Cover, title, play/next buttons. |
+| Player.js | Top-level player container. Shows `BoxPlayer`, `BoxPlayerBubble`, or `FullScreenPlayer` based on state. |
+| BoxPlayer.js | Mini player (mobile, fixed at bottom). Cover, title, play/next buttons. PanResponder swipe: horizontal = next/prev song, vertical up = expand, vertical down = dismiss (`onDismiss`). |
+| BoxPlayerBubble.js | Tiny floating cover bubble shown when the mini player is dismissed; tap restores it. |
 | BoxDesktopPlayer.js | Mini player for desktop layout (fixed sidebar). Includes progress bar and volume. |
 | FullScreenPlayer.js | Full-screen modal player with cover, queue list, lyrics. Lyrics background fills the whole screen. |
 | FullScreenHorizontalPlayer.js | Full-screen horizontal layout of player (desktop). |
@@ -253,7 +254,7 @@ Playback state enum: `Playing`, `Paused`, `Stopped`, `Loading`, `Error`, `None`.
 |---|---|
 | SongItem.js | Single song row with cover, title, artist, favorited button, cached indicator. |
 | ExplorerItem.js | Item with cover, title, subtitle for explorer lists. |
-| AllItem.js | First item in horizontal lists ("Show all" type). |
+| AllItem.js | Grid tile for the `LegendList numColumns={2}` grids (Tracks/Explorer grids, SearchMore, Playlists, ShowAll). Root is `width:'100%'` to fill its numColumns cell. |
 | LBAlbumItem.js | Album item from ListenBrainz (used in FreshReleases). |
 | PlaylistItem.js | Playlist item for vertical playlist list. |
 | HistoryItem.js | Search history item with delete action. |

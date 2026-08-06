@@ -1,5 +1,5 @@
 import React from 'react'
-import { View, Text, StyleSheet, ActivityIndicator, ScrollView } from 'react-native'
+import { View, Text, StyleSheet, ActivityIndicator } from 'react-native'
 import { LegendList } from '@legendapp/list'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useTranslation } from 'react-i18next'
@@ -102,22 +102,26 @@ const SongExplorer = ({ layout = 'list', showHeader = true, title = null }) => {
 
 	if (layout === 'grid') return (
 		<>
-			<ScrollView
+			<LegendList
+				data={songs}
+				numColumns={2}
+				keyExtractor={(_, index) => index}
 				style={mainStyles.mainContainer(theme)}
-				contentContainerStyle={[mainStyles.contentMainContainer(insets, false), { minHeight: '100%' }]}
-				onScroll={({ nativeEvent }) => {
-					if (nativeEvent.contentOffset.y + nativeEvent.layoutMeasurement.height >= nativeEvent.contentSize.height - 100) handleEndReached()
-				}}
-				scrollEventThrottle={16}
-			>
-				{showHeader && <PresHeaderIcon title={title || t("Songs")} subTitle={t("Explore")} icon="music" />}
-				<View style={styles.gridContainer}>
-					{songs.map((item, index) => (
-						<AllItem key={index} item={item} type="song" onPress={() => playSong(config, songDispatch, songs, index)} onLongPress={() => setIndexOptions(index)} />
-					))}
-				</View>
-				{renderFooter()}
-			</ScrollView>
+				contentContainerStyle={[mainStyles.contentMainContainer(insets, false), { minHeight: Math.ceil(songs.length / 2) * 230 + 410 }]}
+				waitForInitialLayout={false}
+				recycleItems={true}
+				estimatedItemSize={230}
+				onEndReached={handleEndReached}
+				onEndReachedThreshold={0.1}
+				ListHeaderComponent={
+					showHeader ? <PresHeaderIcon title={title || t("Songs")} subTitle={t("Explore")} icon="music" /> : null
+				}
+				ListFooterComponent={renderFooter}
+				ListEmptyComponent={renderActivityIndicator}
+				renderItem={({ item, index }) => (
+					<AllItem item={item} type="song" onPress={() => playSong(config, songDispatch, songs, index)} onLongPress={() => setIndexOptions(index)} />
+				)}
+			/>
 			<OptionsSongsList
 				songs={songs}
 				indexOptions={indexOptions}
@@ -159,13 +163,6 @@ const SongExplorer = ({ layout = 'list', showHeader = true, title = null }) => {
 }
 
 const styles = StyleSheet.create({
-	gridContainer: {
-		display: 'flex',
-		flexDirection: 'row',
-		flexWrap: 'wrap',
-		paddingStart: 20,
-		paddingEnd: 20,
-	},
 	titleSelector: (theme) => ({
 		color: theme.primaryText,
 		fontSize: size.text.medium,

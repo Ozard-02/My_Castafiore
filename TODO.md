@@ -12,9 +12,15 @@
    - Add "Play next" option for entire albums (queue all album tracks after current song)
    - Add to context menu on Album screens and album-level options
 
-3. **Swipe When Minimized**
+3. **Swipe When Minimized** ✅ done
    - Enable swipe gestures on the mini player (BoxPlayer/BoxDesktopPlayer) to dismiss or expand
    - Enable swipe gestures (left/right) to navigate btw songs
+   - ✅ Done: `PanResponder` + `Animated` (repo idiom) on `BoxPlayer`: vertical swipe dismisses
+     (translates down, replaced by `BoxPlayerBubble` — a tap-to-restore cover bubble above the
+     tab bar), vertical swipe-up expands the full player, horizontal swipe = next/previous song.
+     Moves claim the responder only past a 6px threshold, so taps on expand/play/next still work.
+     Android media notification stays visible while hidden, so dismiss is always recoverable.
+   - Desktop `BoxDesktopPlayer` swipe skipped (its seek/volume `SlideBar` PanResponders conflict; YAGNI).
 
 4. **Better Download Management**
    - Dedicated Downloads screen in settings: list cached songs, pause/resume, remove individually or in bulk
@@ -59,13 +65,15 @@
    - In each view, a toggle between **grid** and **list** layout.
    - Remove the Favorited/Favorites section from the Playlists tab.
 
-9. **Virtualized grid** 🔮 improvement
+9. **Virtualized grid** ✅ done
    - Grid view (Tracks tab, SearchMore, ShowAll) is a non-virtualized `flexWrap` ScrollView —
      all items stay mounted. Fine while pagination keeps each grid ~100 items/page, but slow
      on huge native lists (e.g. the full artist list).
-   - Better: `LegendList`/`FlatList` with `numColumns={2}` + a tile sized to fill its cell.
-     Requires decoupling `AllItem` from `flex:1, maxWidth:'50%'` (native) so it fits a
-     numColumns cell cleanly. Do only if perf is actually noticed.
+   - ✅ Done: all six grids converted to `LegendList numColumns={2}` (SongExplorer, AlbumExplorer,
+     ArtistExplorer, SearchMore, Playlists tab, ShowAll.web), pagination via `onEndReached`,
+     headers/selectors moved into `ListHeaderComponent`. `AllItem` root is now `width:'100%'`
+     (+`paddingHorizontal:10`) to fill its numColumns cell. `onEndReached`/`estimatedItemSize`
+     are already the list-mode pattern, so nothing new was added.
 
    ### Plan
    - **A. Navigation** — `app/components/Navigation.js`: add `TracksStack` tab

@@ -1,5 +1,5 @@
 import React from 'react'
-import { View, Text, StyleSheet, ActivityIndicator, ScrollView } from 'react-native'
+import { View, Text, StyleSheet, ActivityIndicator } from 'react-native'
 import { LegendList } from '@legendapp/list'
 import { useNavigation } from '@react-navigation/native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -99,24 +99,34 @@ const AlbumExplorer = ({ layout = 'list', showHeader = true, title = null }) => 
 
 	if (layout === 'grid') return (
 		<>
-			<ScrollView
+			<LegendList
+				data={albums}
+				numColumns={2}
+				keyExtractor={(_, index) => index}
 				style={mainStyles.mainContainer(theme)}
-				contentContainerStyle={[mainStyles.contentMainContainer(insets, false), { minHeight: '100%' }]}
-				onScroll={({ nativeEvent }) => {
-					if (nativeEvent.contentOffset.y + nativeEvent.layoutMeasurement.height >= nativeEvent.contentSize.height - 100) handleEndReached()
-				}}
-				scrollEventThrottle={16}
-			>
-				{showHeader && <PresHeaderIcon title={title || t("Albums")} subTitle={t("Explore")} icon="book" />}
-				<Text style={styles.titleSelector(theme)}>Type</Text>
-				<Selector current={type} items={TYPES} setData={setType} />
-				<View style={styles.gridContainer}>
-					{albums.map((item, index) => (
-						<AllItem key={index} item={item} type="album" onPress={() => navigation.navigate('Album', item)} onLongPress={() => setIndexOptions(index)} />
-					))}
-				</View>
-				{renderFooter()}
-			</ScrollView>
+				contentContainerStyle={[mainStyles.contentMainContainer(insets, false), { minHeight: Math.ceil(albums.length / 2) * 230 + 410 }]}
+				waitForInitialLayout={false}
+				recycleItems={true}
+				estimatedItemSize={230}
+				onEndReached={handleEndReached}
+				onEndReachedThreshold={0.1}
+				ListHeaderComponent={
+					<View style={{ flex: 1 }}>
+						{showHeader && <PresHeaderIcon
+							title={title || t("Albums")}
+							subTitle={t("Explore")}
+							icon="book"
+						/>}
+						<Text style={styles.titleSelector(theme)}>Type</Text>
+						<Selector current={type} items={TYPES} setData={setType} />
+					</View>
+				}
+				ListFooterComponent={renderFooter}
+				ListEmptyComponent={renderActivityIndicator}
+				renderItem={({ item, index }) => (
+					<AllItem item={item} type="album" onPress={() => navigation.navigate('Album', item)} onLongPress={() => setIndexOptions(index)} />
+				)}
+			/>
 			<OptionsAlbums
 				albums={albums}
 				indexOptions={indexOptions}
@@ -167,13 +177,6 @@ const AlbumExplorer = ({ layout = 'list', showHeader = true, title = null }) => 
 }
 
 const styles = StyleSheet.create({
-	gridContainer: {
-		display: 'flex',
-		flexDirection: 'row',
-		flexWrap: 'wrap',
-		paddingStart: 20,
-		paddingEnd: 20,
-	},
 	titleSelector: (theme) => ({
 		color: theme.primaryText,
 		fontSize: size.text.medium,

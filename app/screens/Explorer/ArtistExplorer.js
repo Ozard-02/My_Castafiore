@@ -1,5 +1,5 @@
 import React from 'react'
-import { View, Text, ScrollView, StyleSheet } from 'react-native'
+import { View, Text } from 'react-native'
 import { LegendList } from '@legendapp/list'
 import { useNavigation } from '@react-navigation/native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -72,17 +72,22 @@ const ArtistExplorer = ({ layout = 'list', showHeader = true, title = null }) =>
 		const artistsGrid = artists.filter(item => typeof item !== 'string')
 		return (
 			<>
-				<ScrollView
+				<LegendList
+					data={artistsGrid}
+					numColumns={2}
+					keyExtractor={(item, index) => item.id || index}
 					style={mainStyles.mainContainer(theme)}
-					contentContainerStyle={[mainStyles.contentMainContainer(insets, false), { minHeight: '100%' }]}
-				>
-					{showHeader && <PresHeaderIcon title={title || t("Artists")} subTitle={t("Explore")} icon="group" />}
-					<View style={styles.gridContainer}>
-						{artistsGrid.map((item, index) => (
-							<AllItem key={item.id || index} item={item} type="artist" onPress={() => navigation.navigate('Artist', { id: item.id, name: item.name })} onLongPress={() => setIndexOptions(artists.indexOf(item))} />
-						))}
-					</View>
-				</ScrollView>
+					contentContainerStyle={[mainStyles.contentMainContainer(insets, false), { minHeight: Math.ceil(artistsGrid.length / 2) * 230 + 410 }]}
+					waitForInitialLayout={false}
+					recycleItems={true}
+					estimatedItemSize={230}
+					ListHeaderComponent={
+						showHeader ? <PresHeaderIcon title={title || t("Artists")} subTitle={t("Explore")} icon="group" /> : null
+					}
+					renderItem={({ item }) => (
+						<AllItem item={item} type="artist" onPress={() => navigation.navigate('Artist', { id: item.id, name: item.name })} onLongPress={() => setIndexOptions(artists.indexOf(item))} />
+					)}
+				/>
 				<OptionsArtists
 					artists={artists}
 					indexOptions={indexOptions}
@@ -129,15 +134,5 @@ const ArtistExplorer = ({ layout = 'list', showHeader = true, title = null }) =>
 		</>
 	)
 }
-
-const styles = StyleSheet.create({
-	gridContainer: {
-		display: 'flex',
-		flexDirection: 'row',
-		flexWrap: 'wrap',
-		paddingStart: 20,
-		paddingEnd: 20,
-	},
-})
 
 export default ArtistExplorer

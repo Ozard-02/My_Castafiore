@@ -1,7 +1,7 @@
 import React from 'react'
-import { View, ScrollView } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useTranslation } from 'react-i18next'
+import { LegendList } from '@legendapp/list'
 
 import { useConfig } from '~/contexts/config'
 import { getCachedAndApi } from '~/utils/api'
@@ -35,35 +35,24 @@ const ShowAll = ({ navigation, route: { params: { section } } }) => {
 		if (section.type === 'artist_all') return navigation.navigate('Artist', { id: item.id, name: item.name })
 	}
 
-	// I try to use FlatList instead of ScrollView but it glitched and numColumns can't be useState
-	// in doc it says that Flatlist is not compatible with flexWrap
 	return (
-		<ScrollView
+		<LegendList
 			vertical={true}
+			numColumns={2}
 			style={mainStyles.mainContainer(theme)}
-			contentContainerStyle={mainStyles.contentMainContainer(insets)}
-		>
-			<Header title={t(`homeSection.${section.title}`)} />
-			<View
-				style={{
-					display: 'flex',
-					flexDirection: 'row',
-					flexWrap: 'wrap',
-					paddingStart: 20,
-					paddingEnd: 20,
-					paddingTop: 10,
-				}}>
-				{
-					list.map((item, index) => (
-						<AllItem
-							key={index}
-							item={item}
-							type={section.type}
-							onPress={onPress}
-						/>
-					))}
-			</View>
-		</ScrollView>
+			contentContainerStyle={[mainStyles.contentMainContainer(insets, true), { minHeight: Math.ceil(list.length / 2) * 230 + 100 + 80 }]}
+			ListHeaderComponent={() => <Header title={t(`homeSection.${section.title}`)} />}
+			data={list}
+			keyExtractor={(item, index) => index}
+			estimatedItemSize={230}
+			renderItem={({ item }) => (
+				<AllItem
+					item={item}
+					type={section.type}
+					onPress={onPress}
+				/>
+			)}
+		/>
 	)
 }
 

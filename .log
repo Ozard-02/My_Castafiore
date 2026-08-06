@@ -1,5 +1,24 @@
 # Castafiore - Session Log
 
+## 2026-08-05 (5th)
+- TODO #2 "Swipe When Minimized" + TODO #9 "Virtualized grid" done. Plan: `plans/swipe-and-virtual-grid.md`.
+- Swipe on the mini player (`BoxPlayer.js` rewritten): `PanResponder` claims the responder only
+  on move past a 6px threshold (so taps on expand/play/next still work); on release, dominant axis
+  wins — horizontal dx<-60 next / dx>60 previous, vertical dy<-60 expand / dy>60 dismiss. The bar
+  translates with the finger (clamped ±90). Inner buttons keep their separate responder grants.
+- Dismiss → `Player.js` `isHidden` state (reset on tab change + song change) renders
+  `BoxPlayerBubble.js` (new): a 46px floating cover bubble above the tab bar; tap restores the
+  mini player. Android media notification still shows while hidden, so it's always recoverable.
+- Desktop `BoxDesktopPlayer` swipe skipped (its seek/volume `SlideBar` PanResponders conflict; YAGNI).
+- All 6 non-virtualized flexWrap grids converted to `LegendList numColumns={2}` (it was already
+  the list-mode component): SongExplorer, AlbumExplorer, ArtistExplorer, SearchMore, Playlists tab,
+  ShowAll.web. Pagination moved from `onScroll` → `onEndReached`; headers/selectors into
+  `ListHeaderComponent`; `contentContainerStyle` minHeight `Math.ceil(n/2)*230 + header` to force
+  virtualized layout. LegendList numColumns cells are absolutely positioned at `width:1/numColumns%`,
+  so `AllItem` root changed `50%` → `100%` + `paddingHorizontal:10` (10px edge inset / 20px gutter;
+  `AllItem` is used only in these 6 grids — verified).
+- eslint clean; APK rebuilt (45s) + installed on R5CY71GYKWF.
+
 ## 2026-08-05 (4th)
 - WiFi feature broken on device → diagnosed and fixed.
   - Root cause 1: i18n keys added under `settings.connect.*` but code read `settings.addServer.*` →
@@ -115,7 +134,8 @@
 ## tips / gotchas
 - The three Explorer screens are used both as standalone screens (from Search) and embedded
   in the Tracks tab. Layout state lives in `Tracks.js` and is passed down as a prop.
-- Grid view is non-virtualized (flexWrap ScrollView) — same trade-off as SearchMore grid.
+- Grid view uses virtualized `LegendList numColumns={2}` in all 6 grid screens (Explorer
+  grids, SearchMore, Playlists, ShowAll.web). `AllItem` root is `width:'100%'` to fill a cell.
 - `addToQueue(songDispatch, track, index)` inserts at `index`; inserting at the same
   `index` repeatedly reverses order, so insert in reverse to keep wanted order.
 - eslint: `npx eslint app -c eslint.config.mjs`.

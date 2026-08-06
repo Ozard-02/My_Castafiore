@@ -2,6 +2,7 @@ import React from 'react'
 import { ScrollView, Text, TextInput, View, StyleSheet } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useTranslation } from 'react-i18next'
+import { LegendList } from '@legendapp/list'
 import Icon from 'react-native-vector-icons/FontAwesome'
 
 import { useConfig } from '~/contexts/config'
@@ -67,12 +68,8 @@ const Playlists = ({ navigation }) => {
 			})
 	}
 
-	return (
-		<ScrollView
-			vertical={true}
-			style={mainStyles.mainContainer(theme)}
-			contentContainerStyle={mainStyles.contentMainContainer(insets)}
-		>
+	const header = (
+		<>
 			<View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginEnd: 20, marginTop: 30, marginBottom: 20 }}>
 				<Text style={[mainStyles.mainTitle(theme), { marginBottom: 0, marginTop: 0 }]}>{t('Your Playlists')}</Text>
 				<View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -135,14 +132,34 @@ const Playlists = ({ navigation }) => {
 						</>
 				}
 			</View>
-			{layout === 'grid' ?
-				<View style={styles.gridContainer}>
-					{playlists.map((item) => (
-						<AllItem key={item.id} item={item} type="playlist" onPress={() => navigation.navigate('Playlist', { playlist: item })} />
-					))}
-				</View> :
-				<VerticalPlaylist playlists={playlists} onRefresh={refreshPlaylists} />
-			}
+		</>
+	)
+
+	if (layout === 'grid') return (
+		<LegendList
+			data={playlists}
+			numColumns={2}
+			keyExtractor={(item) => item.id}
+			style={mainStyles.mainContainer(theme)}
+			contentContainerStyle={[mainStyles.contentMainContainer(insets), { minHeight: Math.ceil(playlists.length / 2) * 230 + 100 }]}
+			waitForInitialLayout={false}
+			recycleItems={true}
+			estimatedItemSize={230}
+			ListHeaderComponent={header}
+			renderItem={({ item }) => (
+				<AllItem item={item} type="playlist" onPress={() => navigation.navigate('Playlist', { playlist: item })} />
+			)}
+		/>
+	)
+
+	return (
+		<ScrollView
+			vertical={true}
+			style={mainStyles.mainContainer(theme)}
+			contentContainerStyle={mainStyles.contentMainContainer(insets)}
+		>
+			{header}
+			<VerticalPlaylist playlists={playlists} onRefresh={refreshPlaylists} />
 		</ScrollView>
 	)
 }
@@ -154,13 +171,6 @@ const styles = StyleSheet.create({
 		marginTop: 10,
 		marginBottom: 17,
 		...mainStyles.stdVerticalMargin
-	},
-	gridContainer: {
-		display: 'flex',
-		flexDirection: 'row',
-		flexWrap: 'wrap',
-		paddingStart: 20,
-		paddingEnd: 20,
 	},
 })
 

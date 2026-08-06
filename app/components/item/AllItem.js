@@ -31,8 +31,8 @@ const AllItem = ({ item, type, onPress, onLongPress = () => { } }) => {
 
 const styles = StyleSheet.create({
 	item: {
-		width: "50%",
-		paddingHorizontal: 5,
+		width: "100%",
+		paddingHorizontal: 10,
 		marginBottom: 10,
 	},
 	cover: (type) => ({

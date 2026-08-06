@@ -1,5 +1,5 @@
 import React from 'react'
-import { View, Text, StyleSheet, ActivityIndicator, ScrollView } from 'react-native'
+import { View, Text, StyleSheet, ActivityIndicator } from 'react-native'
 import { LegendList } from '@legendapp/list'
 import { useNavigation } from '@react-navigation/native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -119,22 +119,26 @@ const SearchMore = ({ route: { params: { query, results, type } } }) => {
 	return (
 		<View style={[mainStyles.mainContainer(theme), { flex: 1 }]}>
 			{view === 'grid' ? (
-				<ScrollView
+				<LegendList
+					data={items}
+					numColumns={2}
+					keyExtractor={(_, index) => index}
 					style={mainStyles.mainContainer(theme)}
-					contentContainerStyle={[mainStyles.contentMainContainer(insets, false), { minHeight: '100%' }]}
-					onScroll={({ nativeEvent }) => {
-						if (nativeEvent.contentOffset.y + nativeEvent.layoutMeasurement.height >= nativeEvent.contentSize.height - 100) handleEndReached()
-					}}
-					scrollEventThrottle={16}
-				>
-					<Header title={t("Search")} right={viewButton} />
-					<View style={styles.gridContainer}>
-						{items.map((item, index) => (
-							<AllItem key={index} item={item} type={type} onPress={(i) => goTo(i, index)} />
-						))}
-					</View>
-					{renderFooter()}
-				</ScrollView>
+					contentContainerStyle={[mainStyles.contentMainContainer(insets, false), { minHeight: Math.ceil(items.length / 2) * 230 + 100 + 80 }]}
+					waitForInitialLayout={false}
+					recycleItems={true}
+					estimatedItemSize={230}
+					onEndReached={handleEndReached}
+					onEndReachedThreshold={0.1}
+					ListHeaderComponent={
+						<Header title={t("Search")} right={viewButton} />
+					}
+					ListFooterComponent={renderFooter}
+					ListEmptyComponent={renderActivityIndicator}
+					renderItem={({ item, index }) => (
+						<AllItem item={item} type={type} onPress={(i) => goTo(i, index)} />
+					)}
+				/>
 			) : (
 				<LegendList
 					data={items}
@@ -163,13 +167,6 @@ const SearchMore = ({ route: { params: { query, results, type } } }) => {
 }
 
 const styles = StyleSheet.create({
-	gridContainer: {
-		display: 'flex',
-		flexDirection: 'row',
-		flexWrap: 'wrap',
-		paddingStart: 20,
-		paddingEnd: 20,
-	},
 	titleSelector: (theme) => ({
 		color: theme.primaryText,
 		fontSize: size.text.medium,
