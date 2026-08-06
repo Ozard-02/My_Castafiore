@@ -6,7 +6,7 @@ import NetInfo from '@react-native-community/netinfo'
 import { useConfig, useSetConfig } from '~/contexts/config'
 import { useSettings } from '~/contexts/settings'
 import { useSongDispatch } from '~/contexts/song'
-import { getCurrentNetwork } from '~/utils/network'
+import { getNetworkInfo, CELLULAR_NETWORK } from '~/utils/network'
 import Player from '~/utils/player'
 import logger from '~/utils/logger'
 
@@ -26,29 +26,40 @@ const NetworkAutoSwitch = () => {
 	}
 
 	const decide = React.useCallback(async () => {
-		const ssid = await getCurrentNetwork()
-		if (!ssid) return
-		const lower = ssid.toLowerCase()
+		const info = await getNetworkInfo()
+		if (!info || info.type === 'none' || info.type === 'unknown') return
+		const ssid = info.type === 'wifi' && info.ssid ? info.ssid.toLowerCase() : null
+		if (info.type === 'wifi' && !ssid) return
 		const active = config?.url ? config : null
 		const isActive = (s) => s.url === config?.url && s.username === config?.username
 
-		const matched = settings.servers?.find((s) => s.network && s.network.toLowerCase() === lower)
-		if (matched && !isActive(matched)) {
+		const onCellular = info.type === 'cellular'
+		const bound = onCellular
+			? settings.servers?.find((s) => s.network === CELLULAR_NETWORK)
+			: settings.servers?.find((s) => s.network && s.network !== CELLULAR_NETWORK && s.network.toLowerCase() === ssid)
+
+		if (bound && !isActive(bound)) {
 			if (active && !active.network) {
 				await AsyncStorage.setItem(FALLBACK_KEY, JSON.stringify(active)).catch(() => { })
 			}
-			switchTo(matched)
+			switchTo(bound)
 			return
 		}
 
-		if (active?.network && active.network.toLowerCase() !== lower) {
-			let fallback = null
-			try {
-				fallback = JSON.parse(await AsyncStorage.getItem(FALLBACK_KEY))
-			} catch { /* corrupted/absent fallback is fine */ }
-			if (fallback && !settings.servers?.some((s) => s.url === fallback.url && s.username === fallback.username)) fallback = null
-			if (!fallback) fallback = settings.servers?.find((s) => !s.network)
-			if (fallback && !isActive(fallback)) switchTo(fallback)
+		const activeBound = active?.network
+		if (activeBound) {
+			const stillOnBound = activeBound === CELLULAR_NETWORK
+				? onCellular
+				: !!ssid && activeBound.toLowerCase() === ssid
+			if (!stillOnBound) {
+				let fallback = null
+				try {
+					fallback = JSON.parse(await AsyncStorage.getItem(FALLBACK_KEY))
+				} catch { /* corrupted/absent fallback is fine */ }
+				if (fallback && !settings.servers?.some((s) => s.url === fallback.url && s.username === fallback.username)) fallback = null
+				if (!fallback) fallback = settings.servers?.find((s) => !s.network)
+				if (fallback && !isActive(fallback)) switchTo(fallback)
+			}
 		}
 	}, [config, settings.servers, setConfig, songDispatch])
 

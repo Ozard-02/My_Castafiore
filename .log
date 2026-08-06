@@ -1,5 +1,20 @@
 # Castafiore - Session Log
 
+## 2026-08-05 (6th)
+- Server binding extended to cellular data (TODO #5 follow-up). Plan: `plans/cellular-network-binding.md`.
+- `utils/network.native.js`: added `getNetworkInfo()` → `{type:'wifi',ssid}|{type:'cellular'}|{type:'none'}`
+  (`NetInfo.fetch()` no-arg) + exported `CELLULAR_NETWORK = '__cellular__'` token; `getCurrentNetwork()`
+  is now a ssid-only wrapper. Web stub returns `{type:'none'}` + token export.
+- `networkAutoSwitch.js` `decide()`: on cellular → match server with `network === CELLULAR_NETWORK`;
+  on wifi → match by ssid (skips the token). Leaving a bound network (wifi OR cellular) → fallback
+  (lastFallback, else first server without a binding). Old gap fixed: leaving a bound WiFi for
+  cellular used to do nothing (short-circuited on null ssid) — now it falls back.
+- `AddServer.js`: "Cellular data" chip (`mobile` icon) alongside the SSID chips; field shows the
+  translated label while bound to cellular; `settings.networks` history keeps only real SSIDs.
+- `Connect.js`: cellular-bound servers show a `mobile` icon instead of `wifi`.
+- i18n en/de: `Network (WiFi)` → `Network`; added `Cellular`.
+- eslint clean; APK rebuilt (1m25s) + installed on R5CY71GYKWF.
+
 ## 2026-08-05 (5th)
 - TODO #2 "Swipe When Minimized" + TODO #9 "Virtualized grid" done. Plan: `plans/swipe-and-virtual-grid.md`.
 - Swipe on the mini player (`BoxPlayer.js` rewritten): `PanResponder` claims the responder only

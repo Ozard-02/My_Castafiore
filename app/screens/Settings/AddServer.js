@@ -11,7 +11,7 @@ import { useSetConfig } from '~/contexts/config'
 import { useSettings, useSetSettings } from '~/contexts/settings'
 import { useSongDispatch } from '~/contexts/song'
 import { useTheme } from '~/contexts/theme'
-import { getCurrentNetwork, requestLocationPermission } from '~/utils/network'
+import { getCurrentNetwork, requestLocationPermission, CELLULAR_NETWORK } from '~/utils/network'
 import ButtonSwitch from '~/components/settings/ButtonSwitch'
 import ButtonText from '~/components/settings/ButtonText'
 import Header from '~/components/Header'
@@ -98,7 +98,7 @@ const AddServer = ({ navigation }) => {
 					const conf = { name, url: uri, username, query, type: json.type, network }
 					upConfig(conf)
 					setError('')
-					const networks = network
+					const networks = network && network !== CELLULAR_NETWORK
 						? [network, ...(settings.networks || []).filter((n) => n.toLowerCase() !== network.toLowerCase())].slice(0, 10)
 						: settings.networks
 					setSettings({ ...settings, networks, servers: [...settings.servers, conf] })
@@ -189,33 +189,47 @@ const AddServer = ({ navigation }) => {
 					<OptionInput
 						title={t("settings.connect.Network")}
 						placeholder={t("settings.connect.Network Placeholder")}
-						value={network}
+						value={network === CELLULAR_NETWORK ? t('settings.connect.Cellular') : network}
 						placeholderTextColor={theme.primaryText}
 						onChangeText={network => setNetwork(network)}
 					/>
-					{suggestions.length > 0 && (
-						<View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, padding: 15 }}>
-							{suggestions.map((ssid) => (
-								<Pressable
-									key={ssid}
-									style={({ pressed }) => ([mainStyles.opacity({ pressed }), {
-										flexDirection: 'row',
-										alignItems: 'center',
-										paddingVertical: 6,
-										paddingHorizontal: 12,
-										borderRadius: 15,
-										backgroundColor: ssid === network ? theme.primaryTouch : theme.innerTouch,
-									}])}
-									onPress={() => setNetwork(ssid)}
-								>
-									<Icon name="wifi" size={size.icon.tiny} color={ssid === network ? theme.innerTouch : theme.primaryText} style={{ marginEnd: 5 }} />
-									<Text style={{ color: ssid === network ? theme.innerTouch : theme.primaryText, fontSize: size.text.small }}>
-										{ssid === currentNetwork ? t('settings.connect.Current') + ' · ' : ''}{ssid}
-									</Text>
-								</Pressable>
-							))}
-						</View>
-					)}
+					<View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, padding: 15 }}>
+						<Pressable
+							style={({ pressed }) => ([mainStyles.opacity({ pressed }), {
+								flexDirection: 'row',
+								alignItems: 'center',
+								paddingVertical: 6,
+								paddingHorizontal: 12,
+								borderRadius: 15,
+								backgroundColor: network === CELLULAR_NETWORK ? theme.primaryTouch : theme.innerTouch,
+							}])}
+							onPress={() => setNetwork(network === CELLULAR_NETWORK ? '' : CELLULAR_NETWORK)}
+						>
+							<Icon name="mobile" size={size.icon.tiny} color={network === CELLULAR_NETWORK ? theme.innerTouch : theme.primaryText} style={{ marginEnd: 5 }} />
+							<Text style={{ color: network === CELLULAR_NETWORK ? theme.innerTouch : theme.primaryText, fontSize: size.text.small }}>
+								{t('settings.connect.Cellular')}
+							</Text>
+						</Pressable>
+						{suggestions.map((ssid) => (
+							<Pressable
+								key={ssid}
+								style={({ pressed }) => ([mainStyles.opacity({ pressed }), {
+									flexDirection: 'row',
+									alignItems: 'center',
+									paddingVertical: 6,
+									paddingHorizontal: 12,
+									borderRadius: 15,
+									backgroundColor: ssid === network ? theme.primaryTouch : theme.innerTouch,
+								}])}
+								onPress={() => setNetwork(ssid)}
+							>
+								<Icon name="wifi" size={size.icon.tiny} color={ssid === network ? theme.innerTouch : theme.primaryText} style={{ marginEnd: 5 }} />
+								<Text style={{ color: ssid === network ? theme.innerTouch : theme.primaryText, fontSize: size.text.small }}>
+									{ssid === currentNetwork ? t('settings.connect.Current') + ' · ' : ''}{ssid}
+								</Text>
+							</Pressable>
+						))}
+					</View>
 					<ButtonSwitch
 						title={t("settings.connect.Use current network")}
 						value={network === currentNetwork && !!currentNetwork}
