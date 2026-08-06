@@ -14,7 +14,7 @@ import ImageError from '~/components/ImageError'
 import size from '~/styles/size'
 import useKeyboardIsOpen from '~/utils/useKeyboardIsOpen'
 
-const BoxPlayer = ({ setFullScreen, onDismiss }) => {
+const BoxPlayer = ({ setFullScreen }) => {
 	const song = useSong()
 	const songDispatch = useSongDispatch()
 	const config = useConfig()
@@ -22,6 +22,11 @@ const BoxPlayer = ({ setFullScreen, onDismiss }) => {
 	const theme = useTheme()
 	const isKeyboardOpen = useKeyboardIsOpen()
 	const translateY = React.useRef(new Animated.Value(0)).current
+
+	const songRef = React.useRef(song)
+	songRef.current = song
+	const configRef = React.useRef(config)
+	configRef.current = config
 
 	const panResponder = React.useRef(PanResponder.create({
 		onStartShouldSetPanResponder: () => false,
@@ -37,12 +42,10 @@ const BoxPlayer = ({ setFullScreen, onDismiss }) => {
 			}).start()
 			const { dx, dy } = gestureState
 			if (Math.abs(dx) > Math.abs(dy)) {
-				if (dx < -60) Player.nextSong(config, song, songDispatch)
-				else if (dx > 60) Player.previousSong(config, song, songDispatch)
+				if (dx < -60) Player.nextSong(configRef.current, songRef.current, songDispatch)
+				else if (dx > 60) Player.previousSong(configRef.current, songRef.current, songDispatch)
 			} else if (dy < -60) {
 				setFullScreen(true)
-			} else if (dy > 60 && onDismiss) {
-				onDismiss()
 			}
 		},
 	})).current

@@ -1,5 +1,16 @@
 # Castafiore - Session Log
 
+## 2026-08-05 (7th)
+- Mini-player swipe fixes (TODO #3 follow-up):
+  - **Bug fix**: horizontal swipe worked only once — the `PanResponder` (created once via
+    `useRef`) captured the *initial* `song`/`config`. After the first gesture `song.index` had
+    advanced, but the stale closure called `nextSong(..., oldSong, ...)` which set the same index
+    again → "stuck on the same song". Fixed by reading `songRef.current` / `configRef.current`
+    (refs updated every render) inside the responder.
+  - Removed the swipe-down dismiss + `BoxPlayerBubble` restore (user request): deleted
+    `BoxPlayerBubble.js`, dropped `isHidden` state from `Player.js`, removed the `onDismiss`
+    branch. Vertical swipe now only expands; horizontal = next/prev (repeatable).
+
 ## 2026-08-05 (6th)
 - Server binding extended to cellular data (TODO #5 follow-up). Plan: `plans/cellular-network-binding.md`.
 - `utils/network.native.js`: added `getNetworkInfo()` → `{type:'wifi',ssid}|{type:'cellular'}|{type:'none'}`

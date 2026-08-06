@@ -213,9 +213,8 @@ Playback state enum: `Playing`, `Paused`, `Stopped`, `Loading`, `Error`, `None`.
 ### Player Components (app/components/player/)
 | File | Description |
 |---|---|
-| Player.js | Top-level player container. Shows `BoxPlayer`, `BoxPlayerBubble`, or `FullScreenPlayer` based on state. |
-| BoxPlayer.js | Mini player (mobile, fixed at bottom). Cover, title, play/next buttons. PanResponder swipe: horizontal = next/prev song, vertical up = expand, vertical down = dismiss (`onDismiss`). |
-| BoxPlayerBubble.js | Tiny floating cover bubble shown when the mini player is dismissed; tap restores it. |
+| Player.js | Top-level player container. Shows `BoxPlayer` or `FullScreenPlayer` based on state. |
+| BoxPlayer.js | Mini player (mobile, fixed at bottom). Cover, title, play/next buttons. PanResponder swipe: horizontal = next/prev song, vertical up = expand. |
 | BoxDesktopPlayer.js | Mini player for desktop layout (fixed sidebar). Includes progress bar and volume. |
 | FullScreenPlayer.js | Full-screen modal player with cover, queue list, lyrics. Lyrics background fills the whole screen. |
 | FullScreenHorizontalPlayer.js | Full-screen horizontal layout of player (desktop). |

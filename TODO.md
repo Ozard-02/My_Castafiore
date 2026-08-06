@@ -15,12 +15,13 @@
 3. **Swipe When Minimized** ✅ done
    - Enable swipe gestures on the mini player (BoxPlayer/BoxDesktopPlayer) to dismiss or expand
    - Enable swipe gestures (left/right) to navigate btw songs
-   - ✅ Done: `PanResponder` + `Animated` (repo idiom) on `BoxPlayer`: vertical swipe dismisses
-     (translates down, replaced by `BoxPlayerBubble` — a tap-to-restore cover bubble above the
-     tab bar), vertical swipe-up expands the full player, horizontal swipe = next/previous song.
-     Moves claim the responder only past a 6px threshold, so taps on expand/play/next still work.
-     Android media notification stays visible while hidden, so dismiss is always recoverable.
-   - Desktop `BoxDesktopPlayer` swipe skipped (its seek/volume `SlideBar` PanResponders conflict; YAGNI).
+   - ✅ Done: `PanResponder` + `Animated` (repo idiom) on `BoxPlayer`: horizontal swipe =
+     next/previous song, vertical swipe-up expands the full player. Moves claim the responder
+     only past a 6px threshold, so taps on expand/play/next still work. `song`/`config` are read
+     via refs in the responder so repeated gestures keep advancing (the first version captured the
+     initial song and froze after one skip). Swipe-down dismiss + restore bubble were removed
+     (user request). Desktop `BoxDesktopPlayer` swipe skipped (its seek/volume `SlideBar`
+     PanResponders conflict; YAGNI).
 
 4. **Better Download Management**
    - Dedicated Downloads screen in settings: list cached songs, pause/resume, remove individually or in bulk

@@ -16,10 +16,14 @@ Research findings:
 Decisions:
 - BoxPlayer: PanResponder that only claims the responder ON MOVE (threshold ~6px) so taps still reach the
   inner Pressable (expand) and IconButton/PlayButton. On release: horizontal |dx|>|dy| → dx<-60 next /
-  dx>60 previous; vertical dy<-60 → expand (setFullScreen(true)); dy>60 → dismiss (onDismiss()).
+  dx>60 previous; vertical dy<-60 → expand (setFullScreen(true)).
   Bar translates vertically while dragging (Animated, translateY clamped ±90).
-- Dismiss = `Player.js` gains `isHidden` state (reset on tab switch + song change). When hidden, render a
-  small floating album-cover bubble (`BoxPlayerBubble.js`, new) above the tab bar; tap → restore mini player.
+- **Late change (user request)**: the swipe-down dismiss + `BoxPlayerBubble` restore were REMOVED.
+  Vertical swipe now only expands; horizontal swipe = next/prev.
+- **Late fix**: the responder must read `song`/`config` from refs (`songRef`/`configRef`) updated each
+  render, not from the initial render's closure — otherwise the first gesture advances the index but the
+  stale closure sets the same index again ("stuck on the same song"). The responder is created once via
+  `useRef`, so closures are captured at mount.
 - Desktop `BoxDesktopPlayer` SKIPPED for swipe: full-width bar with seek/volume SlideBars whose
   PanResponders conflict with a wrapping horizontal swipe (YAGNI; easy to add later).
 
@@ -45,7 +49,8 @@ Research findings:
 ## Steps
 1. AllItem root `width: '50%'` → `width: '100%'`, `paddingHorizontal: 10`. — DONE
 2. BoxPlayer swipe (PanResponder + Animated translateY). — DONE
-3. BoxPlayerBubble.js (new) + Player.js `isHidden`/bubble/onDismiss wiring. — DONE
+3. ~~BoxPlayerBubble.js (new) + Player.js `isHidden`/bubble/onDismiss wiring.~~ REMOVED (user request).
+   Bubble deleted, dismiss branch dropped; vertical swipe now only expands.
 4. SongExplorer grid → LegendList numColumns=2. — DONE
 5. AlbumExplorer grid → LegendList numColumns=2. — DONE
 6. ArtistExplorer grid → LegendList numColumns=2. — DONE
