@@ -1,5 +1,6 @@
 import React from 'react'
-import { View, Text, ScrollView, StyleSheet } from 'react-native'
+import { View, Text, StyleSheet } from 'react-native'
+import { LegendList } from '@legendapp/list'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useTranslation } from 'react-i18next'
 import Icon from 'react-native-vector-icons/FontAwesome'
@@ -95,61 +96,60 @@ const Downloads = () => {
 	const totalSize = Object.values(index).reduce((sum, entry) => sum + entry.size, 0)
 	const isEmpty = activeItems.length === 0 && collectionsList.length === 0 && individualSongs.length === 0
 
-	const renderActiveItem = (item) => {
+	const renderActiveItem = ({ item }) => {
 		const isDownloading = item.status === 'downloading'
 		const isPaused = item.status === 'paused'
 		const isError = item.status === 'error'
 		const progress = isDownloading ? Math.round((item.progress || 0) * 100) : 0
 
 		return (
-			<View key={item.songId} style={[styles.row, { backgroundColor: theme.secondaryBack }]}>
-				<ImageError style={styles.thumb} source={{ uri: item.meta.cover }} iconError="music" />
-				<View style={styles.rowContent}>
-					<Text style={[styles.rowTitle, { color: theme.primaryText }]} numberOfLines={1}>{item.meta.title}</Text>
-					<Text style={[styles.rowSubtitle, { color: theme.secondaryText }]} numberOfLines={1}>
-						{item.meta.artist}{item.source ? ` · ${item.source.name}` : ''}
-					</Text>
-					{isDownloading && (
-						<View style={[styles.progressTrack, { backgroundColor: theme.primaryBack }]}>
-							<View style={[styles.progressFill, { backgroundColor: theme.primaryTouch, width: `${progress}%` }]} />
-						</View>
-					)}
-					{isDownloading && (
-						<Text style={[styles.progressText, { color: theme.secondaryText }]}>
-							{formatBytes(item.writtenBytes)} / {formatBytes(item.totalBytes || item.writtenBytes)} · {progress}%
+			<View style={[styles.activeCard, { backgroundColor: theme.secondaryBack }]}>
+				<View style={styles.row}>
+					<ImageError style={styles.thumb} source={{ uri: item.meta.cover }} iconError="music" />
+					<View style={styles.rowContent}>
+						<Text style={[styles.rowTitle, { color: theme.primaryText }]} numberOfLines={1}>{item.meta.title}</Text>
+						<Text style={[styles.rowSubtitle, { color: theme.secondaryText }]} numberOfLines={1}>
+							{item.meta.artist}{item.source ? ` · ${item.source.name}` : ''}
 						</Text>
-					)}
-					{isPaused && <Text style={[styles.statusText, { color: theme.secondaryText }]}>{t('settings.downloads.Paused')}</Text>}
-					{isError && <Text style={[styles.statusText, { color: '#e33' }]} numberOfLines={1}>{item.error || t('settings.downloads.Failed')}</Text>}
-					{item.status === 'queued' && <Text style={[styles.statusText, { color: theme.secondaryText }]}>{t('settings.downloads.Queued')}</Text>}
-				</View>
-				<View style={styles.rowActions}>
-					{isDownloading && <IconButton icon="pause" size={size.icon.small} color={theme.primaryText} style={styles.actionButton} onPress={() => pauseDownload(item.songId)} />}
-					{isPaused && <IconButton icon="play" size={size.icon.small} color={theme.primaryText} style={styles.actionButton} onPress={() => resumeDownload(item.songId)} />}
-					{isError && <IconButton icon="refresh" size={size.icon.small} color={theme.primaryText} style={styles.actionButton} onPress={() => retryDownload(item.songId)} />}
-					<IconButton
-						icon="times"
-						size={size.icon.small}
-						color={theme.secondaryText}
-						style={styles.actionButton}
-						onPress={() => {
-							if (isDownloading) {
-								confirmAlert(t('settings.downloads.Cancel download'), t('settings.downloads.Cancel download alert', { name: item.meta.title }), async () => cancelDownload(item.songId))
-							} else {
-								cancelDownload(item.songId)
-							}
-						}}
-					/>
+						{isDownloading && (
+							<View style={[styles.progressTrack, { backgroundColor: theme.primaryBack }]}>
+								<View style={[styles.progressFill, { backgroundColor: theme.primaryTouch, width: `${progress}%` }]} />
+							</View>
+						)}
+						{isDownloading && (
+							<Text style={[styles.progressText, { color: theme.secondaryText }]}>
+								{formatBytes(item.writtenBytes)} / {formatBytes(item.totalBytes || item.writtenBytes)} · {progress}%
+							</Text>
+						)}
+						{isPaused && <Text style={[styles.statusText, { color: theme.secondaryText }]}>{t('settings.downloads.Paused')}</Text>}
+						{isError && <Text style={[styles.statusText, { color: '#e33' }]} numberOfLines={1}>{item.error || t('settings.downloads.Failed')}</Text>}
+						{item.status === 'queued' && <Text style={[styles.statusText, { color: theme.secondaryText }]}>{t('settings.downloads.Queued')}</Text>}
+					</View>
+					<View style={styles.rowActions}>
+						{isDownloading && <IconButton icon="pause" size={size.icon.small} color={theme.primaryText} style={styles.actionButton} onPress={() => pauseDownload(item.songId)} />}
+						{isPaused && <IconButton icon="play" size={size.icon.small} color={theme.primaryText} style={styles.actionButton} onPress={() => resumeDownload(item.songId)} />}
+						{isError && <IconButton icon="refresh" size={size.icon.small} color={theme.primaryText} style={styles.actionButton} onPress={() => retryDownload(item.songId)} />}
+						<IconButton
+							icon="times"
+							size={size.icon.small}
+							color={theme.secondaryText}
+							style={styles.actionButton}
+							onPress={() => {
+								if (isDownloading) {
+									confirmAlert(t('settings.downloads.Cancel download'), t('settings.downloads.Cancel download alert', { name: item.meta.title }), async () => cancelDownload(item.songId))
+								} else {
+									cancelDownload(item.songId)
+								}
+							}}
+						/>
+					</View>
 				</View>
 			</View>
 		)
 	}
 
-	return (
-		<ScrollView
-			style={mainStyles.mainContainer(theme)}
-			contentContainerStyle={mainStyles.contentMainContainer(insets)}
-		>
+	const header = (
+		<>
 			<Header title={t('Downloads')} />
 			<View style={settingStyles.contentMainContainer}>
 				<Text style={settingStyles.titleContainer(theme)}>{t('settings.cache.Song caching')}</Text>
@@ -200,110 +200,129 @@ const Downloads = () => {
 				)}
 
 				{activeItems.length > 0 && (
-					<>
-						<Text style={settingStyles.titleContainer(theme)}>{t('settings.downloads.Active downloads')}</Text>
-						<View style={settingStyles.optionsContainer(theme)}>
-							{activeItems.map(renderActiveItem)}
-						</View>
-					</>
+					<Text style={settingStyles.titleContainer(theme)}>{t('settings.downloads.Active downloads')}</Text>
 				)}
-
-				{collectionsList.length > 0 && (
-					<>
-						<Text style={settingStyles.titleContainer(theme)}>{t('settings.downloads.Downloaded')}</Text>
-						<View style={settingStyles.optionsContainer(theme)}>
-							{collectionsList.map((collection) => (
-								<View key={`${collection.type}:${collection.id}`} style={[styles.row, { backgroundColor: theme.secondaryBack }]}>
-									<ImageError style={styles.thumb} source={{ uri: collection.cover }} iconError="music" />
-									<View style={styles.rowContent}>
-										<Text style={[styles.rowTitle, { color: theme.primaryText }]} numberOfLines={1}>{collection.name}</Text>
-										<Text style={[styles.rowSubtitle, { color: theme.secondaryText }]} numberOfLines={1}>
-											{collection.completedSongs} {t('songs')} · {formatBytes(collection.totalSize)}
-										</Text>
-									</View>
-									<IconButton
-										icon="trash"
-										size={size.icon.small}
-										color={theme.secondaryText}
-										style={styles.actionButton}
-										onPress={() => {
-											confirmAlert(t('settings.downloads.Remove download'), t('settings.downloads.Remove download alert', { name: collection.name }), async () => removeSource({ type: collection.type, id: collection.id, name: collection.name }))
-										}}
-									/>
-								</View>
-							))}
-						</View>
-					</>
-				)}
-
-				{individualSongs.length > 0 && (
-					<>
-						<Text style={settingStyles.titleContainer(theme)}>{t('settings.downloads.Individual songs')}</Text>
-						<View style={settingStyles.optionsContainer(theme)}>
-							{individualSongs.map((song) => (
-								<View key={song.songId} style={[styles.row, { backgroundColor: theme.secondaryBack }]}>
-									<ImageError style={styles.thumb} source={{ uri: song.meta.cover }} iconError="music" />
-									<View style={styles.rowContent}>
-										<Text style={[styles.rowTitle, { color: theme.primaryText }]} numberOfLines={1}>{song.meta.title}</Text>
-										<Text style={[styles.rowSubtitle, { color: theme.secondaryText }]} numberOfLines={1}>{song.meta.artist} · {formatBytes(song.size)}</Text>
-									</View>
-									<IconButton icon="trash" size={size.icon.small} color={theme.secondaryText} style={styles.actionButton} onPress={() => removeSong(song.songId)} />
-								</View>
-							))}
-						</View>
-					</>
-				)}
-
-				{!isEmpty && (
-					<View style={[settingStyles.optionsContainer(theme), styles.clearAllRow, { marginTop: 20 }]}>
-						<IconButton
-							icon="trash"
-							size={size.icon.small}
-							color={theme.secondaryText}
-							style={styles.actionButton}
-							onPress={() => confirmAlert(t('settings.downloads.Clear all'), t('settings.downloads.Clear all alert'), async () => clearAllDownloads())}
-						/>
-						<Text
-							style={[styles.clearAllText, { color: theme.primaryText }]}
-							onPress={() => confirmAlert(t('settings.downloads.Clear all'), t('settings.downloads.Clear all alert'), async () => clearAllDownloads())}
-						>{t('settings.downloads.Clear all')} · {formatBytes(totalSize)}</Text>
-					</View>
-				)}
-				<View style={settingStyles.optionsContainer(theme)}>
-					<ButtonMenu
-						title={t("settings.cache.Clear API cache")}
-						icon="trash"
-						onPress={() => confirmAlert(
-							t('settings.cache.Clear API cache'),
-							t('settings.cache.Clear API cache alert message'),
-							async () => {
-								await clearCache()
-								getStat()
-							}
-						)}
-						isLast
-					/>
-				</View>
-				<Text style={settingStyles.titleContainer(theme)}>{t('settings.cache.Cache stats')}</Text>
-				<View style={settingStyles.optionsContainer(theme)}>
-					<ListMap
-						data={statCache}
-						renderItem={(item, index) => (
-							<TableItem
-								key={index}
-								title={item.name}
-								value={item.count}
-								isLast={index === statCache.length - 1}
-							/>
-						)}
-					/>
-				</View>
 			</View>
-		</ScrollView>
+		</>
+	)
+
+	const footer = (
+		<View style={settingStyles.contentMainContainer}>
+			{collectionsList.length > 0 && (
+				<>
+					<Text style={settingStyles.titleContainer(theme)}>{t('settings.downloads.Downloaded')}</Text>
+					<View style={settingStyles.optionsContainer(theme)}>
+						{collectionsList.map((collection) => (
+							<View key={`${collection.type}:${collection.id}`} style={[styles.row, { backgroundColor: theme.secondaryBack }]}>
+								<ImageError style={styles.thumb} source={{ uri: collection.cover }} iconError="music" />
+								<View style={styles.rowContent}>
+									<Text style={[styles.rowTitle, { color: theme.primaryText }]} numberOfLines={1}>{collection.name}</Text>
+									<Text style={[styles.rowSubtitle, { color: theme.secondaryText }]} numberOfLines={1}>
+										{collection.completedSongs} {t('songs')} · {formatBytes(collection.totalSize)}
+									</Text>
+								</View>
+								<IconButton
+									icon="trash"
+									size={size.icon.small}
+									color={theme.secondaryText}
+									style={styles.actionButton}
+									onPress={() => {
+										confirmAlert(t('settings.downloads.Remove download'), t('settings.downloads.Remove download alert', { name: collection.name }), async () => removeSource({ type: collection.type, id: collection.id, name: collection.name }))
+									}}
+								/>
+							</View>
+						))}
+					</View>
+				</>
+			)}
+
+			{individualSongs.length > 0 && (
+				<>
+					<Text style={settingStyles.titleContainer(theme)}>{t('settings.downloads.Individual songs')}</Text>
+					<View style={settingStyles.optionsContainer(theme)}>
+						{individualSongs.map((song) => (
+							<View key={song.songId} style={[styles.row, { backgroundColor: theme.secondaryBack }]}>
+								<ImageError style={styles.thumb} source={{ uri: song.meta.cover }} iconError="music" />
+								<View style={styles.rowContent}>
+									<Text style={[styles.rowTitle, { color: theme.primaryText }]} numberOfLines={1}>{song.meta.title}</Text>
+									<Text style={[styles.rowSubtitle, { color: theme.secondaryText }]} numberOfLines={1}>{song.meta.artist} · {formatBytes(song.size)}</Text>
+								</View>
+								<IconButton icon="trash" size={size.icon.small} color={theme.secondaryText} style={styles.actionButton} onPress={() => removeSong(song.songId)} />
+							</View>
+						))}
+					</View>
+				</>
+			)}
+
+			{!isEmpty && (
+				<View style={[settingStyles.optionsContainer(theme), styles.clearAllRow, { marginTop: 20 }]}>
+					<IconButton
+						icon="trash"
+						size={size.icon.small}
+						color={theme.secondaryText}
+						style={styles.actionButton}
+						onPress={() => confirmAlert(t('settings.downloads.Clear all'), t('settings.downloads.Clear all alert'), async () => clearAllDownloads())}
+					/>
+					<Text
+						style={[styles.clearAllText, { color: theme.primaryText }]}
+						onPress={() => confirmAlert(t('settings.downloads.Clear all'), t('settings.downloads.Clear all alert'), async () => clearAllDownloads())}
+					>{t('settings.downloads.Clear all')} · {formatBytes(totalSize)}</Text>
+				</View>
+			)}
+			<View style={settingStyles.optionsContainer(theme)}>
+				<ButtonMenu
+					title={t("settings.cache.Clear API cache")}
+					icon="trash"
+					onPress={() => confirmAlert(
+						t('settings.cache.Clear API cache'),
+						t('settings.cache.Clear API cache alert message'),
+						async () => {
+							await clearCache()
+							getStat()
+						}
+					)}
+					isLast
+				/>
+			</View>
+			<Text style={settingStyles.titleContainer(theme)}>{t('settings.cache.Cache stats')}</Text>
+			<View style={settingStyles.optionsContainer(theme)}>
+				<ListMap
+					data={statCache}
+					renderItem={(item, index) => (
+						<TableItem
+							key={index}
+							title={item.name}
+							value={item.count}
+							isLast={index === statCache.length - 1}
+						/>
+					)}
+				/>
+			</View>
+		</View>
+	)
+
+	return (
+		<LegendList
+			style={mainStyles.mainContainer(theme)}
+			contentContainerStyle={mainStyles.contentMainContainer(insets)}
+			ListHeaderComponent={header}
+			ListFooterComponent={footer}
+			data={activeItems}
+			keyExtractor={(item) => item.songId}
+			renderItem={renderActiveItem}
+			estimatedItemSize={80}
+			recycleItems={true}
+		/>
 	)
 }
 
 const styles = StyleSheet.create({
+	activeCard: {
+		paddingHorizontal: 17,
+		borderRadius: 10,
+		marginBottom: 20,
+		overflow: 'hidden',
+	},
 	statsCard: {
 		borderRadius: 12,
 		paddingVertical: 14,

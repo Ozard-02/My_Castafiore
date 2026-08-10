@@ -10,6 +10,7 @@ const WINDOW_MS = 10_000
 
 const listeners = new Set()
 let state = { queue: [], index: {}, collections: {} }
+let queueById = new Map()
 let isProcessing = false
 
 const getKeys = () => {
@@ -27,6 +28,7 @@ const notify = () => {
 
 const setState = (next) => {
 	state = next
+	queueById = new Map(next.queue.map((q) => [q.songId, q]))
 	notify()
 }
 
@@ -116,6 +118,7 @@ export const initDownloads = async () => {
 			item.resumable = null
 		})
 		state = { queue, index, collections }
+		queueById = new Map(queue.map((q) => [q.songId, q]))
 		notify()
 	} catch (error) {
 		logger.error('downloadManager', 'Error loading downloads', error)
@@ -144,10 +147,16 @@ const buildMeta = (song) => ({
 // ---------------------------------------------------------------------------
 // Queue engine
 // ---------------------------------------------------------------------------
+const progressTimestamps = new Map()
+const PROGRESS_INTERVAL_MS = 200
+
 const onProgress = (songId) => (progress) => {
-	const item = state.queue.find((q) => q.songId === songId)
+	const item = queueById.get(songId)
 	if (!item || item.status !== 'downloading') return
 	trackBytes(songId, progress.totalBytesWritten)
+	const last = progressTimestamps.get(songId) || 0
+	if (Date.now() - last < PROGRESS_INTERVAL_MS) return
+	progressTimestamps.set(songId, Date.now())
 	setState({
 		...state,
 		queue: state.queue.map((q) => q.songId === songId
@@ -158,7 +167,7 @@ const onProgress = (songId) => (progress) => {
 
 const moveToQueue = (song, source, silent = false) => {
 	if (isCached(song.id)) return null
-	if (state.queue.some((q) => q.songId === song.id)) return null
+	if (queueById.has(song.id)) return null
 	return {
 		songId: song.id,
 		url: songUrl(song),
@@ -458,7 +467,7 @@ export const getDownloadedSongs = () => {
 }
 
 export const getSongState = (songId) => {
-	const queueItem = state.queue.find((q) => q.songId === songId)
+	const queueItem = queueById.get(songId)
 	if (queueItem) {
 		if (queueItem.silent) return state.index[songId] ? { status: 'done', progress: 1 } : { status: 'none', progress: 0 }
 		if (queueItem.status === 'downloading') return { status: 'downloading', progress: queueItem.progress }
