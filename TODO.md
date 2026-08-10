@@ -296,11 +296,12 @@
     - Likely touches: `nextSong` in the player backends (local/cast/upnp/web), `songReducer`
       end-of-queue handling, `Settings` toggle + i18n. Plan: `plans/autoplay-next.md` (to create).
 
-19. **Avoid duplicate song insertions in a playlist** 🚧 WANTED
+19. **Avoid duplicate song insertions in a playlist** ✅ done
     - When adding songs to a playlist, skip songs that are already present (no double insertions).
-    - Likely touches: `addToPlaylist` flow (search screen add-to-playlist, `OptionsSongsList` add to
-      playlist) — check the playlist's current songs before appending; decide UX (silently skip vs.
-      tell the user how many were already there).
+    - ✅ Done: new `addSongToPlaylist(config, playlist, songId)` in `app/utils/api.js` fetches the
+      playlist's current songs (`getPlaylist` → `entry`) and returns `false` (no `updatePlaylist`
+      call) if the song id is already there. Used by the three add-to-playlist actions
+      (`OptionsSongsList`, `OptionsPlayer`, `OptionsQueue`). Silently skips — the popup just closes.
 
 ---
 
