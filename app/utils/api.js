@@ -64,6 +64,21 @@ export const addSongToPlaylist = async (config, playlist, songId) => {
 	return true
 }
 
+export const addSongsToPlaylist = async (config, playlist, songIds) => {
+	if (!songIds?.length) return 0
+	const existingIds = await getApi(config, 'getPlaylist', { id: playlist.id })
+		.then((json) => new Set((json?.playlist?.entry || []).map((song) => song.id)))
+		.catch(() => new Set())
+	let added = 0
+	for (const songId of songIds) {
+		if (existingIds.has(songId)) continue
+		await getApi(config, 'updatePlaylist', { playlistId: playlist.id, songIdToAdd: songId })
+		existingIds.add(songId)
+		added++
+	}
+	return added
+}
+
 export const getCachedAndApi = async (config, path, query = '', setData = () => { }) => {
 	if (!config?.url || !config?.query) {
 		logger.error('getCachedAndApi', 'config.url or config.query is not defined')

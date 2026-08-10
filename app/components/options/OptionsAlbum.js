@@ -4,7 +4,7 @@ import { useNavigation } from '@react-navigation/native'
 import { useTranslation } from 'react-i18next'
 
 import { useConfig } from '~/contexts/config'
-import { getApi, getApiNetworkFirst } from '~/utils/api'
+import { getApi, getApiNetworkFirst, addSongsToPlaylist } from '~/utils/api'
 import { urlCover } from '~/utils/url'
 import { playSong, addToQueue, addToUpNext } from '~/utils/player'
 import { useSong, useSongDispatch } from '~/contexts/song'
@@ -26,6 +26,30 @@ const OptionsAlbum = ({ album, isOpen, onClose }) => {
 			})
 			.catch(() => { })
 		refOption.current.close()
+	}
+
+	const openAddToPlaylist = () => {
+		getApi(config, 'getPlaylists')
+			.then((json) => {
+				if (!json.playlists?.playlist) return
+
+				refOption.current.setVirtualOptions([
+					{
+						name: t('Add to playlist'),
+					},
+					...json.playlists.playlist.map((playlist) => ({
+						name: playlist.name,
+						image: urlCover(config, playlist, 100),
+						onPress: () => {
+							addSongsToPlaylist(config, playlist, (album.song || []).map((s) => s.id))
+								.catch(() => { })
+							refOption.current.close()
+						}
+					}))
+				]
+				)
+			})
+			.catch(() => { })
 	}
 
 	if (!album) return null
@@ -63,6 +87,11 @@ const OptionsAlbum = ({ album, isOpen, onClose }) => {
 						}
 					},
 					hidden: !song.queue?.length
+				},
+				{
+					name: t('Add to playlist'),
+					icon: 'plus',
+					onPress: openAddToPlaylist
 				},
 				{
 					name: t('Download'),
