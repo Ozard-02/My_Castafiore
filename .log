@@ -1,5 +1,205 @@
 # Castafiore - Session Log
 
+## 2026-08-10 (18th)
+- Offline-mode feature REVERTED per user ("undo all offline feature", "we will work later").
+  - Deleted `app/components/button/OfflineButton.js` + `app/utils/offline.js`.
+  - Removed `useOfflineSongs` from SongsList, HorizontalSongs, SongExplorer, ShowAll n/w,
+    SearchMore, Favorited, Playlist, GenreSong, Songs, RandomButton.
+  - Removed `<OfflineButton/>` from Album, Artist, Genre, Favorited, Playlist headers.
+  - Dropped `isOffline` from `defaultSettings` + "Offline" key from en.json.
+  - All those files byte-identical to HEAD again. Kept unrelated in-progress work
+    (queue DnD, playlist sort/swipe, server switch, Favorited home song section 17b).
+- eslint clean; release APK rebuilt + installed on R5CY71GYKWF.
+- Committed + pushed.
+
+## 2026-08-09 (17th)
+- Re-added Favorited section to the Playlists tab, **below** "My Playlists" (`Playlists.js`):
+  restored `getStarred2` fetch + `refreshFavorited()` in `onRefresh`, `SongsList`/`Pressable`
+  imports, and the Favorited pressable (navigates to the `Favorited` screen) + preview list
+  (`previewFavorited`). The section sits after `<VerticalPlaylist>`, not above the header
+  (that placement is what commit 25a9378 removed).
+- Fixed queue-view crash (Invariant Violation `scrollToIndex out of range: item length 0`):
+  playing a single song yields an empty *rotated* `queueItems` (`[...queue.slice(1), ...]` = `[]`)
+  while `isCurrentInQueue` stays true, so `scrollToIndex({ index: 0 })` fired on an empty FlatList.
+  Guarded all three call sites with `queueItems.length > 0`:
+  `useQueueDnD.js` scroll effect, `FullScreenPlayer.js` `onLayout`, `FullScreenHorizontalPlayer.js` `onLayout`.
+- eslint clean, release build OK. Not installed yet.
+
+## 2026-08-09 (17b)
+- Favorited section now shows in the Playlists tab **grid** view too (`ListFooterComponent` on the
+  LegendList) — it previously only rendered in list mode. Extracted the block to `favoritedSection`.
+- Fixed Home "Favorited" section showing nothing: it read `json?.starred2?.album` (starred *albums*),
+  but the heart stars *songs* → `starred2.song` populated, `starred2.album` empty → empty list → hidden.
+  Changed the `favorited-album-star` home section to `type: 'song'` + `getInfo: setList(json?.starred2?.song)`.
+  New `app/components/lists/HorizontalSongs.js` (horizontal song tiles via CustomFlat, tap plays,
+  long-press OptionsSongsList) rendered from `HorizontalList` for `type === 'song'`.
+  `ShowAll.native.js`/`ShowAll.web.js` handle `section.type === 'song'` (tap → `playSong`).
+- eslint clean, release build OK. Not installed yet.
+
+## 2026-08-09 (16th)
+- UI consistency pass (TODO #16) was fully REVERTED per user ("it's ugly, revert back and rebuild").
+  All 11 navigation-prop→hook conversions, shared search styles, PresHeaderIcon/BackButton theme
+  colors, Selector check, SearchResults pills, Tracks status-bar are back to pre-pass state
+  (byte-identical, verified via git diff). Build + install OK.
+
+## 2026-08-09 (15th)
+- UI consistency pass (TODO #16): all screens converted to `useNavigation()` hook (Playlists,
+  Settings, Album, Artist, ArtistAlbums, Connect, AddServer, ShowAll native+web, UpdateRadio,
+  DownloadBanner). Shared `mainStyles.searchBox`/`searchInput` extracted and applied to Tracks
+  search + Playlists new-playlist field. PresHeaderIcon cover/icon theme-aware; BackButton white
+  chevron + dark text-shadow halo. Tracks grid toggle uses `size.icon.small`. SearchResults
+  explorer boxes → pills (user: pills over boxes). Selector selected pill shows a check icon
+  (user: check icon everywhere). Tracks status-bar → fixed View pattern. Full eslint clean,
+  build + install OK.
+
+## 2026-08-08 (14th)
+- Queue DnD autoscroll direction fix: `QueueDrag.js` scrolled DOWN near the top edge and UP near the
+  bottom (inverted). Negated the two `scroll` signs — top edge now scrolls UP, bottom edge scrolls DOWN.
+  eslint clean. TODO #1 updated.
+
+## 2026-08-08 (13th)
+- TODO #17 Queue top order — display the queue rotated so the current song is at the top.
+  - `useQueueDnD.queueItems` = queue rotated to start at the current song
+    (`[...queue.slice(index+1), ...queue.slice(0, index)]` when current is in queue); `song.queue`
+    stays the source of truth. `queueRealIndex`/`displayToReal` use `(index + 1 + i) % queue.length`.
+    Scroll-to-index targets 0 in both players + the hook's effect. `isCurrentInQueue === false`
+    (radio/up-next) leaves the list untouched.
+  - eslint clean. Docs updated (TODO #17).
+
+## 2026-08-08 (12th)
+- TODO #13 Shuffle Behavior — physical queue reorder (visual + playback follow shuffle).
+- Shuffle ON now reorders `song.queue` itself via `shuffle()` (tools.js); the preserved original
+  order is kept in a new persisted `song.originalQueue`. `setActionEndOfSong('random')` saves the
+  original on first activation, re-shuffles from it on re-press, and restoring order (any non-random
+  action while shuffled) puts `originalQueue` back and remaps the current song's index by id.
+- `nextSong`/`previousSong` (native + web) dropped the random branch: the queue is already shuffled,
+  so both advance sequentially. Removed `randomIndex`/`nextRandomIndex`/`prevRandomIndex` from
+  `tools.js` and all reducer references. `addToQueue`/`removeFromQueue`/`moveUpNextToQueue`/
+  `moveQueueToUpNext` keep `originalQueue` in sync by id so added/removed songs survive the toggle.
+- Shuffle button UX (user choice): tap toggles ON/OFF only; re-shuffle = toggle OFF→ON.
+- eslint clean. Docs updated (TODO #13, STRUCTURE.md). Plan: `plans/shuffle-reorder.md`.
+
+## 2026-08-08 (11th)
+- TODO #14 Seamless Server Switching — follow-up: reuse the song cache for instant resume.
+- **Shared song cache** (`app/utils/cache.native.js`): cache was per-server
+  (`cache/<sanitizedUrl>/songs/`), so after a switch `isSongCached()` missed the already-cached
+  current song → pause while re-buffering from the (possibly slow) new server. Now a single shared
+  `cache/songs/` folder (`getPathDir()`); `initCacheSong()` consolidates old per-server folders (and
+  the legacy `undefined` one) with `FileSystem.moveAsync`. `convertToTrack` already prefers the
+  cached file, so playback resumes instantly after a switch. First field-test run failed: files were
+  moved before the destination dir existed → moved `makeDirectoryAsync(sharedDir)` before the loop.
+- **Deferred**: downloadManager AsyncStorage keys still namespaced by `folderCache` (kept — unifying
+  would orphan existing per-server `downloadIndex:<url>` data; not needed for playback).
+- Build gotcha: system Java is 26.0.2 → Gradle 8.13's embedded Kotlin crashes parsing it
+  (`IllegalArgumentException: 26.0.2` at settings resolution). Build with
+  `JAVA_HOME=/usr/lib/jvm/java-17-openjdk`.
+- eslint clean; release APK built + installed on R5CY71GYKWF; startup logcat clean (migration ran,
+  no `initCacheSong` errors). Manual field test pending: play on WiFi → let it cache → switch server
+  → expect no pause.
+
+## 2026-08-08 (12th)
+- TODO #14 follow-up 2: user still heard a ~1s stop. Root causes in `playerLocal.switchServer`:
+  (1) `loadSong` did `TrackPlayer.load` + **play**, and only then `setPosition` → track audibly
+  restarted from 0 and jumped to the saved position; (2) it reloaded even when the current track was
+  already playing from a server-independent cached file.
+- Fix: return early (player untouched) when active track URL already equals `getPathSong(...)`;
+  otherwise load from shared cache and **seek before play**, then play/pause.
+- Honest constraint: single-engine TrackPlayer `load()` = teardown+rebuild → no true gapless swap.
+  Now 0 gap when already on cache, ~0.2-0.3s otherwise. Preemptive "swap to cache when current song
+  finishes downloading" (one small hiccup early per streamed song) considered but NOT shipped — offer
+  if user still hears a gap.
+- eslint clean; APK rebuilt + installed on R5CY71GYKWF. Manual test pending: switch server mid-song
+  (song fully cached) → expect no restart-from-0, only at most a brief blip.
+
+## 2026-08-08 (13th)
+- TODO #10 swipe done: playlist row swipe actions.
+- New `app/components/item/PlaylistSwipeRow.js` (PanResponder + Animated, no new dependency):
+  swipe **right** → enqueue; swipe **left** → reveal "Remove from playlist" + "Play next" buttons.
+  Horizontal-only claim (|dx|>8 and dx dominates dy) so vertical scroll/taps are untouched; tap on an
+  open row closes it; open state is parent-driven (`openSongId` in `Playlist.js`) so LegendList
+  `recycleItems` can't leave a stale-open row. Handlers in `Playlist.js` mirror `OptionsSongsList`
+  (addToQueue/addToUpNext if `song.queue` exists else playSong; remove via `updatePlaylist
+  songIndexToRemove`).
+- i18n: added missing `Remove from playlist` key to en/de (OptionsSongsList already referenced it).
+- eslint clean; APK rebuilt + installed on R5CY71GYKWF. Manual test pending: swipe right enqueues,
+  swipe left shows the two buttons, remove + play next work, scroll/tap unaffected.
+
+## 2026-08-08
+- TODO #11 Status Bar Background + TODO #12 Player Controls Position + TODO #10 Playlist Improvements (partial) done. Plan: `plans/playlist-improvements.md`.
+- **Status bar background** (`Navigation.js`): `<SystemBars>` from `react-native-edge-to-edge` only
+  accepts `style`/`hidden` (no backgroundColor prop). Fix: added a fixed `<View>` with
+  `height: insets.top` + `backgroundColor: theme.primaryBack` behind the status bar, covering all
+  screens at once. `useSafeAreaInsets` imported.
+- **Player controls position** (`FullScreenPlayer.js`): changed `playerContainer` `justifyContent`
+  from `'center'` to `'space-between'` + `paddingBottom: 20`. Cover/title now at top, play + action
+  buttons in the lower third (not pressed on the bottom). Desktop `FullScreenHorizontalPlayer.js`
+  unchanged.
+- **Playlist searchbar + sort** (`Playlist.js`): added `searchQuery` state + `TextInput` above song
+  list (filters by title/artist client-side, live). Added `sortOption` state + sort icon button
+  → `OptionsPopup` with options: Default, Title, Artist, Album, Duration, Track. Sort persists in
+  `settings.sortPlaylist` (new in `defaultSettings`). `filteredSortedSongs` memo feeds both
+  `LegendList` and `OptionsSongsList`.
+- **Playlist delete** (`OptionsPlaylist.js`): added "Delete playlist" option (red trash icon)
+  using `confirmAlert` → `deletePlaylist` API. `Playlist.js` passes `onDelete={() => navigation.goBack()}`.
+- i18n: added en/de keys for Sort, Sort by …, Default, Search in playlist, Are you sure…
+- eslint clean. APK rebuilt (1m20s) + installed on R5CY71GYKWF.
+
+## 2026-08-06 (9th)
+- Queue view polish (TODO #1 follow-up). Plan: `plans/queue-dnd.md`.
+- Pinned **"Now playing"** row at the top of the QUEUE view (above "Up next" and "Queue"), non-draggable
+  (mobile: `SongItem` with playing indicator; desktop: right-aligned `QueueRow` with overlay). New i18n key.
+- **Cross-section drag-and-drop**: `QueueDragRow.js` rewritten into `QueueDragProvider` + `QueueDragRow`.
+  One manager for both lists — measures each list via `measureInWindow`, resolves the drop target from the
+  absolute finger position vs list bounds, edge-autoscrolls the active list (queue list `viewport` now
+  wired via `onLayout`; it was never set before, so queue autoscroll never engaged), and **springs sibling
+  rows to ±rowHeight to open a live gap** while the dragged row is lifted (elevation + background).
+  Drop → new `moveTrack` util → `moveUpNext`/`moveInQueue` (same list) or new reducer cases
+  `moveUpNextToQueue`/`moveQueueToUpNext` (cross list; the latter ignores `from === song.index`, so the
+  current song can't be dropped into "Up next"; the UI also clamps the current row's target to the queue).
+- Desktop rows now render a drag handle (`QueueRow`); previously the raw `Pressable` rows ignored the
+  injected `handle` prop, so desktop had no drag.
+- **Follow-up fixes** (after device smoke test):
+  - **Crash on drag**: `startDrag` called `measureInWindow` on the `FlatList` ref, which doesn't expose it
+    ("TypeError: undefined is not a function"). Now each list is wrapped in a `View` (`queueBox`/`upNextBox`)
+    and the provider measures those (guarded with `?.`). The up-next section header was moved outside the
+    measured box so the box frame aligns with the first row.
+  - **Current song removed from the queue list** (user request — it's already the pinned "Now playing"):
+    the queue `FlatList` now renders `queueItems = queue minus song.index` (display-level; the full queue
+    stays the source of truth). Queue display indices are mapped to real queue indices for
+    `moveTrack`/`setIndex`/long-press options; open-view scroll targets the first upcoming song
+    (display index `song.index`, clamped). The now-unneeded `crossBlock` clamp was dropped (the reducer
+    guard `from === song.index` remains as a safety net).
+- eslint clean; APK rebuilt (40s) + installed on R5CY71GYKWF; launch + drag smoke verified (no crash).
+- **Follow-up fixes (round 2)** — device smoke test found drag behaving wrong ("songs go nowhere") and the
+  lifted row disappearing:
+  - **Drag rewrite** (`QueueDrag.js`): window-coordinate measurement is unreliable inside a `Modal`, so the
+    provider now computes everything relative to the shared container — both lists are direct children of one
+    parent, their `onLayout` `boxY`/`boxH` + the gesture `dy` resolve the drop target, no `measureInWindow`.
+    Region detection only engages "Up next" when that box actually exists (a previously absent box captured
+    drops); cross-section gap = trailing rows (`index >= targetIndex`) shift `+rowHeight` (the old code
+    compared indices across lists); same-list gaps shift per from/target relationship; desktop's bottom-aligned
+    queue gets a `bottomPad` correction.
+  - **Row disappearing**: lifted row dropped `elevation`/`zIndex` (translateY inside a clipped FlatList on
+    Android made it vanish) — lifted styling is now just `backgroundColor`. Spring uses `useNativeDriver: false`.
+- **Refactor** (cleanup pass): extracted `app/utils/useQueueDnD.js` (all queue-DnD state: refs, `lists` memo,
+  `handleMove` with the display→real index mapping, `queueRealIndex`, the scroll-to-current effect) shared by
+  both players; deleted the dead `queueBox`/`upNextBox` refs (leftovers from `measureInWindow`); renamed
+  `QueueDragRow.js` → `QueueDrag.js` (file holds provider + row) and tidied the provider (dropped redundant
+  `key` from registered rows, inlined the up-region helper).
+- **QUEUE view sizing (mobile)**: the QUEUE preview reused the album-cover square style (`albumImage`,
+  ~310px on a phone, `min/max width & height + aspectRatio`), so it used very little screen. Now it uses
+  `{ width: '100%', flex: 1, maxHeight: '70%' }` — full column width (≤500) and grows to available height
+  capped at 70% of the container (no overflow on short screens); title/TimeBar/controls drop below it.
+  Desktop unchanged (already half-width/full-height).
+- **DnD polish** (`QueueDrag.js`): sibling spring stiffened (`friction 7/60` → `friction 10/tension 140` +
+  `overshootClamping: true`) so the gap opens and rows snap back without the elastic bounce/overshoot;
+  cross-section target switching now has a `±rowHeight/2` hysteresis dead-band around the up-next box
+  bottom — the section only flips when the finger clearly crosses, so near-boundary drags no longer flicker
+  between Up next/Queue or land at the far edge of the wrong section. Same-section drops stay exact.
+- **1:1 drag tracking** (`QueueDrag.js`): the lifted row used `dy − scrollDelta`, so once edge-autoscroll
+  engaged the row drifted away from the finger as the list scrolled. Now it follows the finger exactly
+  (`setDrag(dy)`); the `scrollDelta` state was removed (autoscroll still scrolls the list under the finger).
+
 ## 2026-08-05 (8th)
 - TODO #1 Queue Management done (all 4 parts). Plan: `plans/queue-management.md`.
 - Separate "up next" queue: `song.upNext` (persisted) in the song reducer.

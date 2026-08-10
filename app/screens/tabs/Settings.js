@@ -26,13 +26,16 @@ const Settings = ({ navigation }) => {
 	const songDispatch = useSongDispatch()
 
 	return (
-		<ScrollView
-			style={mainStyles.mainContainer(theme)}
-			contentContainerStyle={[
-				mainStyles.contentMainContainer(insets),
-				settingStyles.contentMainContainer
-			]}
-		>
+		<View style={{ flex: 1 }}>
+			<View style={{ height: insets.top, backgroundColor: theme.primaryBack }} />
+			<ScrollView
+				style={mainStyles.mainContainer(theme)}
+				contentContainerStyle={[
+					mainStyles.contentMainContainer(insets),
+					settingStyles.contentMainContainer,
+					{ paddingTop: 0 }
+				]}
+			>
 			<View style={[settingStyles.optionsContainer(theme), { marginTop: 40 }]}>
 				<Pressable
 					onPress={() => Player.tuktuktuk(songDispatch)}
@@ -86,11 +89,6 @@ const Settings = ({ navigation }) => {
 					title={t("Player")}
 					icon="play"
 					onPress={() => navigation.navigate('Settings/Player')}
-				/>
-				<ButtonMenu
-					title={t("Cache")}
-					icon="database"
-					onPress={() => navigation.navigate('Settings/Cache')}
 				/>
 				<ButtonMenu
 					title={t("Downloads")}
@@ -162,6 +160,7 @@ const Settings = ({ navigation }) => {
 			</View>
 
 		</ScrollView>
+		</View>
 	)
 }
 

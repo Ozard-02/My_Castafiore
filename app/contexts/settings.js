@@ -110,6 +110,7 @@ export const defaultSettings = {
 	gridView: false,
 	// Playlist settings
 	reversePlaylist: false,
+	sortPlaylist: null,
 	orderPlaylist: 'title',
 	previewFavorited: 3,
 	language: null,
@@ -180,11 +181,11 @@ export const homeSections = [
 		icon: 'heart',
 		id: 'favorited-album-star',
 		title: 'Favorited',
-		type: 'album_star',
+		type: 'song',
 		isShowAll: true,
 		path: 'getStarred2',
 		query: '',
-		getInfo: (json, setList) => setList(json?.starred2?.album),
+		getInfo: (json, setList) => setList(json?.starred2?.song),
 	},
 	{
 		id: 'recently-added',

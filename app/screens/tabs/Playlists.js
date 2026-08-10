@@ -1,5 +1,5 @@
 import React from 'react'
-import { ScrollView, Text, TextInput, View, StyleSheet } from 'react-native'
+import { ScrollView, Text, TextInput, View, StyleSheet, Pressable } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useTranslation } from 'react-i18next'
 import { LegendList } from '@legendapp/list'
@@ -12,6 +12,7 @@ import { useTheme } from '~/contexts/theme'
 import RotateIconButton from '~/components/button/RotateIconButton'
 import IconButton from '~/components/button/IconButton'
 import mainStyles from '~/styles/main'
+import SongsList from '~/components/lists/SongsList'
 import VerticalPlaylist from '~/components/lists/VerticalPlaylist'
 import AllItem from '~/components/item/AllItem'
 import size from '~/styles/size'
@@ -26,6 +27,10 @@ const Playlists = ({ navigation }) => {
 	const theme = useTheme()
 	const [newPlaylist, setNewPlaylist] = React.useState(null)
 
+	const [favorited, refreshFavorited] = useCachedAndApi([], 'getStarred2', null, (json, setData) => {
+		setData(json?.starred2?.song)
+	}, [])
+
 	const [playlists, refreshPlaylists, setPlaylists] = useCachedAndApi([], 'getPlaylists', null, (json, setData) => {
 		setData([...(json?.playlists?.playlist || [])].sort(sortPlaylist))
 	}, [])
@@ -36,6 +41,7 @@ const Playlists = ({ navigation }) => {
 
 	const onRefresh = (rotate) => {
 		rotate()
+		refreshFavorited()
 		refreshPlaylists()
 	}
 
@@ -135,32 +141,56 @@ const Playlists = ({ navigation }) => {
 		</>
 	)
 
+	const favoritedSection = (
+		<>
+			<Pressable
+				style={({ pressed }) => ([mainStyles.opacity({ pressed }), styles.subTitleParent, { marginTop: 20 }])}
+				onPress={() => navigation.navigate('Favorited')}
+			>
+				<Icon name="heart" size={size.icon.small} color={theme.primaryTouch} style={{ marginEnd: 10 }} />
+				<Text style={[mainStyles.subTitle(theme), { flex: 1 }]}>{t('Favorited')}</Text>
+				<Text style={{ color: theme.secondaryText, fontWeight: 'bold', fontSize: 15 }}>
+					{favorited?.length} <Icon name="chevron-right" size={15} color={theme.secondaryText} />
+				</Text>
+			</Pressable>
+			<SongsList songs={favorited?.slice(0, settings.previewFavorited)} listToPlay={favorited} />
+		</>
+	)
+
 	if (layout === 'grid') return (
-		<LegendList
-			data={playlists}
-			numColumns={2}
-			keyExtractor={(item) => item.id}
-			style={mainStyles.mainContainer(theme)}
-			contentContainerStyle={[mainStyles.contentMainContainer(insets), { minHeight: Math.ceil(playlists.length / 2) * 230 + 100 }]}
-			waitForInitialLayout={false}
-			recycleItems={true}
-			estimatedItemSize={230}
-			ListHeaderComponent={header}
-			renderItem={({ item }) => (
-				<AllItem item={item} type="playlist" onPress={() => navigation.navigate('Playlist', { playlist: item })} />
-			)}
-		/>
+		<View style={{ flex: 1 }}>
+			<View style={{ height: insets.top, backgroundColor: theme.primaryBack }} />
+			<LegendList
+				data={playlists}
+				numColumns={2}
+				keyExtractor={(item) => item.id}
+				style={mainStyles.mainContainer(theme)}
+				contentContainerStyle={[mainStyles.contentMainContainer(insets), { paddingTop: 0, minHeight: Math.ceil(playlists.length / 2) * 230 + 100 }]}
+				waitForInitialLayout={false}
+				recycleItems={true}
+				estimatedItemSize={230}
+				ListHeaderComponent={header}
+				ListFooterComponent={favoritedSection}
+				renderItem={({ item }) => (
+					<AllItem item={item} type="playlist" onPress={() => navigation.navigate('Playlist', { playlist: item })} />
+				)}
+			/>
+		</View>
 	)
 
 	return (
-		<ScrollView
-			vertical={true}
-			style={mainStyles.mainContainer(theme)}
-			contentContainerStyle={mainStyles.contentMainContainer(insets)}
-		>
+		<View style={{ flex: 1 }}>
+			<View style={{ height: insets.top, backgroundColor: theme.primaryBack }} />
+			<ScrollView
+				vertical={true}
+				style={mainStyles.mainContainer(theme)}
+				contentContainerStyle={[mainStyles.contentMainContainer(insets), { paddingTop: 0 }]}
+			>
 			{header}
 			<VerticalPlaylist playlists={playlists} onRefresh={refreshPlaylists} />
+			{favoritedSection}
 		</ScrollView>
+		</View>
 	)
 }
 

@@ -25,7 +25,8 @@ import SlideBar from '~/components/button/SlideBar'
 import SlideControl from '~/components/button/SlideControl'
 import SongItem from '~/components/item/SongItem'
 import ConnectButton from '~/components/button/ConnectButton'
-import QueueDragRow from '~/components/player/QueueDragRow'
+import QueueDragRow, { QueueDragProvider } from '~/components/player/QueueDrag'
+import useQueueDnD from '~/utils/useQueueDnD'
 
 const preview = {
 	COVER: 0,
@@ -35,25 +36,13 @@ const preview = {
 
 const CoverItem = ({ isPreview, song, setFullScreen, stars }) => {
 	const { t } = useTranslation()
-	const scroll = React.useRef(null)
-	const upNextScroll = React.useRef(null)
-	const queueOffset = React.useRef(0)
-	const queueViewport = React.useRef(0)
-	const upNextOffset = React.useRef(0)
-	const upNextViewport = React.useRef(0)
 	const config = useConfig()
 	const theme = useTheme()
 	const songDispatch = useSongDispatch()
 	const [indexOptions, setIndexOptions] = React.useState(-1)
 	const [upNextOptions, setUpNextOptions] = React.useState(-1)
 	const { width } = useWindowDimensions()
-
-	const isCurrentInQueue = song.songInfo && song.queue?.some((item) => item.id === song.songInfo.id)
-	const rowHeight = size.image.small + 10
-
-	React.useEffect(() => {
-		if (isPreview === preview.QUEUE && isCurrentInQueue) scroll.current?.scrollToIndex({ index: song.index, animated: true, viewOffset: 0, viewPosition: 0.5 })
-	}, [song.index])
+	const { scroll, upNextScroll, queueOffset, queueViewport, upNextOffset, upNextViewport, queueBoxY, queueBoxH, upNextBoxY, upNextBoxH, rowHeight, isCurrentInQueue, queueItems, queueRealIndex, lists, handleMove } = useQueueDnD(song, songDispatch, { scrollAnimated: true })
 
 	const albumImage = React.useMemo(() => {
 		const size = Math.min(width, 500) - 50
@@ -79,80 +68,84 @@ const CoverItem = ({ isPreview, song, setFullScreen, stars }) => {
 	)
 	if (isPreview === preview.QUEUE) return (
 		<>
-			<View style={[albumImage, { borderRadius: null, flex: 1 }]}>
-				{song.upNext?.length > 0 && (
-					<View style={{ maxHeight: Math.min(song.upNext.length, 3) * rowHeight }}>
-						<Text style={{ color: theme.secondaryText, fontSize: size.text.small, textTransform: 'uppercase', marginBottom: 5 }}>{t('Up next')}</Text>
+			<View style={{ width: '100%', flex: 1, maxHeight: '70%' }}>
+				<QueueDragProvider lists={lists} rowHeight={rowHeight} onMove={handleMove}>
+					<Text style={{ color: theme.secondaryText, fontSize: size.text.small, textTransform: 'uppercase', marginBottom: 5 }}>{t('Now playing')}</Text>
+					{song.songInfo && (
+						<View style={{ marginBottom: 10 }}>
+							<SongItem
+								song={{ ...song.songInfo, starred: stars.some(s => s.id === song.songInfo.id) }}
+								queue={song.queue}
+								index={song.index}
+								setIndexOptions={() => { }}
+								onPress={() => false}
+								isPlaying
+							/>
+						</View>
+					)}
+					{song.upNext?.length > 0 && (
+						<>
+							<Text style={{ color: theme.secondaryText, fontSize: size.text.small, textTransform: 'uppercase', marginBottom: 5 }}>{t('Up next')}</Text>
+							<View onLayout={(e) => { upNextBoxY.current = e.nativeEvent.layout.y; upNextBoxH.current = e.nativeEvent.layout.height }} style={{ maxHeight: Math.min(song.upNext.length, 3) * rowHeight }}>
+								<FlatList
+									ref={upNextScroll}
+									data={song.upNext}
+									keyExtractor={(item, index) => 'up' + item.id + index}
+									showsVerticalScrollIndicator={false}
+									getItemLayout={(_, index) => ({ length: rowHeight, offset: rowHeight * index, index })}
+									onScroll={(e) => { upNextOffset.current = e.nativeEvent.contentOffset.y }}
+									scrollEventThrottle={16}
+									onLayout={(e) => { upNextViewport.current = e.nativeEvent.layout.height }}
+									renderItem={({ item, index }) => (
+										<QueueDragRow list="up" index={index}>
+											<SongItem
+												song={{ ...item, starred: stars.some(s => s.id === item.id) }}
+												queue={song.upNext}
+												index={index}
+												setIndexOptions={setUpNextOptions}
+												onPress={() => false}
+												isPlaying={false}
+											/>
+										</QueueDragRow>
+									)}
+								/>
+							</View>
+						</>
+					)}
+					<Text style={{ color: theme.secondaryText, fontSize: size.text.small, textTransform: 'uppercase', marginVertical: 5 }}>{t('Queue')}</Text>
+					<View onLayout={(e) => { queueBoxY.current = e.nativeEvent.layout.y; queueBoxH.current = e.nativeEvent.layout.height }} style={{ flex: 1 }}>
 						<FlatList
-							ref={upNextScroll}
-							data={song.upNext}
-							keyExtractor={(item, index) => 'up' + item.id + index}
+							ref={scroll}
+							style={{ flex: 1 }}
+							contentContainerStyle={{ width: '100%' }}
+							data={queueItems}
+							keyExtractor={(_, index) => index}
 							showsVerticalScrollIndicator={false}
+							onLayout={(e) => { queueViewport.current = e.nativeEvent.layout.height; if (isCurrentInQueue && queueItems.length > 0) scroll.current?.scrollToIndex({ index: 0, animated: false, viewOffset: 0, viewPosition: 0 }) }}
 							getItemLayout={(_, index) => ({ length: rowHeight, offset: rowHeight * index, index })}
-							onScroll={(e) => { upNextOffset.current = e.nativeEvent.contentOffset.y }}
+							onScroll={(e) => { queueOffset.current = e.nativeEvent.contentOffset.y }}
 							scrollEventThrottle={16}
-							onLayout={(e) => { upNextViewport.current = e.nativeEvent.layout.height }}
-							renderItem={({ item, index }) => (
-								<QueueDragRow
-									dataIndex={index}
-									rowHeight={rowHeight}
-									listRef={upNextScroll}
-									offsetRef={upNextOffset}
-									viewportRef={upNextViewport}
-									blockStart={0}
-									blockEnd={song.upNext.length - 1}
-									onMove={(from, to) => Player.moveUpNext(songDispatch, from, to)}
-								>
-									<SongItem
-										song={{ ...item, starred: stars.some(s => s.id === item.id) }}
-										queue={song.upNext}
-										index={index}
-										setIndexOptions={setUpNextOptions}
-										onPress={() => false}
-										isPlaying={false}
-									/>
-								</QueueDragRow>
-							)}
+							onScrollToIndexFailed={() => { }}
+							renderItem={({ item, index }) => {
+								const realIndex = queueRealIndex(index)
+								return (
+									<QueueDragRow list="queue" index={index}>
+										<SongItem
+											song={{ ...item, starred: stars.some(s => s.id === item.id) }}
+											queue={song.queue}
+											index={realIndex}
+											setIndexOptions={setIndexOptions}
+											onPress={(_track, queue, index) => {
+												Player.setIndex(config, songDispatch, queue, index)
+											}}
+											isPlaying={false}
+										/>
+									</QueueDragRow>
+								)
+							}}
 						/>
 					</View>
-				)}
-				<Text style={{ color: theme.secondaryText, fontSize: size.text.small, textTransform: 'uppercase', marginVertical: 5 }}>{t('Queue')}</Text>
-				<FlatList
-					ref={scroll}
-					style={{ flex: 1 }}
-					contentContainerStyle={{ width: '100%' }}
-					data={song.queue}
-					keyExtractor={(_, index) => index}
-					showsVerticalScrollIndicator={false}
-					onLayout={() => isCurrentInQueue && scroll.current?.scrollToIndex({ index: song.index, animated: false, viewOffset: 0, viewPosition: 0.5 })}
-					getItemLayout={(_, index) => ({ length: rowHeight, offset: rowHeight * index, index })}
-					onScroll={(e) => { queueOffset.current = e.nativeEvent.contentOffset.y }}
-					scrollEventThrottle={16}
-					onScrollToIndexFailed={() => { }}
-					renderItem={({ item, index }) => (
-						<QueueDragRow
-							dataIndex={index}
-							rowHeight={rowHeight}
-							listRef={scroll}
-							offsetRef={queueOffset}
-							viewportRef={queueViewport}
-							blockStart={0}
-							blockEnd={song.queue.length - 1}
-							onMove={(from, to) => Player.moveInQueue(songDispatch, from, to)}
-						>
-							<SongItem
-								song={{ ...item, starred: stars.some(s => s.id === item.id) }}
-								queue={song.queue}
-								index={index}
-								setIndexOptions={setIndexOptions}
-								onPress={(_track, queue, index) => {
-									Player.setIndex(config, songDispatch, queue, index)
-								}}
-								isPlaying={isCurrentInQueue && song.index === index}
-							/>
-						</QueueDragRow>
-					)}
-				/>
+				</QueueDragProvider>
 			</View>
 			<OptionsQueue queue={song.queue} indexOptions={indexOptions} setIndexOptions={setIndexOptions} closePlayer={() => setFullScreen(false)} />
 			<OptionsUpNext upNext={song.upNext} indexOptions={upNextOptions} setIndexOptions={setUpNextOptions} />
@@ -378,7 +371,8 @@ const styles = StyleSheet.create({
 		alignItems: 'center',
 		flexDirection: 'column',
 		flex: 1,
-		justifyContent: 'center',
+		justifyContent: 'space-between',
+		paddingBottom: 20,
 	},
 })
 

@@ -6,6 +6,8 @@ import { LegendList } from '@legendapp/list'
 import { useConfig } from '~/contexts/config'
 import { getCachedAndApi } from '~/utils/api'
 import { useTheme } from '~/contexts/theme'
+import { playSong } from '~/utils/player'
+import { useSongDispatch } from '~/contexts/song'
 import size from '~/styles/size'
 import Header from '~/components/Header'
 import mainStyles from '~/styles/main'
@@ -16,8 +18,9 @@ const ShowAll = ({ navigation, route: { params: { section } } }) => {
 	const insets = useSafeAreaInsets()
 	const config = useConfig()
 	const theme = useTheme()
+	const songDispatch = useSongDispatch()
 	const [list, setList] = React.useState([])
-
+	
 	React.useEffect(() => {
 		getList()
 	}, [section.type, section.query])
@@ -29,17 +32,18 @@ const ShowAll = ({ navigation, route: { params: { section } } }) => {
 		getCachedAndApi(config, section.path, nquery, (json) => section.getInfo(json, setList))
 	}
 
-	const onPress = React.useCallback((item) => {
+	const onPress = React.useCallback((item, index) => {
 		if (section.type === 'album') return navigation.navigate('Album', item)
 		if (section.type === 'album_star') return navigation.navigate('Album', item)
 		if (section.type === 'artist') return navigation.navigate('Artist', { id: item.id, name: item.name })
 		if (section.type === 'artist_all') return navigation.navigate('Artist', { id: item.id, name: item.name })
-	}, [section.type])
+		if (section.type === 'song') return playSong(config, songDispatch, list, index)
+	}, [section.type, list])
 
-	const renderItem = React.useCallback(({ item }) => (
+	const renderItem = React.useCallback(({ item, index }) => (
 		<ExplorerItem
 			item={item}
-			onPress={() => onPress(item)}
+			onPress={() => onPress(item, index)}
 			title={item.name || item.album || item.title}
 			subTitle={item.artist || `${item.albumCount} ${t('albums')}`}
 			borderRadius={section.type === 'artist' || section.type === 'artist_all' ? size.radius.circle : 2}

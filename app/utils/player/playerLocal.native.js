@@ -195,6 +195,26 @@ const resetAudio = (songDispatch) => {
 	TrackPlayer.reset()
 }
 
+const switchServer = async (config) => {
+	const song = global.song
+	if (!song?.songInfo || !song.queue?.length) return
+	const track = song.queue[song.index]
+	if (!track) return
+
+	// Already playing from the local cache file (server-independent) → leave the player untouched.
+	if (await isSongCached(null, track.id, global.streamFormat, global.maxBitRate)) {
+		const active = await TrackPlayer.getActiveTrack()
+		if (active && active.url === getPathSong(track.id, global.streamFormat)) return
+	}
+
+	const state = await saveState()
+	await TrackPlayer.load(await convertToTrack(track, config))
+	// seek BEFORE play so the track doesn't audibly restart from 0
+	if (state.position > 0) await setPosition(state.position)
+	if (state.isPlaying) await resumeSong()
+	else await pauseSong()
+}
+
 const saveState = async () => {
 	const progress = await TrackPlayer.getProgress()
 	const state = await TrackPlayer.getPlaybackState()
@@ -231,6 +251,7 @@ export default {
 	reload,
 	useEvent,
 	resetAudio,
+	switchServer,
 	saveState,
 	downloadNextSong,
 	downloadSong,

@@ -66,10 +66,12 @@ const Home = () => {
 	}
 
 	return (
-		<ScrollView vertical={true}
-			style={mainStyles.mainContainer(theme)}
-			contentContainerStyle={mainStyles.contentMainContainer(insets)}
-		>
+		<View style={{ flex: 1 }}>
+			<View style={{ height: insets.top, backgroundColor: theme.primaryBack }} />
+			<ScrollView vertical={true}
+				style={mainStyles.mainContainer(theme)}
+				contentContainerStyle={[mainStyles.contentMainContainer(insets), { paddingTop: 0 }]}
+			>
 			<View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', margin: 20 }}>
 				<Pressable
 					style={({ pressed }) => ([mainStyles.opacity({ pressed }), styles.boxRandom(theme)])}
@@ -110,6 +112,7 @@ const Home = () => {
 				<HorizontalList key={index} refresh={refresh}{...value} />
 			)}
 		</ScrollView>
+		</View>
 	)
 }
 

@@ -66,7 +66,7 @@ A `PlayerEvent` component within `AppProvider` wires `Player.useEvent()` to sync
 ### app/contexts/song/
 - **context.js**: Creates `SongContext` and `SongDispatchContext`.
 - **provider.js**: `SongProvider` wraps `songReducer` with `React.useReducer`. Exports `songReducer`, `defaultSong`, and `convertTrack()`.
-  - Reducer actions: `init`, `restore`, `setQueue`, `setIndex`, `setState`, `addToQueue`, `setRating`, `removeFromQueue`, `setActionEndOfSong`, `reset`.
+  - Reducer actions: `init`, `restore`, `setQueue`, `setIndex`, `setState`, `addToQueue`, `setRating`, `removeFromQueue`, `addToUpNext`, `nextUpNext`, `removeFromUpNext`, `moveUpNext`, `moveInQueue`, `moveUpNextToQueue`, `moveQueueToUpNext`, `syncGlobal`, `setActionEndOfSong`, `reset`.
   - `newSong()` updates state, sets `global.song`, and persists to AsyncStorage.
 - **use.js**: `useSong()` and `useSongDispatch()` hooks.
 - **index.js**: Re-exports from `provider.js` and `use.js`.
@@ -130,11 +130,12 @@ Playback state enum: `Playing`, `Paused`, `Stopped`, `Loading`, `Error`, `None`.
 
 ### Other Utils
 - **url.js**: `urlCover()` resolves cover art URLs (handles navidrome/ampache/generic Subsonic types). `urlStream()` resolves audio stream URLs.
-- **tools.js**: `shuffle()`, `nextRandomIndex()`, `prevRandomIndex()`, `saveQueue()`.
+- **tools.js**: `shuffle()`, `saveQueue()`.
 - **lrc.js**: `parseLrc()` parses LRC-format lyrics into `{ time, text }` objects.
 - **logger.js**: In-memory log buffer (`global.logs`, max 1000 entries). Provides `info()`, `debug()`, `error()`, `get()`.
 - **alert.js**: `confirmAlert()` - cross-platform confirm dialog (native `Alert` / web `window.confirm`).
 - **useKeyboardIsOpen** (platform-resolved): Native uses Keyboard API; Web returns `false`.
+- **useQueueDnD.js**: All queue drag-and-drop state shared by both full-screen players: list refs (`scroll`/`upNextScroll`), scroll offsets, viewports, `onLayout` box positions (`boxY`/`boxH`), `rowHeight`, the `isCurrentInQueue`/`queueItems` derivation (queue **rotated** to start at the current song — next song first, previous songs wrapped to the bottom; current song stays pinned above, `song.queue` remains the source of truth), `queueRealIndex` (display→real index mapping `(index + 1 + i) % queue.length`), the `lists` memo for `QueueDragProvider`, `handleMove` (routes through `Player.moveTrack`), and the scroll-to-top effect. Options: `bottomAligned` (desktop flex-end queue), `scrollAnimated`.
 
 ---
 
@@ -155,7 +156,7 @@ Playback state enum: `Playing`, `Paused`, `Stopped`, `Loading`, `Error`, `None`.
 | File | Description |
 |---|---|
 | Home.js | Renders home feed from `homeSections` config. Random song button, server scan trigger, refresh. |
-| Tracks.js | Music tab (4th tab position, no separate Search tab). Search bar on top; when empty shows the Selector (Songs/Albums/Artists) + explorer; typing swaps to inline `SearchResults`. Grid/list toggle persists `gridView`. |
+| Tracks.js | Music tab (4th tab position, no separate Search tab). Search bar on top (shared `mainStyles.searchBox`/`searchInput`); when empty shows the Selector (Songs/Albums/Artists, selected pill shows a check icon) + explorer; typing swaps to inline `SearchResults`. Grid/list toggle persists `gridView`. Fixed status-bar View pattern. |
 | Playlists.js | Lists user playlists (sorted, with pin filtering). Add playlist inline. Favorites section removed. |
 | Settings.js | Master settings screen with navigation to sub-screens. App version, connect status, theme/language/cache/player/home/playlists/shares settings. |
 
@@ -216,9 +217,9 @@ Playback state enum: `Playing`, `Paused`, `Stopped`, `Loading`, `Error`, `None`.
 | Player.js | Top-level player container. Shows `BoxPlayer` or `FullScreenPlayer` based on state. |
 | BoxPlayer.js | Mini player (mobile, fixed at bottom). Cover, title, play/next buttons. PanResponder swipe: horizontal = next/prev song, vertical up = expand. |
 | BoxDesktopPlayer.js | Mini player for desktop layout (fixed sidebar). Includes progress bar and volume. |
-| FullScreenPlayer.js | Full-screen modal player with cover, queue list ("Up next" + main queue), lyrics. Lyrics background fills the whole screen. |
-| FullScreenHorizontalPlayer.js | Full-screen horizontal layout of player (desktop); same queue view. |
-| QueueDragRow.js | Wraps a queue row with a PanResponder drag handle (Animated translateY, edge autoscroll); drop → `moveInQueue`/`moveUpNext`. |
+| FullScreenPlayer.js | Full-screen modal player with cover, queue view (pinned "Now playing" + "Up next" + main queue), lyrics. Lyrics background fills the whole screen. The current song is shown only in the pinned row — it is filtered out of the queue list (display-level). |
+| FullScreenHorizontalPlayer.js | Full-screen horizontal layout of player (desktop); same queue view with right-aligned rows and a drag handle. |
+| QueueDrag.js | Cross-section drag-and-drop for the queue view: `QueueDragProvider` (one manager for both lists — lists are direct children of one container, their `onLayout` `boxY`/`boxH` + the gesture `dy` resolve the drop target with no window-coordinate measurement; region detection uses "Up next" only when that box exists; edge-autoscrolls the active list; springs sibling rows ±`rowHeight` to open a live gap; `bottomAligned` queues get a bottom-pad correction) + `QueueDragRow` (grab-handle PanResponder row; lifted row styled with `backgroundColor`, no elevation). Drop → `moveTrack` (`moveUpNext`/`moveInQueue`/`moveUpNextToQueue`/`moveQueueToUpNext`). |
 | Lyric.js | Synchronized lyrics display. Fetches from server, caches locally, falls back to LrcLib API. |
 
 ### Bar Components (app/components/bar/)
@@ -266,7 +267,7 @@ Playback state enum: `Playing`, `Paused`, `Stopped`, `Loading`, `Error`, `None`.
 | PlayButton.js | Play/pause button. Switches icon based on `song.state`. Shows `ActivityIndicator` while loading. |
 | IconButton.js | Generic icon button using `react-native-vector-icons`. |
 | FavoritedButton.js | Heart toggle button. Long-press opens rating popup. Calls `star`/`unstar` API. |
-| BackButton.js | Back navigation button. |
+| BackButton.js | Back navigation button (white chevron with dark text-shadow halo so it reads over any cover/theme). |
 | RotateIconButton.js | Icon button with optional rotation animation on press. |
 | RandomButton.js | Shuffle play button. |
 | DownloadButton.js | Spotify-style download toggle for an album/playlist/favorited: idle → enqueue, queued spinner, downloading ring with %, paused/error states, done/partial filled circle (tap removes with confirm). Uses `getCollectionState`. |

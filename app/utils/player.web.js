@@ -4,7 +4,7 @@ import * as serviceWorkerRegistration from '~/services/serviceWorkerRegistration
 
 import { getApi } from '~/utils/api'
 import { urlStream, urlCover } from './url'
-import { nextRandomIndex, prevRandomIndex, saveQueue } from '~/utils/tools'
+import { saveQueue } from '~/utils/tools'
 import State from '~/utils/playerState'
 import logger from '~/utils/logger'
 
@@ -222,22 +222,16 @@ export const nextSong = async (config, song, songDispatch) => {
 		return
 	}
 	if (song.queue) {
-		if (song.actionEndOfSong === 'random') await setIndex(config, songDispatch, song.queue, nextRandomIndex())
-		else {
-			if (!global.repeatQueue && song.index === song.queue.length - 1) return
-			await setIndex(config, songDispatch, song.queue, (song.index + 1) % song.queue.length)
-		}
+		if (!global.repeatQueue && song.index === song.queue.length - 1) return
+		await setIndex(config, songDispatch, song.queue, (song.index + 1) % song.queue.length)
 		if (song.actionEndOfSong === 'repeat') await setRepeat(songDispatch, 'next')
 	}
 }
 
 export const previousSong = async (config, song, songDispatch) => {
 	if (song.queue) {
-		if (song.actionEndOfSong === 'random') await setIndex(config, songDispatch, song.queue, prevRandomIndex())
-		else {
-			if (!global.repeatQueue && song.index === 0) return
-			await setIndex(config, songDispatch, song.queue, (song.queue.length + song.index - 1) % song.queue.length)
-		}
+		if (!global.repeatQueue && song.index === 0) return
+		await setIndex(config, songDispatch, song.queue, (song.queue.length + song.index - 1) % song.queue.length)
 		if (song.actionEndOfSong === 'repeat') await setRepeat(songDispatch, 'next')
 	}
 }
@@ -330,6 +324,18 @@ export const resetAudio = (songDispatch) => {
 	sound.currentTime = 0
 }
 
+const switchServer = async (config) => {
+	const song = global.song
+	if (!song?.songInfo || !song.queue?.length) return
+	const sound = audio()
+	const position = sound.currentTime || 0
+	const isPlaying = !sound.paused
+	await loadSong(config, song.queue, song.index)
+	if (position > 0) await setPosition(position)
+	if (isPlaying) await resumeSong()
+	else await pauseSong()
+}
+
 export const removeFromQueue = async (songDispatch, index) => {
 	songDispatch({ type: 'removeFromQueue', index })
 }
@@ -356,6 +362,18 @@ export const moveInQueue = async (songDispatch, from, to) => {
 	songDispatch({ type: 'moveInQueue', from, to })
 }
 
+// fromList/toList: 'up' (up next) or 'queue' (main queue)
+export const moveTrack = async (songDispatch, { fromList, from, toList, to }) => {
+	if (fromList === toList) {
+		if (fromList === 'up') songDispatch({ type: 'moveUpNext', from, to })
+		else songDispatch({ type: 'moveInQueue', from, to })
+	} else if (fromList === 'up') {
+		songDispatch({ type: 'moveUpNextToQueue', from, to })
+	} else {
+		songDispatch({ type: 'moveQueueToUpNext', from, to })
+	}
+}
+
 export default {
 	initService,
 	initPlayer,
@@ -377,12 +395,14 @@ export default {
 	setRepeat,
 	reload,
 	resetAudio,
+	switchServer,
 	addToQueue,
 	removeFromQueue,
 	addToUpNext,
 	removeFromUpNext,
 	moveUpNext,
 	moveInQueue,
+	moveTrack,
 	setIndex,
 	State,
 }

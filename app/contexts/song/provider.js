@@ -5,6 +5,7 @@ import { Platform, AppState } from 'react-native'
 import Player from '~/utils/player'
 import logger from '~/utils/logger'
 import State from '~/utils/playerState'
+import { shuffle } from '~/utils/tools'
 import { SongContext, SongDispatchContext } from '~/contexts/song/context'
 
 export const SongProvider = ({ children }) => {
@@ -88,7 +89,7 @@ export const songReducer = (state, action) => {
 				songInfo: action.song.songInfo || null,
 				index: action.song.index || 0,
 				actionEndOfSong: action.song.actionEndOfSong || 'next',
-				randomIndex: action.song.randomIndex || [],
+				originalQueue: action.song.originalQueue || (action.song.actionEndOfSong === 'random' ? action.song.queue : null),
 				isSongLoad: action.isSongLoad || false,
 			})
 		case 'setQueue': {
@@ -98,6 +99,7 @@ export const songReducer = (state, action) => {
 				index: action.index,
 				queue: newQueue,
 				upNext: [],
+				originalQueue: null,
 				isSongLoad: true,
 			}, true)
 		}
@@ -126,7 +128,7 @@ export const songReducer = (state, action) => {
 			return newSong(state, {
 				queue: newQueue,
 				index: (typeof action.index === 'number' && state.index >= action.index) ? state.index + 1 : state.index,
-				randomIndex: state.randomIndex?.length ? [...state.randomIndex, newQueue.length - 1] : [],
+				originalQueue: state.originalQueue ? [...state.originalQueue, action.track] : null,
 			}, true)
 		}
 		case 'setRating': {
@@ -153,6 +155,7 @@ export const songReducer = (state, action) => {
 			if (!state.queue || state.queue.length <= action.index) return state
 			const newQueue = [...state.queue]
 			let newIndex = state.index
+			const removed = newQueue[action.index]
 
 			newQueue.splice(action.index, 1)
 			if (newIndex >= action.index) newIndex--
@@ -161,7 +164,7 @@ export const songReducer = (state, action) => {
 				queue: newQueue,
 				index: newIndex,
 				songInfo: newQueue[newIndex] || null,
-				randomIndex: state.randomIndex.filter((i) => i < newQueue.length),
+				originalQueue: state.originalQueue ? state.originalQueue.filter((item) => item.id !== removed.id) : null,
 			}, true)
 		}
 		case 'addToUpNext': {
@@ -216,7 +219,36 @@ export const songReducer = (state, action) => {
 			return newSong(state, {
 				queue: newQueue,
 				index: newIndex,
-				randomIndex: [],
+			}, true)
+		}
+		case 'moveUpNextToQueue': {
+			if (!state.upNext?.length || !state.queue?.length) return state
+			const from = action.from, to = action.to
+			if (from < 0 || from >= state.upNext.length || to < 0 || to > state.queue.length) return state
+			const upNext = [...state.upNext]
+			const [moved] = upNext.splice(from, 1)
+			const newQueue = [...state.queue]
+			newQueue.splice(to, 0, moved)
+			return newSong(state, {
+				queue: newQueue,
+				upNext,
+				index: to <= state.index ? state.index + 1 : state.index,
+				originalQueue: state.originalQueue ? [...state.originalQueue, moved] : null,
+			}, true)
+		}
+		case 'moveQueueToUpNext': {
+			if (!state.queue?.length) return state
+			const from = action.from, to = action.to
+			if (from === state.index || from < 0 || from >= state.queue.length || to < 0 || to > (state.upNext?.length || 0)) return state
+			const newQueue = [...state.queue]
+			const [moved] = newQueue.splice(from, 1)
+			const upNext = [...(state.upNext || [])]
+			upNext.splice(to, 0, moved)
+			return newSong(state, {
+				queue: newQueue,
+				upNext,
+				index: from < state.index ? state.index - 1 : state.index,
+				originalQueue: state.originalQueue ? state.originalQueue.filter((item) => item.id !== moved.id) : null,
 			}, true)
 		}
 		case 'syncGlobal':
@@ -226,25 +258,34 @@ export const songReducer = (state, action) => {
 				songInfo: action.song.songInfo,
 				index: action.song.index,
 				actionEndOfSong: action.song.actionEndOfSong,
-				randomIndex: action.song.randomIndex,
+				originalQueue: action.song.originalQueue || null,
 			}, true)
 		case 'setActionEndOfSong':
 			if (['next', 'repeat', 'random'].indexOf(action.action) === -1) return state
 			if (action.action === 'random') {
 				if (state.queue?.length) {
-					const allIndex = state.queue.map((_, index) => index)
-					// generate list of random index
-					const randomIndex = []
-					while (randomIndex.length < state.queue.length) {
-						const index = Math.floor(Math.random() * allIndex.length)
-						randomIndex.push(allIndex[index])
-						allIndex.splice(index, 1)
-					}
+					// first shuffle: preserve original; re-press: re-shuffle from the preserved original
+					const baseQueue = state.actionEndOfSong === 'random' && state.originalQueue?.length
+						? state.originalQueue
+						: state.queue
+					const shuffled = shuffle(baseQueue)
+					const newIndex = shuffled.findIndex((track) => track.id === state.songInfo?.id)
 					return newSong(state, {
 						actionEndOfSong: action.action,
-						randomIndex
+						queue: shuffled,
+						index: newIndex === -1 ? 0 : newIndex,
+						originalQueue: state.actionEndOfSong === 'random' && state.originalQueue?.length ? state.originalQueue : state.queue,
 					}, true)
 				}
+			}
+			if (state.actionEndOfSong === 'random' && state.originalQueue?.length) {
+				const newIndex = state.originalQueue.findIndex((track) => track.id === state.songInfo?.id)
+				return newSong(state, {
+					actionEndOfSong: action.action,
+					queue: state.originalQueue,
+					index: newIndex === -1 ? 0 : newIndex,
+					originalQueue: null,
+				}, true)
 			}
 			return newSong(state, {
 				actionEndOfSong: action.action,
@@ -268,6 +309,6 @@ export const defaultSong = {
 	upNext: [],
 	index: 0,
 	actionEndOfSong: 'next',
-	randomIndex: [],
+	originalQueue: null,
 	state: State.Stopped,
 }

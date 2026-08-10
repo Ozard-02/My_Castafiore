@@ -57,29 +57,33 @@ export const getPathSong = (songId, streamFormat) => {
 
 
 const getPathDir = () => {
-	return `${FileSystem.documentDirectory}/cache/${global.config.folderCache}/songs/`
+	return `${FileSystem.documentDirectory}/cache/songs/`
 }
 
 export const initCacheSong = async () => {
-	// An error was in the past where folderCache was undefined
-	// So we need to rename it to avoid losing all cached songs
-	// This can be removed in the future 
-	const info = await FileSystem.getInfoAsync(`${FileSystem.documentDirectory}/cache/undefined/`)
-	if (info.exists) {
-		await FileSystem.moveAsync({
-			from: `${FileSystem.documentDirectory}/cache/undefined`,
-			to: `${FileSystem.documentDirectory}/cache/${global.config.folderCache}`
-		})
-			.catch(error => {
-				logger.error('initCacheSong', error)
-			})
-			.then(() => logger.info('initCacheSong', 'Renamed undefined cache folder to the correct one'))
-	}
-
-	await FileSystem.makeDirectoryAsync(getPathDir(), { intermediates: true })
+	// Old versions kept one cache folder per server (and one accidental 'undefined' folder).
+	// Songs are now shared across servers (same library → same ids), so consolidate them.
+	const cacheRoot = `${FileSystem.documentDirectory}/cache/`
+	const sharedDir = getPathDir()
+	await FileSystem.makeDirectoryAsync(sharedDir, { intermediates: true })
 		.catch(error => {
 			logger.error('initCacheSong', error)
 		})
+	const folders = await FileSystem.readDirectoryAsync(cacheRoot)
+		.catch(() => [])
+	for (const folder of folders) {
+		if (folder === 'songs') continue
+		const oldSongs = `${cacheRoot}${folder}/songs/`
+		const info = await FileSystem.getInfoAsync(oldSongs)
+		if (!info.exists || !info.isDirectory) continue
+		const files = await FileSystem.readDirectoryAsync(oldSongs)
+			.catch(() => [])
+		for (const file of files) {
+			await FileSystem.moveAsync({ from: `${oldSongs}${file}`, to: `${sharedDir}${file}` })
+				.catch((error) => logger.error('initCacheSong', error))
+		}
+	}
+
 	global.listCacheSong = await getListCacheSong() || []
 }
 

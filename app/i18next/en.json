@@ -198,9 +198,11 @@
     "Public": "Public",
     "Queue": "Queue",
     "Random Song": "Random Song",
+    "Remove from playlist": "Remove from playlist",
     "Remove from queue": "Remove from queue",
     "Remove from up next": "Remove from up next",
     "Up next": "Up next",
+    "Now playing": "Now playing",
     "Move to top": "Move to top",
     "Move up": "Move up",
     "Move down": "Move down",
@@ -240,6 +242,15 @@
     "No UPNP/DLNA devices found": "No UPNP/DLNA devices found",
     "Error scanning for devices": "Error scanning for devices",
     "Stream music to compatible devices: Chromecast, UPNP/DLNA speakers, TVs, and media receivers.": "Stream music to compatible devices: Chromecast, UPNP/DLNA speakers, TVs, and media receivers.",
-    "Chromecast": "Chromecast"
+    "Chromecast": "Chromecast",
+    "Default": "Default",
+    "Sort": "Sort",
+    "Sort by title": "Sort by title",
+    "Sort by artist": "Sort by artist",
+    "Sort by album": "Sort by album",
+    "Sort by duration": "Sort by duration",
+    "Sort by track": "Sort by track",
+    "Search in playlist": "Search in playlist",
+    "Are you sure you want to delete this playlist?": "Are you sure you want to delete this playlist?"
   }
 }

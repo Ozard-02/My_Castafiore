@@ -23,6 +23,12 @@
 
 - Always run the test suite before committing:
 
+# building
+
+- **JDK for Android builds**: the system Java (26.0.2) crashes Gradle 8.13's embedded Kotlin with
+  `IllegalArgumentException: 26.0.2`. Always build with JDK 17:
+  `JAVA_HOME=/usr/lib/jvm/java-17-openjdk ./android/gradlew -p android app:assembleRelease -x lint -x test`
+
 # remember
 
 - Security is a priority — don't destroy it with shortcuts.

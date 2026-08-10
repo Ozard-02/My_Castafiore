@@ -29,7 +29,6 @@ import ShowAll from '~/screens/ShowAll'
 import SearchMore from '~/screens/SearchMore'
 
 import AddServer from '~/screens/Settings/AddServer'
-import CacheSettings from '~/screens/Settings/Cache'
 import Connect from '~/screens/Settings/Connect'
 import DownloadsSettings from '~/screens/Settings/Downloads'
 import HomeSettings from '~/screens/Settings/Home'
@@ -162,7 +161,6 @@ export const SettingsStack = () => {
 			<Stack.Screen name="Settings/AddServer" component={AddServer} />
 			<Stack.Screen name="Settings/Home" component={HomeSettings} />
 			<Stack.Screen name="Settings/Playlists" component={PlaylistsSettings} />
-			<Stack.Screen name="Settings/Cache" component={CacheSettings} />
 			<Stack.Screen name="Settings/Downloads" component={DownloadsSettings} />
 			<Stack.Screen name="Settings/Theme" component={ThemeSettings} />
 			<Stack.Screen name="Settings/Informations" component={InformationsSettings} />

@@ -1,4 +1,4 @@
-import { nextRandomIndex, prevRandomIndex, saveQueue } from '~/utils/tools'
+import { saveQueue } from '~/utils/tools'
 import CastPlayer from '~/utils/player/playerCast'
 import LocalPlayer from '~/utils/player/playerLocal'
 import State from '~/utils/playerState'
@@ -31,11 +31,8 @@ export const useEvent = (song, songDispatch) => {
 
 export const previousSong = async (config, song, songDispatch) => {
 	if (song.queue) {
-		if (song.actionEndOfSong === 'random') await setIndex(config, songDispatch, song.queue, prevRandomIndex())
-		else {
-			if (!global.repeatQueue && song.index === 0) return
-			await setIndex(config, songDispatch, song.queue, (song.queue.length + song.index - 1) % song.queue.length)
-		}
+		if (!global.repeatQueue && song.index === 0) return
+		await setIndex(config, songDispatch, song.queue, (song.queue.length + song.index - 1) % song.queue.length)
 		if (song.actionEndOfSong === 'repeat') await setRepeat(songDispatch, 'next')
 	}
 }
@@ -48,11 +45,8 @@ export const nextSong = async (config, song, songDispatch) => {
 		return
 	}
 	if (song.queue) {
-		if (song.actionEndOfSong === 'random') await setIndex(config, songDispatch, song.queue, nextRandomIndex())
-		else {
-			if (!global.repeatQueue && song.index === song.queue.length - 1) return
-			await setIndex(config, songDispatch, song.queue, (song.index + 1) % song.queue.length)
-		}
+		if (!global.repeatQueue && song.index === song.queue.length - 1) return
+		await setIndex(config, songDispatch, song.queue, (song.index + 1) % song.queue.length)
 		if (song.actionEndOfSong === 'repeat') await setRepeat(songDispatch, 'next')
 	}
 }
@@ -157,6 +151,10 @@ export const resetAudio = (songDispatch) => {
 	return getPlayer().resetAudio(songDispatch)
 }
 
+export const switchServer = async (config) => {
+	return getPlayer().switchServer(config)
+}
+
 export const removeFromQueue = async (songDispatch, index) => {
 	songDispatch({ type: 'removeFromQueue', index })
 }
@@ -181,6 +179,18 @@ export const moveUpNext = async (songDispatch, from, to) => {
 
 export const moveInQueue = async (songDispatch, from, to) => {
 	songDispatch({ type: 'moveInQueue', from, to })
+}
+
+// fromList/toList: 'up' (up next) or 'queue' (main queue)
+export const moveTrack = async (songDispatch, { fromList, from, toList, to }) => {
+	if (fromList === toList) {
+		if (fromList === 'up') songDispatch({ type: 'moveUpNext', from, to })
+		else songDispatch({ type: 'moveInQueue', from, to })
+	} else if (fromList === 'up') {
+		songDispatch({ type: 'moveUpNextToQueue', from, to })
+	} else {
+		songDispatch({ type: 'moveQueueToUpNext', from, to })
+	}
 }
 
 export const connect = async (device, newType) => {
@@ -227,12 +237,14 @@ export default {
 	reload,
 	useEvent,
 	resetAudio,
+	switchServer,
 	removeFromQueue,
 	addToQueue,
 	addToUpNext,
 	removeFromUpNext,
 	moveUpNext,
 	moveInQueue,
+	moveTrack,
 	setIndex,
 	restoreState,
 	saveState,

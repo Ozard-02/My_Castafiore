@@ -9,7 +9,6 @@ import { useConfig, useSetConfig } from '~/contexts/config'
 import { confirmAlert } from '~/utils/alert'
 import { getApi } from '~/utils/api'
 import { useSettings, useSetSettings, demoServers } from '~/contexts/settings'
-import { useSongDispatch } from '~/contexts/song'
 import { useTheme } from '~/contexts/theme'
 import { CELLULAR_NETWORK } from '~/utils/network'
 import ButtonText from '~/components/settings/ButtonText'
@@ -29,7 +28,6 @@ const Connect = ({ navigation }) => {
 	const settings = useSettings()
 	const setSettings = useSetSettings()
 	const theme = useTheme()
-	const songDispatch = useSongDispatch()
 	const [error, setError] = React.useState('')
 	const [serverOption, setServerOption] = React.useState(null)
 	const [info, setInfo] = React.useState(null)
@@ -37,7 +35,7 @@ const Connect = ({ navigation }) => {
 	const upConfig = (conf) => {
 		AsyncStorage.setItem('config', JSON.stringify(conf))
 		setConfig(conf)
-		Player.resetAudio(songDispatch)
+		Player.switchServer(conf)
 	}
 
 	React.useEffect(() => {

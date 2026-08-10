@@ -12,6 +12,7 @@ import { useConfig } from '~/contexts/config'
 import { useUpdateApi, isUpdatable } from '~/contexts/updateApi'
 import HorizontalQueue from '~/components/lists/HorizontalQueue'
 import HorizontalAlbums from '~/components/lists/HorizontalAlbums'
+import HorizontalSongs from '~/components/lists/HorizontalSongs'
 import HorizontalArtists from '~/components/lists/HorizontalArtists'
 import HorizontalGenres from '~/components/lists/HorizontalGenres'
 import HorizontalLBStat from '~/components/lists/HorizontalLBStat'
@@ -123,6 +124,7 @@ const HorizontalList = ({ refresh, id, enable }) => {
 			</Pressable>
 			{section.type === 'queue' && <HorizontalQueue current={list.current} queue={list.entry} />}
 			{section.type === 'album' && <HorizontalAlbums albums={list} />}
+			{section.type === 'song' && <HorizontalSongs songs={list} />}
 			{section.type === 'album_star' && <HorizontalAlbums albums={list} />}
 			{section.type === 'artist' && <HorizontalArtists artists={list} />}
 			{section.type === 'artist_all' && <HorizontalArtists artists={list} />}

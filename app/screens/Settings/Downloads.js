@@ -7,10 +7,17 @@ import { useIsFocused } from '@react-navigation/native'
 
 import { useTheme } from '~/contexts/theme'
 import { useDownloads, getDownloadSpeed, formatSpeed, formatBytes, pauseDownload, resumeDownload, cancelDownload, retryDownload, removeSong, removeSource, clearAllDownloads, getDownloadedSongs } from '~/utils/downloadManager'
+import { clearCache, getStatCache } from '~/utils/cache'
+import { useSettings, useSetSettings } from '~/contexts/settings'
 import { confirmAlert } from '~/utils/alert'
 import Header from '~/components/Header'
 import IconButton from '~/components/button/IconButton'
 import ImageError from '~/components/ImageError'
+import ButtonSwitch from '~/components/settings/ButtonSwitch'
+import ButtonMenu from '~/components/settings/ButtonMenu'
+import OptionInput from '~/components/settings/OptionInput'
+import ListMap from '~/components/lists/ListMap'
+import TableItem from '~/components/settings/TableItem'
 import mainStyles from '~/styles/main'
 import settingStyles from '~/styles/settings'
 import size from '~/styles/size'
@@ -22,8 +29,37 @@ const Downloads = () => {
 	const insets = useSafeAreaInsets()
 	const theme = useTheme()
 	const isFocused = useIsFocused()
+	const settings = useSettings()
+	const setSettings = useSetSettings()
 	const { queue, index, collections } = useDownloads()
 	const [speed, setSpeed] = React.useState(0)
+	const [cacheNextSong, setCacheNextSong] = React.useState(settings.cacheNextSong.toString())
+	const [statCache, setStatCache] = React.useState([
+		{ name: 'Loading...', count: '' },
+	])
+
+	const getStat = () => {
+		getStatCache()
+			.then((res) => {
+				setStatCache(res)
+			})
+	}
+
+	React.useEffect(() => {
+		if (!isFocused) return
+		getStat()
+	}, [isFocused])
+
+	React.useEffect(() => {
+		setCacheNextSong(settings.cacheNextSong.toString())
+	}, [settings.cacheNextSong])
+
+	React.useEffect(() => {
+		if (cacheNextSong === '') return
+		const number = parseInt(cacheNextSong)
+		if (number === settings.cacheNextSong) return
+		setSettings({ ...settings, cacheNextSong: number })
+	}, [cacheNextSong])
 
 	React.useEffect(() => {
 		if (!isFocused) return
@@ -116,6 +152,27 @@ const Downloads = () => {
 		>
 			<Header title={t('Downloads')} />
 			<View style={settingStyles.contentMainContainer}>
+				<Text style={settingStyles.titleContainer(theme)}>{t('settings.cache.Song caching')}</Text>
+				<View style={[settingStyles.optionsContainer(theme), { marginBottom: 5 }]}>
+					<ButtonSwitch
+						title={t("settings.cache.Enable song caching")}
+						value={settings.isSongCaching}
+						onPress={() => setSettings({ ...settings, isSongCaching: !settings.isSongCaching })}
+					/>
+					<ButtonSwitch
+						title={t("settings.cache.Show cached songs")}
+						value={settings.showCache}
+						onPress={() => setSettings({ ...settings, showCache: !settings.showCache })}
+					/>
+					<OptionInput
+						title={t("settings.cache.Cache next song")}
+						value={cacheNextSong}
+						onChangeText={(text) => setCacheNextSong(text.replace(/[^0-9]/g, ''))}
+						inputMode="numeric"
+						isLast
+					/>
+				</View>
+				<Text style={settingStyles.description(theme)}>{t('settings.cache.Cache next song description')}</Text>
 				{isEmpty && (
 					<View style={[styles.empty, { backgroundColor: theme.secondaryBack }]}>
 						<Icon name="cloud-download" size={40} color={theme.secondaryText} />
@@ -212,6 +269,35 @@ const Downloads = () => {
 						>{t('settings.downloads.Clear all')} · {formatBytes(totalSize)}</Text>
 					</View>
 				)}
+				<View style={settingStyles.optionsContainer(theme)}>
+					<ButtonMenu
+						title={t("settings.cache.Clear API cache")}
+						icon="trash"
+						onPress={() => confirmAlert(
+							t('settings.cache.Clear API cache'),
+							t('settings.cache.Clear API cache alert message'),
+							async () => {
+								await clearCache()
+								getStat()
+							}
+						)}
+						isLast
+					/>
+				</View>
+				<Text style={settingStyles.titleContainer(theme)}>{t('settings.cache.Cache stats')}</Text>
+				<View style={settingStyles.optionsContainer(theme)}>
+					<ListMap
+						data={statCache}
+						renderItem={(item, index) => (
+							<TableItem
+								key={index}
+								title={item.name}
+								value={item.count}
+								isLast={index === statCache.length - 1}
+							/>
+						)}
+					/>
+				</View>
 			</View>
 		</ScrollView>
 	)

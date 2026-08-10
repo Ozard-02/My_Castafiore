@@ -9,7 +9,6 @@ import md5 from 'md5'
 import { getApi } from '~/utils/api'
 import { useSetConfig } from '~/contexts/config'
 import { useSettings, useSetSettings } from '~/contexts/settings'
-import { useSongDispatch } from '~/contexts/song'
 import { useTheme } from '~/contexts/theme'
 import { getCurrentNetwork, requestLocationPermission, CELLULAR_NETWORK } from '~/utils/network'
 import ButtonSwitch from '~/components/settings/ButtonSwitch'
@@ -28,7 +27,6 @@ const AddServer = ({ navigation }) => {
 	const setConfig = useSetConfig()
 	const settings = useSettings()
 	const setSettings = useSetSettings()
-	const songDispatch = useSongDispatch()
 	const theme = useTheme()
 	const [name, setName] = React.useState('')
 	const [url, setUrl] = React.useState('')
@@ -72,7 +70,7 @@ const AddServer = ({ navigation }) => {
 	const upConfig = (conf) => {
 		AsyncStorage.setItem('config', JSON.stringify(conf))
 		setConfig(conf)
-		Player.resetAudio(songDispatch)
+		Player.switchServer(conf)
 	}
 
 	const connect = () => {

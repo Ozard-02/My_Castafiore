@@ -194,11 +194,21 @@ export const enqueueCollection = async ({ type, id, name, artist = '', cover, so
 
 	const source = { type, id, name: collection.name }
 	const newItems = songs.map((song) => moveToQueue(song, source)).filter(Boolean)
-	if (newItems.length === 0) return
+
+	// Attach the collection source to songs that are already downloaded individually,
+	// so they belong to this collection instead of showing as loose individual songs.
+	const index = { ...state.index }
+	for (const song of songs) {
+		const entry = index[song.id]
+		if (entry && !entry.sources.some((s) => s.type === source.type && s.id === source.id)) {
+			index[song.id] = { ...entry, sources: [...entry.sources, source] }
+		}
+	}
 
 	setState({
 		...state,
 		queue: [...state.queue, ...newItems],
+		index,
 		collections: { ...state.collections, [key]: collection },
 	})
 	await saveDownloads()

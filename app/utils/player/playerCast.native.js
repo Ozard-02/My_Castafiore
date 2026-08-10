@@ -175,6 +175,16 @@ const resetAudio = async (songDispatch) => {
 	client.stop()
 }
 
+const switchServer = async (config) => {
+	const song = global.song
+	if (!song?.songInfo || !song.queue?.length) return
+	const state = await saveState()
+	await loadSong(config, song.queue, song.index)
+	if (state.position > 0) await setPosition(state.position)
+	if (state.isPlaying) await resumeSong()
+	else await pauseSong()
+}
+
 const saveState = async () => {
 	const client = await getClient()
 	if (!client) return {
@@ -249,6 +259,7 @@ export default {
 	reload,
 	useEvent,
 	resetAudio,
+	switchServer,
 	saveState,
 	downloadNextSong,
 	downloadSong,

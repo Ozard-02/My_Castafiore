@@ -5,7 +5,6 @@ import NetInfo from '@react-native-community/netinfo'
 
 import { useConfig, useSetConfig } from '~/contexts/config'
 import { useSettings } from '~/contexts/settings'
-import { useSongDispatch } from '~/contexts/song'
 import { getNetworkInfo, CELLULAR_NETWORK } from '~/utils/network'
 import Player from '~/utils/player'
 import logger from '~/utils/logger'
@@ -16,12 +15,11 @@ const NetworkAutoSwitch = () => {
 	const config = useConfig()
 	const setConfig = useSetConfig()
 	const settings = useSettings()
-	const songDispatch = useSongDispatch()
 
 	const switchTo = async (server) => {
 		await AsyncStorage.setItem('config', JSON.stringify(server))
 		setConfig(server)
-		Player.resetAudio(songDispatch)
+		Player.switchServer(server)
 		logger.info('NetworkAutoSwitch', `Switched to server '${server.name}'`)
 	}
 
@@ -61,7 +59,7 @@ const NetworkAutoSwitch = () => {
 				if (fallback && !isActive(fallback)) switchTo(fallback)
 			}
 		}
-	}, [config, settings.servers, setConfig, songDispatch])
+	}, [config, settings.servers, setConfig])
 
 	React.useEffect(() => {
 		decide()

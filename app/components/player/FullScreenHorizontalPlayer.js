@@ -22,7 +22,8 @@ import size from '~/styles/size'
 import SlideBar from '~/components/button/SlideBar'
 import SlideControl from '~/components/button/SlideControl'
 import ConnectButton from '~/components/button/ConnectButton'
-import QueueDragRow from '~/components/player/QueueDragRow'
+import QueueDragRow, { QueueDragProvider } from '~/components/player/QueueDrag'
+import useQueueDnD from '~/utils/useQueueDnD'
 
 const preview = {
 	COVER: 0,
@@ -34,6 +35,46 @@ const color = {
 	primary: '#fff',
 	secondary: '#c6c6c6'
 }
+
+const QueueRow = ({ item, handle = null, isCurrent, onPress, onLongPress, onContextMenu, theme, config }) => (
+	<Pressable
+		style={({ pressed }) => ([mainStyles.opacity({ pressed }), {
+			flexDirection: 'row',
+			alignItems: 'center',
+			marginBottom: 10,
+		}])}
+		onPress={onPress}
+		onLongPress={onLongPress}
+		onContextMenu={onContextMenu}
+	>
+		{handle}
+		<View style={{ flex: 1, flexDirection: 'column' }}>
+			<Text numberOfLines={1} style={{ color: isCurrent ? theme.primaryTouch : color.primary, fontSize: size.text.medium, marginBottom: 2, textAlign: 'right' }}>
+				{item.title}
+			</Text>
+			<Text numberOfLines={1} style={{ color: color.secondary, fontSize: size.text.small, textAlign: 'right' }}>
+				{item.artist}
+			</Text>
+		</View>
+
+		<View style={[mainStyles.coverSmall(theme), { overflow: 'hidden', marginStart: 10 }]}>
+			{isCurrent && (
+				<View style={{
+					position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1,
+					backgroundColor: 'rgba(0, 0, 0, 0.3)',
+					justifyContent: 'center', alignItems: 'center'
+				}}
+				>
+					<Icon name="align-center" size={19} color={'white'} style={{ height: 19, transform: [{ rotate: '90deg' }] }} />
+				</View>
+			)}
+			<ImageError
+				style={[mainStyles.coverSmall(theme)]}
+				source={{ uri: urlCover(config, item, 100) }}
+			/>
+		</View>
+	</Pressable>
+)
 
 const TimeBar = () => {
 	const [fakeTime, setFakeTime] = React.useState(-1)
@@ -80,24 +121,12 @@ const FullScreenHorizontalPlayer = ({ setFullScreen }) => {
 	const songDispatch = useSongDispatch()
 	const theme = useTheme()
 	const volume = Player.updateVolume()
-	const scroll = React.useRef(null)
-	const upNextScroll = React.useRef(null)
-	const queueOffset = React.useRef(0)
-	const queueViewport = React.useRef(0)
-	const upNextOffset = React.useRef(0)
-	const upNextViewport = React.useRef(0)
 	const { height } = useWindowDimensions()
+	const { scroll, upNextScroll, queueOffset, queueViewport, upNextOffset, upNextViewport, queueBoxY, queueBoxH, upNextBoxY, upNextBoxH, rowHeight, isCurrentInQueue, queueItems, queueRealIndex, lists, handleMove } = useQueueDnD(song, songDispatch, { bottomAligned: true })
 
 	const [stars] = useCachedFirst([], 'getStarred2', null, (json, setData) => {
 		setData(json?.starred2?.song || [])
 	}, [song.songInfo?.id])
-
-	const isCurrentInQueue = song.songInfo && song.queue?.some((item) => item.id === song.songInfo.id)
-	const rowHeight = size.image.small + 10
-
-	React.useEffect(() => {
-		if (isPreview == preview.QUEUE && isCurrentInQueue) scroll.current?.scrollToIndex({ index: song.index, animated: false, viewOffset: 0, viewPosition: 0.5 })
-	}, [song.index, song.songInfo])
 
 	return (
 		<Modal
@@ -180,131 +209,88 @@ const FullScreenHorizontalPlayer = ({ setFullScreen }) => {
 								indexOptions={upNextOptions}
 								setIndexOptions={setUpNextOptions}
 							/>
-							{song.upNext?.length > 0 && (
-								<View style={{ maxHeight: Math.min(song.upNext.length, 3) * rowHeight }}>
-									<Text style={{ color: color.secondary, fontSize: size.text.small, textTransform: 'uppercase', textAlign: 'right', marginBottom: 5 }}>{t('Up next')}</Text>
-									<FlatList
-										ref={upNextScroll}
-										data={song.upNext}
-										keyExtractor={(item, index) => 'up' + item.id + index}
-										showsVerticalScrollIndicator={false}
-										getItemLayout={(_, index) => ({ length: rowHeight, offset: rowHeight * index, index })}
-										onScroll={(e) => { upNextOffset.current = e.nativeEvent.contentOffset.y }}
-										scrollEventThrottle={16}
-										onLayout={(e) => { upNextViewport.current = e.nativeEvent.layout.height }}
-										renderItem={({ item, index }) => (
-											<QueueDragRow
-												dataIndex={index}
-												rowHeight={rowHeight}
-												listRef={upNextScroll}
-												offsetRef={upNextOffset}
-												viewportRef={upNextViewport}
-												blockStart={0}
-												blockEnd={song.upNext.length - 1}
-												onMove={(from, to) => Player.moveUpNext(songDispatch, from, to)}
-											>
-												<Pressable
-													key={item.id}
-													style={({ pressed }) => ([mainStyles.opacity({ pressed }), {
-														flexDirection: 'row',
-														alignItems: 'center',
-														marginBottom: 10,
-													}])}
-													onPress={() => false}
-													onLongPress={() => setUpNextOptions(index)}
-													onContextMenu={(ev) => {
-														ev.preventDefault()
-														return setUpNextOptions(index)
-													}}
-												>
-													<View style={{ flex: 1, flexDirection: 'column' }}>
-														<Text numberOfLines={1} style={{ color: color.primary, fontSize: size.text.medium, marginBottom: 2, textAlign: 'right' }}>
-															{item.title}
-														</Text>
-														<Text numberOfLines={1} style={{ color: color.secondary, fontSize: size.text.small, textAlign: 'right' }}>
-															{item.artist}
-														</Text>
-													</View>
-
-													<View style={[mainStyles.coverSmall(theme), { overflow: 'hidden', marginStart: 10 }]}>
-														<ImageError
-															style={[mainStyles.coverSmall(theme)]}
-															source={{ uri: urlCover(config, item, 100) }}
+							<QueueDragProvider lists={lists} rowHeight={rowHeight} onMove={handleMove}>
+								<Text style={{ color: color.secondary, fontSize: size.text.small, textTransform: 'uppercase', textAlign: 'right', marginBottom: 5 }}>{t('Now playing')}</Text>
+								{song.songInfo && (
+									<QueueRow
+										item={song.songInfo}
+										isCurrent
+										onPress={() => false}
+										onLongPress={() => { }}
+										onContextMenu={() => { }}
+										theme={theme}
+										config={config}
+									/>
+								)}
+								{song.upNext?.length > 0 && (
+									<>
+										<Text style={{ color: color.secondary, fontSize: size.text.small, textTransform: 'uppercase', textAlign: 'right', marginBottom: 5 }}>{t('Up next')}</Text>
+										<View onLayout={(e) => { upNextBoxY.current = e.nativeEvent.layout.y; upNextBoxH.current = e.nativeEvent.layout.height }} style={{ maxHeight: Math.min(song.upNext.length, 3) * rowHeight }}>
+											<FlatList
+												ref={upNextScroll}
+												data={song.upNext}
+												keyExtractor={(item, index) => 'up' + item.id + index}
+												showsVerticalScrollIndicator={false}
+												getItemLayout={(_, index) => ({ length: rowHeight, offset: rowHeight * index, index })}
+												onScroll={(e) => { upNextOffset.current = e.nativeEvent.contentOffset.y }}
+												scrollEventThrottle={16}
+												onLayout={(e) => { upNextViewport.current = e.nativeEvent.layout.height }}
+												renderItem={({ item, index }) => (
+													<QueueDragRow list="up" index={index}>
+														<QueueRow
+															item={item}
+															isCurrent={false}
+															onPress={() => false}
+															onLongPress={() => setUpNextOptions(index)}
+															onContextMenu={(ev) => {
+																ev.preventDefault()
+																return setUpNextOptions(index)
+															}}
+															theme={theme}
+															config={config}
 														/>
-													</View>
-												</Pressable>
-											</QueueDragRow>
-										)}
+													</QueueDragRow>
+												)}
+											/>
+										</View>
+									</>
+								)}
+								<Text style={{ color: color.secondary, fontSize: size.text.small, textTransform: 'uppercase', textAlign: 'right', marginVertical: 5 }}>{t('Queue')}</Text>
+								<View onLayout={(e) => { queueBoxY.current = e.nativeEvent.layout.y; queueBoxH.current = e.nativeEvent.layout.height }} style={{ flex: 1 }}>
+									<FlatList
+										ref={scroll}
+										onLayout={(e) => { queueViewport.current = e.nativeEvent.layout.height; if (isCurrentInQueue && queueItems.length > 0) scroll.current?.scrollToIndex({ index: 0, animated: false, viewOffset: 0, viewPosition: 0 }) }}
+										style={{ flex: 1 }}
+										contentContainerStyle={{ width: '100%', minHeight: '100%', justifyContent: 'flex-end' }}
+										getItemLayout={(data, index) => ({ length: rowHeight, offset: rowHeight * index, index })}
+										showsVerticalScrollIndicator={false}
+										onScroll={(e) => { queueOffset.current = e.nativeEvent.contentOffset.y }}
+										scrollEventThrottle={16}
+										onScrollToIndexFailed={() => { }}
+										data={queueItems}
+										keyExtractor={(_, index) => index}
+										renderItem={({ item, index }) => {
+											const realIndex = queueRealIndex(index)
+											return (
+												<QueueDragRow list="queue" index={index}>
+													<QueueRow
+														item={item}
+														isCurrent={false}
+														onPress={() => Player.setIndex(config, songDispatch, song.queue, realIndex)}
+														onLongPress={() => setIndexOptions(realIndex)}
+														onContextMenu={(ev) => {
+															ev.preventDefault()
+															return setIndexOptions(realIndex)
+														}}
+														theme={theme}
+														config={config}
+													/>
+												</QueueDragRow>
+											)
+										}}
 									/>
 								</View>
-							)}
-							<Text style={{ color: color.secondary, fontSize: size.text.small, textTransform: 'uppercase', textAlign: 'right', marginVertical: 5 }}>{t('Queue')}</Text>
-							<FlatList
-								ref={scroll}
-								onLayout={() => isCurrentInQueue && scroll.current?.scrollToIndex({ index: song.index, animated: false, viewOffset: 0, viewPosition: 0.5 })}
-								style={{ flex: 1 }}
-								contentContainerStyle={{ width: '100%', minHeight: '100%', justifyContent: 'flex-end' }}
-								getItemLayout={(data, index) => ({ length: rowHeight, offset: rowHeight * index, index })}
-								showsVerticalScrollIndicator={false}
-								onScroll={(e) => { queueOffset.current = e.nativeEvent.contentOffset.y }}
-								scrollEventThrottle={16}
-								onScrollToIndexFailed={() => { }}
-								data={song.queue}
-								keyExtractor={(_, index) => index}
-								renderItem={({ item, index }) => (
-									<QueueDragRow
-										dataIndex={index}
-										rowHeight={rowHeight}
-										listRef={scroll}
-										offsetRef={queueOffset}
-										viewportRef={queueViewport}
-										blockStart={0}
-										blockEnd={song.queue.length - 1}
-										onMove={(from, to) => Player.moveInQueue(songDispatch, from, to)}
-									>
-										<Pressable
-											key={item.id}
-											style={({ pressed }) => ([mainStyles.opacity({ pressed }), {
-												flexDirection: 'row',
-												alignItems: 'center',
-												marginBottom: 10,
-											}])}
-											onPress={() => Player.setIndex(config, songDispatch, song.queue, index)}
-											onLongPress={() => setIndexOptions(index)}
-											onContextMenu={(ev) => {
-												ev.preventDefault()
-												return setIndexOptions(index)
-											}}
-										>
-											<View style={{ flex: 1, flexDirection: 'column' }}>
-												<Text numberOfLines={1} style={{ color: isCurrentInQueue && song.index === index ? theme.primaryTouch : color.primary, fontSize: size.text.medium, marginBottom: 2, textAlign: 'right' }}>
-													{item.title}
-												</Text>
-												<Text numberOfLines={1} style={{ color: color.secondary, fontSize: size.text.small, textAlign: 'right' }}>
-													{item.artist}
-												</Text>
-											</View>
-
-											<View style={[mainStyles.coverSmall(theme), { overflow: 'hidden', marginStart: 10 }]}>
-												{isCurrentInQueue && song.index === index && (
-													<View style={{
-														position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1,
-														backgroundColor: 'rgba(0, 0, 0, 0.3)',
-														justifyContent: 'center', alignItems: 'center'
-													}}
-													>
-														<Icon name="align-center" size={19} color={'white'} style={{ height: 19, transform: [{ rotate: '90deg' }] }} />
-													</View>
-												)}
-												<ImageError
-													style={[mainStyles.coverSmall(theme)]}
-													source={{ uri: urlCover(config, item, 100) }}
-												/>
-											</View>
-										</Pressable>
-									</QueueDragRow>
-								)}
-							/>
+							</QueueDragProvider>
 						</View>
 					}
 				</View>
