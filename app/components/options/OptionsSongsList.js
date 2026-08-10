@@ -4,7 +4,7 @@ import { useNavigation } from '@react-navigation/native'
 import { useTranslation } from 'react-i18next'
 
 import { useConfig } from '~/contexts/config'
-import { getApi, getApiNetworkFirst } from '~/utils/api'
+import { getApi, getApiNetworkFirst, addSongToPlaylist } from '~/utils/api'
 import { urlStream } from '~/utils/url'
 import { isSongCached } from '~/utils/cache'
 import { playSong, addToQueue, addToUpNext } from '~/utils/player'
@@ -113,7 +113,7 @@ const OptionsSongsList = ({ songs, indexOptions, setIndexOptions, onUpdate = () 
 	}
 
 	const addToPlaylist = (playlist) => {
-		getApi(config, 'updatePlaylist', { playlistId: playlist.id, songIdToAdd: songs[indexOptions].id })
+		addSongToPlaylist(config, playlist, songs[indexOptions].id)
 			.then(() => {
 				refOption.current.close()
 				onUpdate()

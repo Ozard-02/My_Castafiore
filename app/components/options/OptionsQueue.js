@@ -4,7 +4,7 @@ import { useNavigation } from '@react-navigation/native'
 import { useTranslation } from 'react-i18next'
 
 import { useConfig } from '~/contexts/config'
-import { getApi } from '~/utils/api'
+import { getApi, addSongToPlaylist } from '~/utils/api'
 import { useSong, useSongDispatch } from '~/contexts/song'
 import { urlCover } from '~/utils/url'
 import { removeFromQueue, moveInQueue } from '~/utils/player'
@@ -70,7 +70,7 @@ const OptionsQueue = ({ queue, indexOptions, setIndexOptions, closePlayer }) => 
 	}
 
 	const addToPlaylist = (playlist) => {
-		getApi(config, 'updatePlaylist', { playlistId: playlist.id, songIdToAdd: queue[indexOptions].id })
+		addSongToPlaylist(config, playlist, queue[indexOptions].id)
 			.then(() => {
 				refOption.current.close()
 			})

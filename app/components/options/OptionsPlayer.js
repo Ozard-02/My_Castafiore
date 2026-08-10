@@ -3,7 +3,7 @@ import { Linking } from 'react-native'
 import { useNavigation } from '@react-navigation/native'
 import { useTranslation } from 'react-i18next'
 
-import { getApi } from '~/utils/api'
+import { getApi, addSongToPlaylist } from '~/utils/api'
 import { urlCover } from '~/utils/url'
 import { useConfig } from '~/contexts/config'
 import { useSettings, useSetSettings } from '~/contexts/settings'
@@ -72,7 +72,7 @@ const OptionsPlayer = ({ song, isOpen, setIsOpen, closePlayer }) => {
 	}
 
 	const addToPlaylist = (playlist) => {
-		getApi(config, 'updatePlaylist', { playlistId: playlist.id, songIdToAdd: song.id })
+		addSongToPlaylist(config, playlist, song.id)
 			.then(() => {
 				refOption.current.close()
 			})

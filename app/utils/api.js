@@ -55,6 +55,15 @@ export const getApi = (config, path, query = '') => {
 	})
 }
 
+export const addSongToPlaylist = async (config, playlist, songId) => {
+	const existing = await getApi(config, 'getPlaylist', { id: playlist.id })
+		.then((json) => json?.playlist?.entry?.some((song) => song.id === songId))
+		.catch(() => null)
+	if (existing) return false
+	await getApi(config, 'updatePlaylist', { playlistId: playlist.id, songIdToAdd: songId })
+	return true
+}
+
 export const getCachedAndApi = async (config, path, query = '', setData = () => { }) => {
 	if (!config?.url || !config?.query) {
 		logger.error('getCachedAndApi', 'config.url or config.query is not defined')
