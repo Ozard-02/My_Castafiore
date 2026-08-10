@@ -112,7 +112,7 @@ const downloadNextSong = async (queue, currentIndex) => {
 		const index = (currentIndex + queue.length + i) % queue.length
 		const track = queue[index]
 		if (track && !track.isLiveStream && track.id.match(/^[a-zA-Z0-9-]*$/)) {
-			await enqueueSong(track, null)
+			await enqueueSong(track, null, true)
 		}
 	}
 }

@@ -156,7 +156,7 @@ const onProgress = (songId) => (progress) => {
 	})
 }
 
-const moveToQueue = (song, source) => {
+const moveToQueue = (song, source, silent = false) => {
 	if (isCached(song.id)) return null
 	if (state.queue.some((q) => q.songId === song.id)) return null
 	return {
@@ -165,6 +165,7 @@ const moveToQueue = (song, source) => {
 		partUri: `${getPathSong(song.id, global.streamFormat)}.part`,
 		meta: buildMeta(song),
 		source,
+		silent,
 		status: 'queued',
 		progress: 0,
 		totalBytes: 0,
@@ -175,8 +176,8 @@ const moveToQueue = (song, source) => {
 	}
 }
 
-export const enqueueSong = async (song, source = null) => {
-	const item = moveToQueue(song, source)
+export const enqueueSong = async (song, source = null, silent = false) => {
+	const item = moveToQueue(song, source, silent)
 	if (!item) return
 	setState({ ...state, queue: [...state.queue, item] })
 	await saveDownloads()
@@ -459,6 +460,7 @@ export const getDownloadedSongs = () => {
 export const getSongState = (songId) => {
 	const queueItem = state.queue.find((q) => q.songId === songId)
 	if (queueItem) {
+		if (queueItem.silent) return state.index[songId] ? { status: 'done', progress: 1 } : { status: 'none', progress: 0 }
 		if (queueItem.status === 'downloading') return { status: 'downloading', progress: queueItem.progress }
 		return { status: queueItem.status, progress: 0 }
 	}

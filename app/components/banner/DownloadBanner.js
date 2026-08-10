@@ -11,9 +11,9 @@ const DownloadBanner = ({ navigation }) => {
 	const theme = useTheme()
 	const { queue } = useDownloads()
 
-	const activeItems = queue.filter((q) => ['downloading', 'queued', 'paused', 'error'].includes(q.status))
+	const activeItems = queue.filter((q) => !q.silent && ['downloading', 'queued', 'paused', 'error'].includes(q.status))
 	const visible = activeItems.length > 0
-	const active = queue.find((q) => q.status === 'downloading')
+	const active = activeItems.find((q) => q.status === 'downloading')
 
 	React.useEffect(() => {
 		if (visible) LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut)
