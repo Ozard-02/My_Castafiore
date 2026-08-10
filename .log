@@ -11,6 +11,25 @@
     (queue DnD, playlist sort/swipe, server switch, Favorited home song section 17b).
 - eslint clean; release APK rebuilt + installed on R5CY71GYKWF.
 - Committed + pushed.
+- **Silent caching downloads** (commit `a95c31f`): cache-ahead `downloadNextSong` enqueues with
+  `silent: true`; `DownloadBanner` and the per-song `%`/clock indicators in `SongItem` skip silent
+  items (via `getSongState`), so auto-caching runs invisibly. Manual downloads still animate.
+- **Long download queue lag** (commit `1210f86`): with ~1000 queued items the O(n) scans were the
+  problem, not tick frequency. (a) id→item `queueById` map rebuilt once in `setState`, used by
+  `getSongState`/`onProgress`/`moveToQueue` → O(1) lookups; (b) `Settings/Downloads` screen renders
+  the active-queue rows with `LegendList` (virtualized, only visible rows mounted) instead of
+  `.map()`-ing 1000 rows into a ScrollView — static sections moved to `ListHeaderComponent`/
+  `ListFooterComponent`.
+- **Parallel downloads** (commit `4de25e8`): replaced the single-slot `isProcessing` boolean with an
+  `activeDownloads` counter; `startNext()` fills up to N slots concurrently. N = new
+  `parallelDownloads` setting (default 3), editable under **Settings → Downloads → Song caching**
+  ("Parallel downloads", integer input next to "Cache next song"). Pause/cancel/clear correctly
+  release slots (cancel only decrements when the item had a live resumable). i18n en/de.
+- Shared-song semantics confirmed (no code change): songs in 2+ downloaded collections accumulate
+  sources on the index entry; `removeSource` deletes the file only when sources drop to `[]`, so
+  deleting one playlist keeps the shared song for the other. Known edge case (deferred): deleting a
+  collection while a shared song is still queued cancels that queue item and it won't re-download
+  for the surviving collection.
 
 ## 2026-08-09 (17th)
 - Re-added Favorited section to the Playlists tab, **below** "My Playlists" (`Playlists.js`):

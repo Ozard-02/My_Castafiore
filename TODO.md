@@ -52,15 +52,34 @@
      tap → Downloads detail screen (Settings/Downloads) with live speed, per-collection downloads
      that can be removed individually (delete one playlist, keep an album), pause/resume/cancel,
      persistence per server via AsyncStorage.
-     - ✅ Done: `downloadManager.native.js` (queue engine, DownloadResumable pause/resume that
-       survives restarts, rolling speed tracker, collection/index persistence, `useDownloads`),
-       `downloadManager.web.js` stub, `DownloadButton` (ring/percent/done states),
-       `DownloadBanner` in TabBar, `Settings/Downloads` screen + stack registration + Settings row,
-       `Download` option replacing "Cache all songs" in OptionsAlbum/Playlist/Favorited, per-song
-       Download action in OptionsSongsList + state icon in SongItem, player `downloadSong`/
-       `downloadNextSong` routed through the manager, i18n en/de.
-     - Deferred (documented): drag-reorder in queue, true headless background download,
-       per-collection quality selector (reuses global streamFormat/maxBitRate).
+      - ✅ Done: `downloadManager.native.js` (queue engine, DownloadResumable pause/resume that
+        survives restarts, rolling speed tracker, collection/index persistence, `useDownloads`),
+        `downloadManager.web.js` stub, `DownloadButton` (ring/percent/done states),
+        `DownloadBanner` in TabBar, `Settings/Downloads` screen + stack registration + Settings row,
+        `Download` option replacing "Cache all songs" in OptionsAlbum/Playlist/Favorited, per-song
+        Download action in OptionsSongsList + state icon in SongItem, player `downloadSong`/
+        `downloadNextSong` routed through the manager, i18n en/de.
+      - ✅ Done 2026-08-10 (18th session):
+        - **Silent caching**: cache-ahead `downloadNextSong` enqueues with `silent: true`; the
+          `DownloadBanner` and per-song progress/clock indicators in `SongItem` skip silent items,
+          so auto-caching runs invisibly (manual downloads still animate). `getSongState` maps
+          silent items to done/none.
+        - **Long-queue performance**: `queueById` (id→item) map rebuilt once in `setState` makes
+          `getSongState`/`onProgress`/`moveToQueue` O(1) (was O(n) per call — brutal with ~1000
+          queued items); `Settings/Downloads` now renders active downloads with a virtualized
+          `LegendList` (only visible rows mounted) instead of `.map()`-ing all rows in a ScrollView
+          (header/footer hold the static sections).
+        - **Parallel downloads**: single-slot `isProcessing` boolean → `activeDownloads` counter;
+          `startNext()` fills up to N concurrent slots. N = new `parallelDownloads` setting
+          (default 3) under Downloads → Song caching (integer input beside "Cache next song"),
+          wired via `global.parallelDownloads`; pause/cancel/clear release slots correctly.
+        - **Shared-song semantics** (documented, no change): songs in 2+ downloaded collections
+          accumulate `sources` on their index entry; `removeSource` deletes the file only when
+          sources drop to `[]`, so removing one playlist keeps the song for the other. Known edge
+          case (deferred): removing a collection while a shared song is still queued cancels that
+          queue item and the surviving collection won't re-download it.
+      - Deferred (documented): drag-reorder in queue, true headless background download,
+        per-collection quality selector (reuses global streamFormat/maxBitRate).
 
 5. **Local WiFi Management** ✅ done
    - I can already insert more than onw server, nut i have to swhich manually, i want this to be network specific, not just wifi/data but select a spsecific wifi network and it will switch automatically

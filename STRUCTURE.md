@@ -125,7 +125,7 @@ Playback state enum: `Playing`, `Paused`, `Stopped`, `Loading`, `Error`, `None`.
 ### app/utils/downloadManager.js (platform-resolved) — Downloads
 | Platform | Implementation |
 |---|---|
-| `downloadManager.native.js` | Spotify-style download manager: serial queue engine built on `DownloadResumable` (pause/resume survives restarts), per-server persistence (`downloadQueue:/downloadIndex:/downloadCollections:` keys in AsyncStorage), rolling 10s speed tracker, collection records (one album/playlist = removable unit). Exposes `useDownloads()` (useSyncExternalStore), `enqueueSong`, `enqueueCollection`, `pauseDownload`, `resumeDownload`, `retryDownload`, `cancelDownload`, `cancelCollection`, `resumeCollection`, `removeSong`, `removeSource`, `clearAllDownloads`, `getCollectionState`, `getSongState`, `getDownloadedSongs`, `getDownloadSpeed`, `formatSpeed`, `formatBytes`. Initialized in `config.js` alongside `initCacheSong()`. |
+| `downloadManager.native.js` | Spotify-style download manager: **parallel** queue engine (fills up to `global.parallelDownloads` slots, default 3) built on `DownloadResumable` (pause/resume survives restarts), per-server persistence (`downloadQueue:/downloadIndex:/downloadCollections:` keys in AsyncStorage), rolling 10s speed tracker, collection records (one album/playlist = removable unit). Cache-ahead downloads are flagged `silent` so the banner/progress UI ignores them. O(1) lookups via a `queueById` map rebuilt in `setState`. Exposes `useDownloads()` (useSyncExternalStore), `enqueueSong`, `enqueueCollection`, `pauseDownload`, `resumeDownload`, `retryDownload`, `cancelDownload`, `cancelCollection`, `resumeCollection`, `removeSong`, `removeSource`, `clearAllDownloads`, `getCollectionState`, `getSongState`, `getDownloadedSongs`, `getDownloadSpeed`, `formatSpeed`, `formatBytes`. Initialized in `config.js` alongside `initCacheSong()`. |
 | `downloadManager.web.js` | No-op stub (offline handled by the service worker). Same exports + `useDownloads`. |
 
 ### Other Utils
@@ -186,7 +186,7 @@ Playback state enum: `Playing`, `Paused`, `Stopped`, `Loading`, `Error`, `None`.
 | AddServer.js | Form to add/edit a server connection. Supports Navidrome, Subsonic, LMS, Ampache types. |
 | Cache.js | Cache management: view stats, clear API cache, clear song cache. |
 | Connect.js | Server connection management: select from saved servers, ping for status, delete servers. |
-| Downloads.js | Download manager UI: live speed/active/queued stats card, active downloads with progress + pause/resume/retry/cancel, downloaded collections removable individually, individual songs bucket, clear all. |
+| Downloads.js | Download manager UI: live speed/active/queued stats card, active downloads with progress + pause/resume/retry/cancel, downloaded collections removable individually, individual songs bucket, clear all. Active queue renders via virtualized `LegendList` (header/footer hold the static sections). Cache settings include the `parallelDownloads` concurrency input. |
 | Home.js | Configure which home sections are enabled and their order. |
 | Informations.js | App/system information display. |
 | Language.js | Language selector. |
