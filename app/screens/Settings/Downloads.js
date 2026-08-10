@@ -35,6 +35,7 @@ const Downloads = () => {
 	const { queue, index, collections } = useDownloads()
 	const [speed, setSpeed] = React.useState(0)
 	const [cacheNextSong, setCacheNextSong] = React.useState(settings.cacheNextSong.toString())
+	const [parallelDownloads, setParallelDownloads] = React.useState(settings.parallelDownloads.toString())
 	const [statCache, setStatCache] = React.useState([
 		{ name: 'Loading...', count: '' },
 	])
@@ -56,11 +57,22 @@ const Downloads = () => {
 	}, [settings.cacheNextSong])
 
 	React.useEffect(() => {
+		setParallelDownloads(settings.parallelDownloads.toString())
+	}, [settings.parallelDownloads])
+
+	React.useEffect(() => {
 		if (cacheNextSong === '') return
 		const number = parseInt(cacheNextSong)
 		if (number === settings.cacheNextSong) return
 		setSettings({ ...settings, cacheNextSong: number })
 	}, [cacheNextSong])
+
+	React.useEffect(() => {
+		if (parallelDownloads === '') return
+		const number = parseInt(parallelDownloads)
+		if (number === settings.parallelDownloads) return
+		setSettings({ ...settings, parallelDownloads: number })
+	}, [parallelDownloads])
 
 	React.useEffect(() => {
 		if (!isFocused) return
@@ -169,10 +181,17 @@ const Downloads = () => {
 						value={cacheNextSong}
 						onChangeText={(text) => setCacheNextSong(text.replace(/[^0-9]/g, ''))}
 						inputMode="numeric"
+					/>
+					<OptionInput
+						title={t("settings.cache.Parallel downloads")}
+						value={parallelDownloads}
+						onChangeText={(text) => setParallelDownloads(text.replace(/[^0-9]/g, ''))}
+						inputMode="numeric"
 						isLast
 					/>
 				</View>
 				<Text style={settingStyles.description(theme)}>{t('settings.cache.Cache next song description')}</Text>
+				<Text style={settingStyles.description(theme)}>{t('settings.cache.Parallel downloads description')}</Text>
 				{isEmpty && (
 					<View style={[styles.empty, { backgroundColor: theme.secondaryBack }]}>
 						<Icon name="cloud-download" size={40} color={theme.secondaryText} />

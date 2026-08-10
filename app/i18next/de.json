@@ -83,6 +83,8 @@
         "Show cached songs": "Zwischengespeicherte Lieder anzeigen",
         "Cache next song": "Nächstes Lied zwischenspeichern",
         "Cache next song description": "Die Nächsten Lieder automatisch zwischenspeichern (Standard: 5)",
+        "Parallel downloads": "Parallele Downloads",
+        "Parallel downloads description": "Anzahl gleichzeitiger Downloads (Standard: 3)",
         "Clear API cache": "API-Zwischenspeicher leeren",
         "Clear song cache": "Lied-Zwischenspeicher leeren",
         "Clear cache alert message": "Möchtest du den Zwischenspeicher wirklich leeren?",

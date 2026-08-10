@@ -11,7 +11,9 @@ const WINDOW_MS = 10_000
 const listeners = new Set()
 let state = { queue: [], index: {}, collections: {} }
 let queueById = new Map()
-let isProcessing = false
+let activeDownloads = 0
+
+const maxConcurrent = () => Math.max(1, global.parallelDownloads || 3)
 
 const getKeys = () => {
 	const folder = global.config?.folderCache || 'default'
@@ -297,7 +299,7 @@ const finishSuccess = async (songId, size) => {
 		global.listCacheSong.push(`${songId}.${global.streamFormat}`)
 	}
 	await saveDownloads()
-	isProcessing = false
+	activeDownloads = Math.max(0, activeDownloads - 1)
 	startNext()
 }
 
@@ -309,16 +311,18 @@ const finishError = async (songId, error) => {
 		queue: state.queue.map((q) => q.songId === songId ? { ...q, status: 'error', error, resumable: null } : q),
 	})
 	await saveDownloads()
-	isProcessing = false
+	activeDownloads = Math.max(0, activeDownloads - 1)
 	startNext()
 }
 
 const startNext = () => {
-	if (isProcessing) return
-	const item = state.queue.find((q) => q.status === 'queued')
-	if (!item) return
-	isProcessing = true
-	runDownload(item)
+	const max = maxConcurrent()
+	while (activeDownloads < max) {
+		const item = state.queue.find((q) => q.status === 'queued')
+		if (!item) break
+		activeDownloads++
+		runDownload(item)
+	}
 }
 
 // ---------------------------------------------------------------------------
@@ -335,7 +339,7 @@ export const pauseDownload = async (songId) => {
 		})
 		speedIds.delete(songId)
 		await saveDownloads()
-		isProcessing = false
+		activeDownloads = Math.max(0, activeDownloads - 1)
 		startNext()
 	} catch (error) {
 		logger.error('downloadManager', 'Pause failed', error)
@@ -357,6 +361,7 @@ export const retryDownload = async (songId) => {
 
 export const cancelDownload = async (songId) => {
 	const item = state.queue.find((q) => q.songId === songId)
+	const wasActive = !!item?.resumable
 	if (item?.resumable) {
 		await item.resumable.cancelAsync().catch(() => { })
 	}
@@ -365,7 +370,7 @@ export const cancelDownload = async (songId) => {
 	lastBytes.delete(songId)
 	setState({ ...state, queue: state.queue.filter((q) => q.songId !== songId) })
 	await saveDownloads()
-	isProcessing = false
+	if (wasActive) activeDownloads = Math.max(0, activeDownloads - 1)
 	startNext()
 }
 
@@ -432,7 +437,7 @@ export const clearAllDownloads = async () => {
 	if (global.listCacheSong) global.listCacheSong = []
 	setState({ queue: [], index: {}, collections: {} })
 	await saveDownloads()
-	isProcessing = false
+	activeDownloads = 0
 }
 
 // ---------------------------------------------------------------------------

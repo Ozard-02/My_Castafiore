@@ -87,6 +87,8 @@
         "Show cached songs": "Show cached songs",
         "Cache next song": "Cache next song",
         "Cache next song description": "Auto download upcoming songs (default: 5)",
+        "Parallel downloads": "Parallel downloads",
+        "Parallel downloads description": "Number of simultaneous downloads (default: 3)",
         "Clear API cache": "Clear API cache",
         "Clear song cache": "Clear song cache",
         "Clear cache alert message": "Are you sure you want to clear the cache?",

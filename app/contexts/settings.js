@@ -99,6 +99,7 @@ export const defaultSettings = {
 	// Cache settings
 	isSongCaching: false,
 	cacheNextSong: 5,
+	parallelDownloads: 3,
 	showCache: true,
 	// Player settings
 	saveQueue: false,
@@ -273,6 +274,10 @@ const updateGlobalSettings = async (settings) => {
 	React.useEffect(() => {
 		global.cacheNextSong = settings.cacheNextSong
 	}, [settings.cacheNextSong])
+
+	React.useEffect(() => {
+		global.parallelDownloads = settings.parallelDownloads
+	}, [settings.parallelDownloads])
 
 	React.useEffect(() => {
 		global.isSongCaching = settings.isSongCaching
