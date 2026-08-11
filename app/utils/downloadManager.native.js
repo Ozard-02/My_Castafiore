@@ -15,14 +15,11 @@ let activeDownloads = 0
 
 const maxConcurrent = () => Math.max(1, global.parallelDownloads || 3)
 
-const getKeys = () => {
-	const folder = global.config?.folderCache || 'default'
-	return {
-		queue: `downloadQueue:${folder}`,
-		index: `downloadIndex:${folder}`,
-		collections: `downloadCollections:${folder}`,
-	}
-}
+const getKeys = () => ({
+	queue: 'downloadQueue',
+	index: 'downloadIndex',
+	collections: 'downloadCollections',
+})
 
 const notify = () => {
 	listeners.forEach((listener) => listener())
@@ -107,7 +104,40 @@ export const saveDownloads = async () => {
 	}
 }
 
+const migrateDownloadKeys = async () => {
+	const all = await AsyncStorage.getAllKeys()
+	const legacy = all.filter((key) => (
+		(key.startsWith('downloadQueue:') || key.startsWith('downloadIndex:') || key.startsWith('downloadCollections:')) &&
+		!['downloadQueue', 'downloadIndex', 'downloadCollections'].includes(key)
+	))
+	if (legacy.length === 0) return
+	const stored = await AsyncStorage.multiGet(legacy)
+	let queue = []
+	let index = {}
+	let collections = {}
+	for (const [key, value] of stored) {
+		if (!value) continue
+		const data = JSON.parse(value)
+		if (key.startsWith('downloadQueue:') && Array.isArray(data)) {
+			for (const item of data) {
+				if (!queue.some((q) => q.songId === item.songId)) queue.push(item)
+			}
+		} else if (key.startsWith('downloadIndex:')) {
+			index = { ...index, ...data }
+		} else if (key.startsWith('downloadCollections:')) {
+			collections = { ...collections, ...data }
+		}
+	}
+	await AsyncStorage.multiSet([
+		['downloadQueue', JSON.stringify(queue)],
+		['downloadIndex', JSON.stringify(index)],
+		['downloadCollections', JSON.stringify(collections)],
+	])
+	await AsyncStorage.multiRemove(legacy)
+}
+
 export const initDownloads = async () => {
+	await migrateDownloadKeys()
 	const keys = getKeys()
 	try {
 		const stored = await AsyncStorage.multiGet([keys.queue, keys.index, keys.collections])
