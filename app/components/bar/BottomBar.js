@@ -68,7 +68,8 @@ const BottomBar = ({ state, descriptors, navigation }) => {
 	const theme = useTheme()
 	const keyboardIsOpen = useKeyboardIsOpen()
 	const { width } = useWindowDimensions()
-	const compact = width < 420
+	// Z Flip cover (~360dp) compact; main screens (~411dp+) keep the regular bar
+	const compact = width < 380
 
 	if (!config.url) return null
 	return (

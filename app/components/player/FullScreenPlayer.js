@@ -45,7 +45,7 @@ const CoverItem = ({ isPreview, song, setFullScreen, stars }) => {
 	const { scroll, upNextScroll, queueOffset, queueViewport, upNextOffset, upNextViewport, queueBoxY, queueBoxH, upNextBoxY, upNextBoxH, rowHeight, isCurrentInQueue, queueItems, queueRealIndex, lists, handleMove } = useQueueDnD(song, songDispatch, { scrollAnimated: true })
 
 	const albumImage = React.useMemo(() => {
-		const size = Math.min(width - 50, 450, Math.max(140, height - 340))
+		const size = Math.min(width - 50, 450, Math.max(110, height - 420))
 		return {
 			maxWidth: size,
 			width: size,
@@ -287,28 +287,28 @@ const FullScreenPlayer = ({ setFullScreen }) => {
 						/>
 					</View>
 					<TimeBar />
-					<View style={{ flexDirection: 'row', width: '100%', marginVertical: compact ? 10 : 30, alignItems: 'center', justifyContent: 'center', gap: compact ? 10 : 30 }}>
+					<View style={{ flexDirection: 'row', width: '100%', marginVertical: compact ? 6 : 30, alignItems: 'center', justifyContent: 'center', gap: compact ? 10 : 30 }}>
 						<IconButton
 							icon="step-backward"
-							size={compact ? 25 : size.icon.large}
+							size={compact ? 22 : size.icon.large}
 							color={theme.primaryText}
 							style={{ padding: 10 }}
 							onPress={() => Player.previousSong(config, song, songDispatch)}
 						/>
 						<PlayButton
-							size={compact ? 40 : 50}
+							size={compact ? 36 : 50}
 							color={theme.primaryText}
 							style={{
 								paddingHorizontal: 10,
-								minWidth: 63,
-								minHeight: 60,
+								minWidth: compact ? 48 : 63,
+								minHeight: compact ? 48 : 60,
 								justifyContent: 'center',
 								alignItems: 'center',
 							}}
 						/>
 						<IconButton
 							icon="step-forward"
-							size={compact ? 25 : size.icon.large}
+							size={compact ? 22 : size.icon.large}
 							color={theme.primaryText}
 							style={{ padding: 10 }}
 							onPress={() => Player.nextSong(config, song, songDispatch)}
@@ -319,14 +319,14 @@ const FullScreenPlayer = ({ setFullScreen }) => {
 							icon="comment-o"
 							size={17}
 							color={isPreview == preview.LYRICS ? theme.primaryTouch : theme.secondaryText}
-							style={{ paddingVertical: compact ? 5 : 10, paddingEnd: 10 }}
+							style={{ paddingVertical: compact ? 4 : 10, paddingEnd: 10 }}
 							onPress={() => setIsPreview(isPreview == preview.LYRICS ? preview.COVER : preview.LYRICS)}
 						/>
 						<IconButton
 							icon="repeat"
 							size={17}
 							color={song.actionEndOfSong == 'repeat' ? theme.primaryTouch : theme.secondaryText}
-							style={{ paddingVertical: compact ? 5 : 10, paddingHorizontal: 10 }}
+							style={{ paddingVertical: compact ? 4 : 10, paddingHorizontal: 10 }}
 							onPress={() => {
 								Player.setRepeat(songDispatch, song.actionEndOfSong === 'repeat' ? 'next' : 'repeat')
 							}}
@@ -334,20 +334,20 @@ const FullScreenPlayer = ({ setFullScreen }) => {
 						<ConnectButton
 							size={20}
 							color={theme.secondaryText}
-							style={{ paddingVertical: compact ? 5 : 10, paddingStart: 10 }}
+							style={{ paddingVertical: compact ? 4 : 10, paddingStart: 10 }}
 						/>
 						<IconButton
 							icon="random"
 							size={17}
 							color={song.actionEndOfSong == 'random' ? theme.primaryTouch : theme.secondaryText}
-							style={{ paddingVertical: compact ? 5 : 10, paddingHorizontal: 10 }}
+							style={{ paddingVertical: compact ? 4 : 10, paddingHorizontal: 10 }}
 							onPress={() => Player.setRepeat(songDispatch, song.actionEndOfSong === 'random' ? 'next' : 'random')}
 						/>
 						<IconButton
 							icon="bars"
 							size={17}
 							color={isPreview == preview.QUEUE ? theme.primaryTouch : theme.secondaryText}
-							style={{ paddingVertical: compact ? 5 : 10, paddingStart: 10 }}
+							style={{ paddingVertical: compact ? 4 : 10, paddingStart: 10 }}
 							onPress={() => setIsPreview(isPreview == preview.QUEUE ? preview.COVER : preview.QUEUE)}
 						/>
 					</View>

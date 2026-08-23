@@ -24,22 +24,25 @@ const PlaylistSwipeRow = ({ open, onOpen, onClose, onQueue, onNext, onRemove, ch
 	const settings = useSettings()
 	const translateX = React.useRef(new Animated.Value(0)).current
 
-	const handlers = { queue: onQueue, next: onNext, remove: onRemove }
-	const resolveAction = (name) => {
-		if (name === 'menu') return onRemove || onNext ? { menu: true } : null
-		if (SWIPE_ACTIONS[name] && handlers[name]) return SWIPE_ACTIONS[name]
+	// everything the gesture handlers need lives in a ref: rows are recycled by
+	// LegendList, so closures captured at PanResponder creation would go stale
+	const stateRef = React.useRef({})
+	stateRef.current = { open, onOpen, onClose, onQueue, onNext, onRemove, swipeRight: settings.swipeRightAction, swipeLeft: settings.swipeLeftAction }
+
+	// 'menu' needs a parent-managed open state (onOpen); without it the direction is disabled
+	const resolveAction = (name, st) => {
+		if (name === 'menu') return (st.onRemove || st.onNext) && st.onOpen ? { menu: true } : null
+		if (name === 'queue' && st.onQueue) return SWIPE_ACTIONS.queue
+		if (name === 'next' && st.onNext) return SWIPE_ACTIONS.next
+		if (name === 'remove' && st.onRemove) return SWIPE_ACTIONS.remove
 		return null
 	}
-	const rightAction = resolveAction(settings.swipeRightAction)
-	const leftResolved = resolveAction(settings.swipeLeftAction)
-	const leftIsMenu = !!leftResolved?.menu
-	const leftHint = leftIsMenu ? null : leftResolved
-	const swipeEnabled = !!(rightAction || leftResolved)
 
-	const stateRef = React.useRef({ open, onOpen, onClose })
-	stateRef.current = { open, onOpen, onClose }
-
-	const fire = (name) => handlers[name]?.()
+	const fire = (name, st) => {
+		if (name === 'queue') st.onQueue?.()
+		else if (name === 'next') st.onNext?.()
+		else if (name === 'remove') st.onRemove?.()
+	}
 
 	const animateTo = React.useCallback((value) => {
 		Animated.spring(translateX, {
@@ -57,40 +60,55 @@ const PlaylistSwipeRow = ({ open, onOpen, onClose, onQueue, onNext, onRemove, ch
 
 	const pan = React.useRef(PanResponder.create({
 		onStartShouldSetPanResponder: () => false,
-		onMoveShouldSetPanResponder: swipeEnabled
-			? (_evt, g) => Math.abs(g.dx) > 5 && Math.abs(g.dx) > Math.abs(g.dy)
-			: undefined,
+		onMoveShouldSetPanResponder: (_evt, g) => {
+			const st = stateRef.current
+			if (!(resolveAction(st.swipeRight, st) || resolveAction(st.swipeLeft, st))) return false
+			return Math.abs(g.dx) > 5 && Math.abs(g.dx) > Math.abs(g.dy)
+		},
 		onPanResponderGrant: () => translateX.stopAnimation(),
 		onPanResponderMove: (_evt, g) => {
-			const start = stateRef.current.open ? -ACTION_WIDTH : 0
+			const st = stateRef.current
+			const leftIsMenu = !!resolveAction(st.swipeLeft, st)?.menu
+			const start = st.open ? -ACTION_WIDTH : 0
 			translateX.setValue(Math.min(120, Math.max(leftIsMenu ? -ACTION_WIDTH : -120, start + g.dx)))
 		},
 		onPanResponderRelease: (_evt, g) => {
-			const start = stateRef.current.open ? -ACTION_WIDTH : 0
+			const st = stateRef.current
+			const rightAction = resolveAction(st.swipeRight, st)
+			const leftResolved = resolveAction(st.swipeLeft, st)
+			const leftIsMenu = !!leftResolved?.menu
+			const start = st.open ? -ACTION_WIDTH : 0
 			const total = start + g.dx
 			if (total > SWIPE_THRESHOLD) {
-				if (rightAction) fire(settings.swipeRightAction)
-				stateRef.current.onClose()
+				if (rightAction) fire(st.swipeRight, st)
+				st.onClose?.()
 				animateTo(0)
 			} else if (total < -(leftIsMenu ? ACTION_WIDTH / 2 : SWIPE_THRESHOLD)) {
 				if (leftIsMenu) {
-					stateRef.current.onOpen()
+					st.onOpen?.()
 					animateTo(-ACTION_WIDTH)
 				} else {
-					if (leftHint) fire(settings.swipeLeftAction)
-					stateRef.current.onClose()
+					if (leftResolved) fire(st.swipeLeft, st)
+					st.onClose?.()
 					animateTo(0)
 				}
 			} else {
-				stateRef.current.onClose()
-				animateTo(stateRef.current.open ? -ACTION_WIDTH : 0)
+				st.onClose?.()
+				animateTo(st.open ? -ACTION_WIDTH : 0)
 			}
 		},
 		onPanResponderTerminate: () => {
-			stateRef.current.onClose()
-			animateTo(stateRef.current.open ? -ACTION_WIDTH : 0)
+			const st = stateRef.current
+			st.onClose?.()
+			animateTo(st.open ? -ACTION_WIDTH : 0)
 		},
 	})).current
+
+	// static layers resolve at render time (settings/props changes re-render anyway)
+	const rightAction = resolveAction(settings.swipeRightAction, stateRef.current)
+	const leftResolved = resolveAction(settings.swipeLeftAction, stateRef.current)
+	const leftIsMenu = !!leftResolved?.menu
+	const leftHint = leftIsMenu ? null : leftResolved
 
 	const renderHint = (action, style) => (
 		<View style={[styles.hint, style, { backgroundColor: theme.secondaryBack }]}>

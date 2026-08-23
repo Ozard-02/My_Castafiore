@@ -34,6 +34,7 @@ const SearchMore = ({ route: { params: { query, results, type } } }) => {
 	const [offset, setOffset] = React.useState(results?.length || 0)
 	const [isLoading, setIsLoading] = React.useState(false)
 	const [view, setView] = React.useState('list')
+	const [openItemIndex, setOpenItemIndex] = React.useState(null)
 
 	const viewButton = (
 		<IconButton
@@ -92,6 +93,11 @@ const SearchMore = ({ route: { params: { query, results, type } } }) => {
 	}, [song.queue, songDispatch, config])
 
 	const renderItem = React.useCallback(({ item, index }) => {
+		const swipeProps = {
+			open: openItemIndex === index,
+			onOpen: () => setOpenItemIndex(index),
+			onClose: () => setOpenItemIndex(null),
+		}
 		const content = (
 			<ExplorerItem
 				item={item}
@@ -102,15 +108,16 @@ const SearchMore = ({ route: { params: { query, results, type } } }) => {
 				borderRadius={type === 'artist' ? size.radius.circle : undefined}
 			/>
 		)
-		if (type === 'song') return <PlaylistSwipeRow onQueue={() => addQueue(item)} onNext={() => playNext(item)}>{content}</PlaylistSwipeRow>
+		if (type === 'song') return <PlaylistSwipeRow {...swipeProps} onQueue={() => addQueue(item)} onNext={() => playNext(item)}>{content}</PlaylistSwipeRow>
 		if (type === 'album') return (
 			<PlaylistSwipeRow
+				{...swipeProps}
 				onQueue={() => addAlbumToQueue(config, songDispatch, item.id)}
 				onNext={() => addAlbumToQueue(config, songDispatch, item.id, true)}
 			>{content}</PlaylistSwipeRow>
 		)
 		return content
-	}, [items, config, type, songDispatch, addQueue, playNext])
+	}, [items, config, type, songDispatch, addQueue, playNext, openItemIndex])
 
 
 	const renderActivityIndicator = () => {

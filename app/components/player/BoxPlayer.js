@@ -1,5 +1,5 @@
 import React from 'react'
-import { Text, View, Pressable, StyleSheet, Animated, PanResponder, Platform } from 'react-native'
+import { Text, View, Pressable, StyleSheet, Animated, PanResponder, Platform, useWindowDimensions } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Icon from 'react-native-vector-icons/FontAwesome'
 
@@ -21,6 +21,9 @@ const BoxPlayer = ({ setFullScreen }) => {
 	const insets = useSafeAreaInsets()
 	const theme = useTheme()
 	const isKeyboardOpen = useKeyboardIsOpen()
+	const { width } = useWindowDimensions()
+	// keep in sync with BottomBar's compact threshold: shorter bar -> smaller offset
+	const compactBar = width < 380
 	const translateY = React.useRef(new Animated.Value(0)).current
 	const translateX = React.useRef(new Animated.Value(0)).current
 	const axisRef = React.useRef(null)
@@ -88,11 +91,11 @@ const BoxPlayer = ({ setFullScreen }) => {
 		<Animated.View
 			style={{
 				position: 'absolute',
-				bottom: (insets.bottom ? insets.bottom : 10) + 59,
+				bottom: (insets.bottom ? insets.bottom : 10) + (compactBar ? 45 : 59),
 				left: insets.left,
 				right: insets.right,
 
-				transform: [{ translateY }, { translateX }],
+				transform: [{ translateY }],
 				display: isKeyboardOpen ? 'none' : undefined,
 			}}
 			touchAction="none"
@@ -108,18 +111,20 @@ const BoxPlayer = ({ setFullScreen }) => {
 					margin: 10,
 					borderRadius: 10,
 				}}>
-				<ImageError
-					source={{ uri: urlCover(config, song?.songInfo, 100) }}
-					style={styles.boxPlayerImage}
-				>
-					<View style={styles.boxPlayerImage}>
-						<Icon name="music" size={size.icon.small} color={theme.playerPrimaryText} />
+				<Animated.View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', overflow: 'hidden', transform: [{ translateX }] }}>
+					<ImageError
+						source={{ uri: urlCover(config, song?.songInfo, 100) }}
+						style={styles.boxPlayerImage}
+					>
+						<View style={styles.boxPlayerImage}>
+							<Icon name="music" size={size.icon.small} color={theme.playerPrimaryText} />
+						</View>
+					</ImageError>
+					<View style={{ flex: 1 }}>
+						<Text style={{ color: theme.playerPrimaryText, textAlign: 'left', flex: 1, fontWeight: 'bold' }} numberOfLines={1}>{song?.songInfo?.track ? `${song?.songInfo?.track}. ` : null}{song?.songInfo?.title ? song.songInfo.title : 'Song title'}</Text>
+						<Text style={{ color: theme.playerSecondaryText, textAlign: 'left', flex: 1 }} numberOfLines={1}>{song?.songInfo?.artist ? song.songInfo.artist : 'Artist'}</Text>
 					</View>
-				</ImageError>
-				<View style={{ flex: 1 }}>
-					<Text style={{ color: theme.playerPrimaryText, textAlign: 'left', flex: 1, fontWeight: 'bold' }} numberOfLines={1}>{song?.songInfo?.track ? `${song?.songInfo?.track}. ` : null}{song?.songInfo?.title ? song.songInfo.title : 'Song title'}</Text>
-					<Text style={{ color: theme.playerSecondaryText, textAlign: 'left', flex: 1 }} numberOfLines={1}>{song?.songInfo?.artist ? song.songInfo.artist : 'Artist'}</Text>
-				</View>
+				</Animated.View>
 				<IconButton
 					icon="step-forward"
 					size={size.icon.small}
