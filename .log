@@ -486,3 +486,15 @@
 - Pill feedback round: cast button removed from pill (not enough space) → row is
   favourite | play/pause. Lyrics card fixed height (52, compact 40) instead of flex:1 —
   it was eating all free vertical space.
+- FullScreenPlayer transport rework (user): 5-button Spotify-style row — shuffle left of
+  prev, repeat right of next (space-between; shuffle/repeat size 20/18-compact, tinted
+  when active). Lyrics comment-o icon reinserted in bottom row (as before: first slot,
+  toggles isPreview); bottom row now lyrics | cast | queue. Lyrics card kept.
+  eslint clean; build+install pending device reconnect.
+- FullScreenPlayer cleanup (user): lyrics CARD removed (comment-o icon in bottom row is
+  the only lyrics toggle again); stale duplicate repeat/cast/random block deleted from
+  bottom row (my earlier edit had appended the new row without removing the old one —
+  bottom row is now lyrics | cast | queue, single instances). Unused Icon import +
+  useTranslation removed. eslint clean, installed on phone.
+  GOTCHA: when replacing a JSX block, verify the old block is actually gone — rg the
+  icon names afterwards.

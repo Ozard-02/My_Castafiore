@@ -3,7 +3,6 @@ import { Text, View, Modal, FlatList, StyleSheet, useWindowDimensions, Pressable
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useNavigation } from '@react-navigation/native'
 import { useTranslation } from 'react-i18next'
-import Icon from 'react-native-vector-icons/FontAwesome'
 
 import { useConfig } from '~/contexts/config'
 import { useSong, useSongDispatch } from '~/contexts/song'
@@ -202,7 +201,6 @@ const FullScreenPlayer = ({ setFullScreen }) => {
 	const song = useSong()
 	const insets = useSafeAreaInsets()
 	const navigation = useNavigation()
-	const { t } = useTranslation()
 	const { width, height } = useWindowDimensions()
 	const compact = width < 420 || height < 700
 	const [isPreview, setIsPreview] = React.useState(preview.COVER)
@@ -289,7 +287,14 @@ const FullScreenPlayer = ({ setFullScreen }) => {
 						/>
 					</View>
 					<TimeBar />
-					<View style={{ flexDirection: 'row', width: '100%', marginVertical: compact ? 6 : 20, alignItems: 'center', justifyContent: 'center', gap: compact ? 10 : 30 }}>
+					<View style={{ flexDirection: 'row', width: '100%', marginVertical: compact ? 6 : 20, alignItems: 'center', justifyContent: 'space-between' }}>
+						<IconButton
+							icon="random"
+							size={compact ? 18 : 20}
+							color={song.actionEndOfSong == 'random' ? theme.primaryTouch : theme.secondaryText}
+							style={{ padding: 10 }}
+							onPress={() => Player.setRepeat(songDispatch, song.actionEndOfSong === 'random' ? 'next' : 'random')}
+						/>
 						<IconButton
 							icon="step-backward"
 							size={compact ? 22 : size.icon.large}
@@ -315,53 +320,26 @@ const FullScreenPlayer = ({ setFullScreen }) => {
 							style={{ padding: 10 }}
 							onPress={() => Player.nextSong(config, song, songDispatch)}
 						/>
-					</View>
-					{isPreview !== preview.QUEUE && (
-						<Pressable
-							onPress={() => setIsPreview(isPreview === preview.LYRICS ? preview.COVER : preview.LYRICS)}
-							style={{
-								width: '100%',
-								height: compact ? 40 : 52,
-								marginBottom: compact ? 6 : 14,
-								paddingHorizontal: 15,
-								borderRadius: 10,
-								backgroundColor: theme.secondaryBack,
-								flexDirection: 'row',
-								alignItems: 'center',
-								gap: 12,
-							}}
-						>
-							<Icon
-								name={isPreview === preview.LYRICS ? 'chevron-up' : 'comment-o'}
-								size={size.icon.small}
-								color={isPreview === preview.LYRICS ? theme.primaryTouch : theme.secondaryText}
-							/>
-							<Text style={{ color: theme.primaryText, fontSize: size.text.medium, fontWeight: 'bold' }}>
-								{isPreview === preview.LYRICS ? t('Hide lyrics') : t('Lyrics')}
-							</Text>
-						</Pressable>
-					)}
-					<View style={{ flexDirection: 'row', width: '100%', justifyContent: 'space-between' }}>
 						<IconButton
 							icon="repeat"
-							size={17}
+							size={compact ? 18 : 20}
 							color={song.actionEndOfSong == 'repeat' ? theme.primaryTouch : theme.secondaryText}
-							style={{ paddingVertical: compact ? 4 : 10, paddingHorizontal: 10 }}
-							onPress={() => {
-								Player.setRepeat(songDispatch, song.actionEndOfSong === 'repeat' ? 'next' : 'repeat')
-							}}
+							style={{ padding: 10 }}
+							onPress={() => Player.setRepeat(songDispatch, song.actionEndOfSong === 'repeat' ? 'next' : 'repeat')}
+						/>
+					</View>
+					<View style={{ flexDirection: 'row', width: '100%', justifyContent: 'space-between' }}>
+						<IconButton
+							icon="comment-o"
+							size={17}
+							color={isPreview == preview.LYRICS ? theme.primaryTouch : theme.secondaryText}
+							style={{ paddingVertical: compact ? 4 : 10, paddingEnd: 10 }}
+							onPress={() => setIsPreview(isPreview == preview.LYRICS ? preview.COVER : preview.LYRICS)}
 						/>
 						<ConnectButton
 							size={20}
 							color={theme.secondaryText}
 							style={{ paddingVertical: compact ? 4 : 10, paddingStart: 10 }}
-						/>
-						<IconButton
-							icon="random"
-							size={17}
-							color={song.actionEndOfSong == 'random' ? theme.primaryTouch : theme.secondaryText}
-							style={{ paddingVertical: compact ? 4 : 10, paddingHorizontal: 10 }}
-							onPress={() => Player.setRepeat(songDispatch, song.actionEndOfSong === 'random' ? 'next' : 'random')}
 						/>
 						<IconButton
 							icon="bars"
