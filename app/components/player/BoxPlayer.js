@@ -24,8 +24,14 @@ const BoxPlayer = ({ setFullScreen }) => {
 	const { width } = useWindowDimensions()
 	// keep in sync with BottomBar's compact threshold: shorter bar -> smaller offset
 	const compactBar = width < 380
+	const [isDismissed, setIsDismissed] = React.useState(false)
 	const translateY = React.useRef(new Animated.Value(0)).current
 	const translateX = React.useRef(new Animated.Value(0)).current
+
+	// dismissed by a downward swipe: comes back when a new song/queue starts
+	React.useEffect(() => {
+		setIsDismissed(false)
+	}, [song?.songInfo?.id, song?.queue])
 	const axisRef = React.useRef(null)
 	const prevSongRef = React.useRef({ id: null, index: -1 })
 
@@ -83,6 +89,8 @@ const BoxPlayer = ({ setFullScreen }) => {
 				else if (dx > 60) Player.previousSong(configRef.current, songRef.current, songDispatch)
 			} else if (dy < -60) {
 				setFullScreen(true)
+			} else if (dy > 60) {
+				setIsDismissed(true)
 			}
 		},
 	})).current
@@ -96,7 +104,7 @@ const BoxPlayer = ({ setFullScreen }) => {
 				right: insets.right,
 
 				transform: [{ translateY }],
-				display: isKeyboardOpen ? 'none' : undefined,
+				display: isDismissed || isKeyboardOpen ? 'none' : undefined,
 			}}
 			touchAction="none"
 			{...panResponder.panHandlers}
