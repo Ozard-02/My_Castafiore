@@ -184,7 +184,12 @@ const Playlist = ({ route: { params } }) => {
 				}
 				renderItem={renderItem}
 			/>
-			<View style={[styles.searchContainer, { top: insets.top + 55 }]}>
+			<View style={[styles.searchContainer, {
+			top: insets.top,
+			left: insets.left + 63,
+			right: insets.right + 63,
+			height: 63,
+		}]}>
 				<Icon name="search" size={size.icon.small} color="rgba(255,255,255,0.7)" style={styles.searchIcon} />
 				<TextInput
 					style={styles.searchInput}
@@ -215,8 +220,6 @@ const Playlist = ({ route: { params } }) => {
 const styles = StyleSheet.create({
 	searchContainer: {
 		position: 'absolute',
-		left: 20,
-		right: 20,
 		zIndex: 3,
 		flexDirection: 'row',
 		alignItems: 'center',
