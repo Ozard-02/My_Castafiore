@@ -200,7 +200,7 @@ const OptionsSongsList = ({ songs, indexOptions, setIndexOptions, onUpdate = () 
 				},
 				{
 					name: t('Play next'),
-					icon: 'indent',
+					icon: 'play-circle',
 					onPress: playNext
 				},
 				{

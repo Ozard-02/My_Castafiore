@@ -23,7 +23,7 @@ export default StyleSheet.create({
 	}),
 	button: {
 		padding: 20,
-		justifyContent: 'start',
+		justifyContent: 'center',
 	},
 	headerContainer: {
 		flexDirection: 'row',

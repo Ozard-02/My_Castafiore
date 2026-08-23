@@ -14,7 +14,7 @@ const SWIPE_THRESHOLD = 60
 // direct swipe actions; 'menu' (left only) opens the action panel, 'none' disables
 const SWIPE_ACTIONS = {
 	queue: { icon: 'plus', labelKey: 'Queue' },
-	next: { icon: 'indent', labelKey: 'Play next' },
+	next: { icon: 'play-circle', labelKey: 'Play next' },
 	remove: { icon: 'trash-o', labelKey: 'Remove' },
 }
 
@@ -112,7 +112,7 @@ const PlaylistSwipeRow = ({ open, onOpen, onClose, onQueue, onNext, onRemove, ch
 					)}
 					{onNext && (
 						<Pressable style={[styles.action, { backgroundColor: theme.primaryTouch }]} onPress={() => { onClose(); onNext() }}>
-							<Icon name="indent" size={size.icon.small} color="#fff" />
+							<Icon name="play-circle" size={size.icon.small} color="#fff" />
 							<Text style={styles.actionText}>{t('Play next')}</Text>
 						</Pressable>
 					)}
