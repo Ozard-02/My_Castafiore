@@ -212,8 +212,9 @@
         per-server folders. Servers share the same library → ids match → cached file is reused
         instantly on switch (`convertToTrack` already prefers the local file).
       - Also: download queue/index/collections AsyncStorage keys were per-server (`folderCache`) →
-        kept as-is (unifying would orphan existing per-server `downloadIndex:<url>` data; not needed
-        for playback). Dead-`folderCache` removal in config.js reverted.
+        **unified 2026-08-10** to shared `downloadQueue`/`downloadIndex`/`downloadCollections` keys
+        (song files already shared → the downloaded-list changing on server switch was a bug; legacy
+        per-server data merged in `initDownloads`).
     - **Follow-up 2 — kill the remaining switch pause** ✅ done:
       - User: "it still stops for a second, i want something really seamless."
       - Root causes in `playerLocal.switchServer`: (a) it called `loadSong` (= `TrackPlayer.load` +
@@ -302,6 +303,50 @@
       playlist's current songs (`getPlaylist` → `entry`) and returns `false` (no `updatePlaylist`
       call) if the song id is already there. Used by the three add-to-playlist actions
       (`OptionsSongsList`, `OptionsPlayer`, `OptionsQueue`). Silently skips — the popup just closes.
+
+20. **Playlist Swipe — fix + customizable** 🚧 WANTED
+    - Broken on device: swiping a playlist row shows only black / does nothing. Likely causes:
+      no visual feedback during drag (action buttons only mount when `open===true`, so during the
+      drag you see bare background) and the gesture gate (`|dx|>8 && |dx|>|dy|*1.2`) losing to
+      LegendList scroll. Fix progressive reveal of actions DURING the drag first.
+    - Then make it customizable: both directions (left + right) configurable in Settings.
+      Actions: Queue / Play next / Remove from playlist / None (extensible).
+    - Same behavior in the Music (Tracks) tab list view for songs AND albums (albums: queue/next
+      only — no remove), including after a search.
+
+21. **Playlist searchbar placement** 🚧 WANTED
+    - Searchbox currently sits under the back button and the ⋮ icon; squeeze it between them on
+      the same row: `[←] [searchbox flex] [⋮]`.
+
+22. **Negative playlists** 🚧 WANTED
+    - Playlists marked "exclusive": their songs are excluded from the Home random-shuffle button,
+      reachable ONLY through the playlist itself (playing the playlist stays untouched; a song in
+      both a negative and a normal playlist stays excluded but playable from both).
+    - Server-side flag via playlist comment tag `#<username>-exclusive` (same mechanism as the
+      pins, `#<username>-pin` — Subsonic standard, Navidrome-compatible).
+    - Toggle "Exclude from shuffle" in `OptionsPlaylist`; new `app/utils/exclusions.js` holding the
+      excluded-song-ID set per server (memory cache + AsyncStorage snapshot); filter applied in
+      `Home.js clickRandomSong`.
+    - Skipped (agreed): album-level home sections, browse/search hiding, Genre.js random (one line
+      with the same helper if wanted later).
+
+23. **Z Flip 7 cover screen UI** 🚧 WANTED
+    - On the cover display (~720×948) the bottom icons get smashed up (full-screen player control
+      row + bottom tab bar). Adaptive compact layout via `useWindowDimensions`: smaller sizes,
+      labels hidden when too narrow. Iterate on device.
+
+24. **Icon consistency pass** 🚧 WANTED
+    - "Play next" icon differs between option menus (song popup vs album popup use different glyphs)
+      — unify everywhere.
+    - Album header: heart + shuffle on one row, download cloud wrapped alone to the next line —
+      align all three on one row.
+
+25. **Mini player (pill) polish** 🚧 WANTED
+    - Vertical wobble while swiping horizontally: BoxPlayer applies `dy` to translateY regardless of
+      gesture direction — axis-lock after intent detection.
+    - Snappier return animation (shorten existing timing; do NOT introduce springs where none exist).
+    - Song-change transition on the pill: outgoing/incoming slide — next song enters from the right,
+      previous returns from the left.
 
 ---
 

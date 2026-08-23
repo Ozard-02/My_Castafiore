@@ -8,6 +8,7 @@ import { getApi } from '~/utils/api'
 import { urlCover } from '~/utils/url'
 import { enqueueCollection } from '~/utils/downloadManager'
 import { confirmAlert } from '~/utils/alert'
+import { isPlaylistExclusive, invalidateExclusions, refreshExcludedSongIds } from '~/utils/exclusions'
 import OptionsPopup from '~/components/popup/OptionsPopup'
 
 const OptionsPlaylist = ({ playlist, open, onClose, onRefresh, onDelete }) => {
@@ -46,8 +47,29 @@ const OptionsPlaylist = ({ playlist, open, onClose, onRefresh, onDelete }) => {
 						refOption.current.close()
 					}
 				},
-				{
-					name: (playlist?.public) ? t('Make private') : t('Make public'),
+			{
+				name: isPlaylistExclusive(config, playlist) ? t('Include in shuffle') : t('Exclude from shuffle'),
+				icon: 'random',
+				onPress: () => {
+					const tag = `#${config.username}-exclusive`
+					const comment = isPlaylistExclusive(config, playlist)
+						? playlist.comment.replaceAll(tag, '')
+						: `${playlist.comment || ''}${tag}`
+					getApi(config, 'updatePlaylist', {
+						playlistId: playlist.id,
+						comment,
+					})
+						.then(async () => {
+							invalidateExclusions(config)
+							await refreshExcludedSongIds(config)
+							refOption.current.close()
+							onRefresh()
+						})
+						.catch(() => { })
+				}
+			},
+			{
+				name: (playlist?.public) ? t('Make private') : t('Make public'),
 					icon: (playlist?.public) ? 'lock' : 'globe',
 					onPress: () => {
 						getApi(config, 'updatePlaylist', {

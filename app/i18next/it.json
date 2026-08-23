@@ -187,6 +187,8 @@
     "min": "min",
     "minutes": "minuti",
     "song": "brano",
-    "songs": "brani"
+    "songs": "brani",
+    "Exclude from shuffle": "Escludi dallo shuffle",
+    "Include in shuffle": "Includi nello shuffle"
   }
 }

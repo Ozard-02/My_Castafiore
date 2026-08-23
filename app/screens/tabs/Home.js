@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next'
 import { useConfig } from '~/contexts/config'
 import { getApi, getApiNetworkFirst } from '~/utils/api'
 import { playSong } from '~/utils/player'
+import { filterExcluded } from '~/utils/exclusions'
 import { useSettings } from '~/contexts/settings'
 import { useSongDispatch } from '~/contexts/song'
 import { useTheme } from '~/contexts/theme'
@@ -29,8 +30,10 @@ const Home = () => {
 
 	const clickRandomSong = () => {
 		getApiNetworkFirst(config, 'getRandomSongs', 'size=50')
-			.then((json) => {
-				playSong(config, songDispatch, json.randomSongs.song, 0)
+			.then(async (json) => {
+				const songs = await filterExcluded(config, json.randomSongs?.song || [])
+				if (!songs.length) return
+				playSong(config, songDispatch, songs, 0)
 			})
 			.catch(() => { })
 	}
