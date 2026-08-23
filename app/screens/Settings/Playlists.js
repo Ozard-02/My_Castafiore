@@ -1,5 +1,5 @@
 import React from 'react'
-import { View, Text } from 'react-native'
+import { View, Text, ScrollView } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useTranslation } from 'react-i18next'
 
@@ -52,11 +52,12 @@ const PlaylistsSettings = () => {
 	}, [previewFavorited])
 
 	return (
-		<View
+		<ScrollView
 			style={[
 				mainStyles.mainContainer(theme),
 				mainStyles.contentMainContainer(insets)
 			]}
+			contentContainerStyle={{ paddingBottom: 20 }}
 		>
 			<Header title={t("Playlists")} />
 			<View style={settingStyles.contentMainContainer}>
@@ -138,7 +139,7 @@ const PlaylistsSettings = () => {
 					))}
 				</View>
 			</View>
-		</View>
+		</ScrollView>
 	)
 }
 
