@@ -1,9 +1,22 @@
-import { saveQueue } from '~/utils/tools'
 import CastPlayer from '~/utils/player/playerCast'
 import LocalPlayer from '~/utils/player/playerLocal'
 import State from '~/utils/playerState'
 import UpnpPlayer from '~/utils/player/playerUpnp'
 import logger from '~/utils/logger'
+
+import * as core from './playerCore'
+
+export {
+	addToQueue,
+	addToUpNext,
+	moveInQueue,
+	moveTrack,
+	moveUpNext,
+	removeFromQueue,
+	removeFromUpNext,
+	setRepeat,
+	secondToTime,
+} from './playerCore'
 
 let type = 'local'
 
@@ -14,6 +27,10 @@ const getPlayer = (forceType = null) => {
 	else if (deviceType === 'upnp') return UpnpPlayer
 	return null
 }
+
+export const { playSong, nextSong, previousSong, setIndex } = core.createSongControls({
+	loadSong: (config, queue, index) => getPlayer().loadSong(config, queue, index),
+})
 
 export const initService = LocalPlayer.initService
 
@@ -27,28 +44,6 @@ export const useEvent = (song, songDispatch) => {
 	LocalPlayer.useEvent(song, songDispatch, nextSong)
 	CastPlayer.useEvent(song, songDispatch, nextSong)
 	UpnpPlayer.useEvent(song, songDispatch, nextSong)
-}
-
-export const previousSong = async (config, song, songDispatch) => {
-	if (song.queue) {
-		if (!global.repeatQueue && song.index === 0) return
-		await setIndex(config, songDispatch, song.queue, (song.queue.length + song.index - 1) % song.queue.length)
-		if (song.actionEndOfSong === 'repeat') await setRepeat(songDispatch, 'next')
-	}
-}
-
-export const nextSong = async (config, song, songDispatch) => {
-	if (song.upNext?.length) {
-		const track = song.upNext[0]
-		songDispatch({ type: 'nextUpNext' })
-		await loadSong(config, [track], 0)
-		return
-	}
-	if (song.queue) {
-		if (!global.repeatQueue && song.index === song.queue.length - 1) return
-		await setIndex(config, songDispatch, song.queue, (song.index + 1) % song.queue.length)
-		if (song.actionEndOfSong === 'repeat') await setRepeat(songDispatch, 'next')
-	}
 }
 
 export const reload = async () => {
@@ -75,13 +70,6 @@ export const downloadNextSong = async (queue, currentIndex) => {
 	return getPlayer().downloadNextSong(queue, currentIndex)
 }
 
-export const playSong = async (config, songDispatch, queue, index) => {
-	await loadSong(config, queue, index)
-	songDispatch({ type: 'setQueue', queue, index })
-	songDispatch({ type: 'setActionEndOfSong', action: 'next' })
-	saveQueue(config, queue, index)
-}
-
 export const restoreState = async (state) => {
 	if (!state) return
 
@@ -92,12 +80,6 @@ export const restoreState = async (state) => {
 	if (state.isPlaying) {
 		await resumeSong()
 	}
-}
-
-export const secondToTime = (second) => {
-	if (!second) return '00:00'
-	if (second === Infinity) return '∞:∞'
-	return `${String((second - second % 60) / 60).padStart(2, '0')}:${String((second - second % 1) % 60).padStart(2, '0')}`
 }
 
 export const setPosition = async (position) => {
@@ -112,24 +94,12 @@ export const getVolume = () => {
 	return getPlayer().getVolume()
 }
 
-export const setRepeat = async (songdispatch, action) => {
-	songdispatch({ type: 'setActionEndOfSong', action })
-}
-
 export const loadSong = async (config, queue, index) => {
 	return getPlayer().loadSong(config, queue, index)
 }
 
-export const unloadSong = async () => { }
 export const tuktuktuk = async (songDispatch) => {
 	return getPlayer().tuktuktuk(songDispatch)
-}
-
-export const setIndex = async (config, songDispatch, queue, index) => {
-	if (queue && index >= 0 && index < queue.length) {
-		loadSong(config, queue, index)
-		songDispatch({ type: 'setIndex', index })
-	}
 }
 
 export const updateVolume = () => { }
@@ -153,44 +123,6 @@ export const resetAudio = (songDispatch) => {
 
 export const switchServer = async (config) => {
 	return getPlayer().switchServer(config)
-}
-
-export const removeFromQueue = async (songDispatch, index) => {
-	songDispatch({ type: 'removeFromQueue', index })
-}
-
-// when index is null, add to the end of the queue
-export const addToQueue = (songDispatch, track, index = null) => {
-	songDispatch({ type: 'addToQueue', track, index })
-}
-
-// atStart: insert at the front of the "up next" list (play next), else append (add to queue)
-export const addToUpNext = (songDispatch, track, atStart = false) => {
-	songDispatch({ type: 'addToUpNext', track, atStart })
-}
-
-export const removeFromUpNext = async (songDispatch, index) => {
-	songDispatch({ type: 'removeFromUpNext', index })
-}
-
-export const moveUpNext = async (songDispatch, from, to) => {
-	songDispatch({ type: 'moveUpNext', from, to })
-}
-
-export const moveInQueue = async (songDispatch, from, to) => {
-	songDispatch({ type: 'moveInQueue', from, to })
-}
-
-// fromList/toList: 'up' (up next) or 'queue' (main queue)
-export const moveTrack = async (songDispatch, { fromList, from, toList, to }) => {
-	if (fromList === toList) {
-		if (fromList === 'up') songDispatch({ type: 'moveUpNext', from, to })
-		else songDispatch({ type: 'moveInQueue', from, to })
-	} else if (fromList === 'up') {
-		songDispatch({ type: 'moveUpNextToQueue', from, to })
-	} else {
-		songDispatch({ type: 'moveQueueToUpNext', from, to })
-	}
 }
 
 export const connect = async (device, newType) => {
@@ -218,18 +150,16 @@ export const saveState = async () => {
 
 export default {
 	initPlayer,
-	previousSong,
+	playSong,
 	nextSong,
+	previousSong,
+	setIndex,
 	pauseSong,
 	resumeSong,
 	stopSong,
-	playSong,
-	secondToTime,
 	setPosition,
 	setVolume,
 	getVolume,
-	setRepeat,
-	unloadSong,
 	tuktuktuk,
 	updateVolume,
 	updateTime,
@@ -238,18 +168,11 @@ export default {
 	useEvent,
 	resetAudio,
 	switchServer,
-	removeFromQueue,
-	addToQueue,
-	addToUpNext,
-	removeFromUpNext,
-	moveUpNext,
-	moveInQueue,
-	moveTrack,
-	setIndex,
 	restoreState,
 	saveState,
 	connect,
 	disconnect,
 	switchPlayer,
-	State
+	State,
+	...core,
 }

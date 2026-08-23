@@ -9,7 +9,6 @@ export default {
 	title: {
 		small: 25,
 		medium: 30,
-		large: 40,
 	},
 	text: {
 		small: 14,

@@ -3,10 +3,6 @@ import * as FileSystem from 'expo-file-system'
 import logger from '~/utils/logger'
 
 // API Cache
-export const getCache = async (_cacheName, _key) => {
-	return null
-}
-
 export const getJsonCache = async (_cacheName, key) => {
 	const json = await AsyncStorage.getItem(key)
 	return json ? JSON.parse(json) : null
@@ -94,17 +90,6 @@ export const clearCache = async () => {
 			.then(keys => keys.filter(key => key.startsWith('http')))
 			.catch(() => [])
 	)
-}
-
-export const clearSongCache = async () => {
-	const pathDir = getPathDir()
-	await FileSystem.readDirectoryAsync(pathDir)
-		.then(files => {
-			const deletePromises = files.map(file => FileSystem.deleteAsync(`${pathDir}${file}`))
-			return Promise.all(deletePromises)
-		})
-		.catch(() => [])
-	await initCacheSong()
 }
 
 export const getStatCache = async () => {

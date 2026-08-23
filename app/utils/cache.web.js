@@ -19,10 +19,6 @@ export const clearCache = async () => {
 	})
 }
 
-export const clearSongCache = async () => {
-	await window.caches.delete('song')
-}
-
 export const getStatCache = async () => {
 	const caches = await window.caches.keys()
 	const stats = []

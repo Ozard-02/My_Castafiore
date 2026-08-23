@@ -8,10 +8,6 @@ import AppProvider from '~/contexts'
 import logger from '~/utils/logger'
 import Navigation from '~/components/Navigation'
 
-
-global.maxBitRate = 0
-global.streamFormat = 'mp3'
-
 const App = () => {
 	React.useEffect(() => {
 		logger.info('App', `App started (version: ${version}, platform: ${Platform.OS} ${Platform.Version})`)
