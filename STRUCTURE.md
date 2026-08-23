@@ -131,10 +131,13 @@ Playback state enum: `Playing`, `Paused`, `Stopped`, `Loading`, `Error`, `None`.
 ### Other Utils
 - **url.js**: `urlCover()` resolves cover art URLs (handles navidrome/ampache/generic Subsonic types). `urlStream()` resolves audio stream URLs.
 - **tools.js**: `shuffle()`, `saveQueue()`.
+- **exclusions.js**: Negative playlists — songs of playlists tagged `#<username>-exclusive` in their comment (same mechanism as pins) are excluded from the Home random-shuffle button. Per-server ID set (`excludedSongs:<folderCache>` in AsyncStorage + memory cache), refreshed on toggle in `OptionsPlaylist`. `filterExcluded()` is the single filter point (`Home.js clickRandomSong`).
+- **albumActions.js**: `addAlbumToQueue(config, songDispatch, albumId, asNext)` — fetches album songs and queues them (or plays the album when no queue is active). Used by swipe actions on album rows (AlbumExplorer, SearchMore).
 - **lrc.js**: `parseLrc()` parses LRC-format lyrics into `{ time, text }` objects.
 - **logger.js**: In-memory log buffer (`global.logs`, max 1000 entries). Provides `info()`, `debug()`, `error()`, `get()`.
 - **alert.js**: `confirmAlert()` - cross-platform confirm dialog (native `Alert` / web `window.confirm`).
 - **useKeyboardIsOpen** (platform-resolved): Native uses Keyboard API; Web returns `false`.
+- **PlaylistSwipeRow.js**: Generic swipeable row (playlist rows, Music tab songs/albums, search results). Actions per direction from `settings.swipeRightAction`/`swipeLeftAction` (queue / play next / remove / action menu (left only) / none); configured action is revealed as a hint during the drag (layers always mounted behind an opaque row); 'menu' keeps the remove+play-next panel with parent-driven `open` state (safe with LegendList row recycling).
 - **useQueueDnD.js**: All queue drag-and-drop state shared by both full-screen players: list refs (`scroll`/`upNextScroll`), scroll offsets, viewports, `onLayout` box positions (`boxY`/`boxH`), `rowHeight`, the `isCurrentInQueue`/`queueItems` derivation (queue **rotated** to start at the current song — next song first, previous songs wrapped to the bottom; current song stays pinned above, `song.queue` remains the source of truth), `queueRealIndex` (display→real index mapping `(index + 1 + i) % queue.length`), the `lists` memo for `QueueDragProvider`, `handleMove` (routes through `Player.moveTrack`), and the scroll-to-top effect. Options: `bottomAligned` (desktop flex-end queue), `scrollAnimated`.
 
 ---

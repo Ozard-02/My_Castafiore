@@ -304,7 +304,16 @@
       call) if the song id is already there. Used by the three add-to-playlist actions
       (`OptionsSongsList`, `OptionsPlayer`, `OptionsQueue`). Silently skips — the popup just closes.
 
-20. **Playlist Swipe — fix + customizable** 🚧 WANTED
+20. **Playlist Swipe — fix + customizable** ✅ done (2026-08-23, needs on-device verify)
+    - ✅ Fix: action layers now always mounted behind an opaque row, revealed by the drag itself
+      (before: mounted only when open → black background, zero feedback). Gesture gate relaxed
+      (dx>5, 1:1 dominance) to win vs LegendList scroll.
+    - ✅ Customizable: Settings > Playlists > "Swipe right"/"Swipe left" (queue / play next /
+      remove / action menu / none; menu = left only). `PlaylistSwipeRow` is generic
+      (onQueue/onNext/onRemove) and reads `settings.swipeRightAction`/`swipeLeftAction`.
+    - ✅ Wired into Music tab list view (SongExplorer songs, AlbumExplorer albums via
+      `utils/albumActions.js` — whole-album queue/next, no remove) and SearchMore list (song+album).
+    - ⚠️ Gesture feel + Tracks/search swipe to verify on device.
     - Broken on device: swiping a playlist row shows only black / does nothing. Likely causes:
       no visual feedback during drag (action buttons only mount when `open===true`, so during the
       drag you see bare background) and the gesture gate (`|dx|>8 && |dx|>|dy|*1.2`) losing to
@@ -314,11 +323,13 @@
     - Same behavior in the Music (Tracks) tab list view for songs AND albums (albums: queue/next
       only — no remove), including after a search.
 
-21. **Playlist searchbar placement** 🚧 WANTED
+21. **Playlist searchbar placement** ✅ done (2026-08-23)
+    - ✅ Searchbox now on the back-button row: `[←] [search flex] [⋮]` (same 63dp row height,
+      inset by 63 on both sides). Still fixed while scrolling (sibling overlay).
     - Searchbox currently sits under the back button and the ⋮ icon; squeeze it between them on
       the same row: `[←] [searchbox flex] [⋮]`.
 
-22. **Negative playlists** 🚧 WANTED
+22. **Negative playlists** ✅ done (2026-08-23, needs on-device verify)
     - Playlists marked "exclusive": their songs are excluded from the Home random-shuffle button,
       reachable ONLY through the playlist itself (playing the playlist stays untouched; a song in
       both a negative and a normal playlist stays excluded but playable from both).
@@ -330,18 +341,29 @@
     - Skipped (agreed): album-level home sections, browse/search hiding, Genre.js random (one line
       with the same helper if wanted later).
 
-23. **Z Flip 7 cover screen UI** 🚧 WANTED
+23. **Z Flip 7 cover screen UI** ✅ done (2026-08-23, needs on-device verify)
+    - ✅ Adaptive `compact` mode (width<420 or height<700): FullScreenPlayer cover capped by
+      height (`min(width-50, 450, max(140, height-340))`), smaller transport icons/gaps, slimmer
+      header/favorite padding; BottomBar compact icons+labels below 420dp.
     - On the cover display (~720×948) the bottom icons get smashed up (full-screen player control
       row + bottom tab bar). Adaptive compact layout via `useWindowDimensions`: smaller sizes,
       labels hidden when too narrow. Iterate on device.
 
-24. **Icon consistency pass** 🚧 WANTED
+24. **Icon consistency pass** ✅ done (2026-08-23)
+    - ✅ "Play next" unified to `play-circle` (song popup + swipe hints/panel; album popups
+      already used it).
+    - ✅ Album header alignment: `presStyles.button` centers content now — DownloadButton centered
+      while heart/shuffle sat at top of tall title rows (the misalignment in screenshots).
     - "Play next" icon differs between option menus (song popup vs album popup use different glyphs)
       — unify everywhere.
     - Album header: heart + shuffle on one row, download cloud wrapped alone to the next line —
       align all three on one row.
 
-25. **Mini player (pill) polish** 🚧 WANTED
+25. **Mini player (pill) polish** ✅ done (2026-08-23, needs on-device verify)
+    - ✅ Axis lock: first 10px of a drag decide x vs y; horizontal swipes no longer move the pill
+      vertically.
+    - ✅ Return animation 200→120ms (timing kept — no springs introduced).
+    - ✅ Song change: pill content slides in from the right (next) / left (previous), 160ms.
     - Vertical wobble while swiping horizontally: BoxPlayer applies `dy` to translateY regardless of
       gesture direction — axis-lock after intent detection.
     - Snappier return animation (shorten existing timing; do NOT introduce springs where none exist).
