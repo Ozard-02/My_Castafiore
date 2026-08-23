@@ -189,6 +189,8 @@
     "song": "brano",
     "songs": "brani",
     "Exclude from shuffle": "Escludi dallo shuffle",
-    "Include in shuffle": "Includi nello shuffle"
+    "Include in shuffle": "Includi nello shuffle",
+    "Queue": "Coda",
+    "Remove": "Rimuovi"
   }
 }

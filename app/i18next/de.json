@@ -236,6 +236,7 @@
     "Search in playlist": "In Playlist suchen",
     "Are you sure you want to delete this playlist?": "Möchten Sie diese Wiedergabeliste wirklich löschen?",
     "Exclude from shuffle": "Vom Zufall ausschließen",
-    "Include in shuffle": "In den Zufall einschließen"
+    "Include in shuffle": "In den Zufall einschließen",
+    "Remove": "Entfernen"
   }
 }

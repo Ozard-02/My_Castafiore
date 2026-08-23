@@ -7,6 +7,7 @@ import { useTheme } from '~/contexts/theme'
 import size from '~/styles/size'
 
 const ACTION_WIDTH = 160
+const HINT_WIDTH = 80
 const SWIPE_THRESHOLD = 60
 
 const PlaylistSwipeRow = ({ open, onOpen, onClose, onEnqueue, onPlayNext, onRemove, children }) => {
@@ -33,11 +34,12 @@ const PlaylistSwipeRow = ({ open, onOpen, onClose, onEnqueue, onPlayNext, onRemo
 
 	const pan = React.useRef(PanResponder.create({
 		onStartShouldSetPanResponder: () => false,
-		onMoveShouldSetPanResponder: (_evt, g) => Math.abs(g.dx) > 8 && Math.abs(g.dx) > Math.abs(g.dy) * 1.2,
+		onMoveShouldSetPanResponder: (_evt, g) => Math.abs(g.dx) > 5 && Math.abs(g.dx) > Math.abs(g.dy),
 		onPanResponderGrant: () => translateX.stopAnimation(),
 		onPanResponderMove: (_evt, g) => {
 			const st = stateRef.current
-			translateX.setValue((st.open ? -ACTION_WIDTH : 0) + g.dx)
+			const next = (st.open ? -ACTION_WIDTH : 0) + g.dx
+			translateX.setValue(Math.min(120, Math.max(-ACTION_WIDTH, next)))
 		},
 		onPanResponderRelease: (_evt, g) => {
 			const st = stateRef.current
@@ -63,19 +65,21 @@ const PlaylistSwipeRow = ({ open, onOpen, onClose, onEnqueue, onPlayNext, onRemo
 
 	return (
 		<View style={{ position: 'relative' }}>
-			{open && (
-				<View style={[styles.actions, { width: ACTION_WIDTH, backgroundColor: theme.secondaryBack }]}>
-					<Pressable style={[styles.action, { backgroundColor: 'red' }]} onPress={() => { onRemove() }}>
-						<Icon name="trash-o" size={size.icon.small} color="#fff" />
-						<Text style={styles.actionText}>{t('Remove from playlist')}</Text>
-					</Pressable>
-					<Pressable style={[styles.action, { backgroundColor: theme.primaryTouch }]} onPress={() => { onPlayNext() }}>
-						<Icon name="indent" size={size.icon.small} color="#fff" />
-						<Text style={styles.actionText}>{t('Play next')}</Text>
-					</Pressable>
-				</View>
-			)}
-			<Animated.View {...pan.panHandlers} style={{ transform: [{ translateX }] }}>
+			<View style={[styles.hint, { backgroundColor: theme.secondaryBack }]}>
+				<Icon name="plus" size={size.icon.small} color={theme.primaryTouch} />
+				<Text style={[styles.actionText, { color: theme.primaryText }]}>{t('Queue')}</Text>
+			</View>
+			<View style={[styles.actions, { width: ACTION_WIDTH, backgroundColor: theme.secondaryBack }]}>
+				<Pressable style={[styles.action, { backgroundColor: '#b3261e' }]} onPress={() => onRemove()}>
+					<Icon name="trash-o" size={size.icon.small} color="#fff" />
+					<Text style={styles.actionText}>{t('Remove')}</Text>
+				</Pressable>
+				<Pressable style={[styles.action, { backgroundColor: theme.primaryTouch }]} onPress={() => onPlayNext()}>
+					<Icon name="indent" size={size.icon.small} color="#fff" />
+					<Text style={styles.actionText}>{t('Play next')}</Text>
+				</Pressable>
+			</View>
+			<Animated.View {...pan.panHandlers} style={{ transform: [{ translateX }], backgroundColor: theme.primaryBack }}>
 				{children}
 				{open && <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />}
 			</Animated.View>
@@ -84,6 +88,17 @@ const PlaylistSwipeRow = ({ open, onOpen, onClose, onEnqueue, onPlayNext, onRemo
 }
 
 const styles = StyleSheet.create({
+	hint: {
+		position: 'absolute',
+		top: 0,
+		bottom: 0,
+		left: 0,
+		width: HINT_WIDTH,
+		justifyContent: 'center',
+		alignItems: 'center',
+		gap: 4,
+		borderRadius: 4,
+	},
 	actions: {
 		position: 'absolute',
 		top: 0,
