@@ -41,11 +41,11 @@ const CoverItem = ({ isPreview, song, setFullScreen, stars }) => {
 	const songDispatch = useSongDispatch()
 	const [indexOptions, setIndexOptions] = React.useState(-1)
 	const [upNextOptions, setUpNextOptions] = React.useState(-1)
-	const { width } = useWindowDimensions()
+	const { width, height } = useWindowDimensions()
 	const { scroll, upNextScroll, queueOffset, queueViewport, upNextOffset, upNextViewport, queueBoxY, queueBoxH, upNextBoxY, upNextBoxH, rowHeight, isCurrentInQueue, queueItems, queueRealIndex, lists, handleMove } = useQueueDnD(song, songDispatch, { scrollAnimated: true })
 
 	const albumImage = React.useMemo(() => {
-		const size = Math.min(width, 500) - 50
+		const size = Math.min(width - 50, 450, Math.max(140, height - 340))
 		return {
 			maxWidth: size,
 			width: size,
@@ -56,7 +56,7 @@ const CoverItem = ({ isPreview, song, setFullScreen, stars }) => {
 			aspectRatio: 1,
 			borderRadius: 10,
 		}
-	}, [width])
+	}, [width, height])
 
 	if (isPreview === preview.COVER) return (
 		<SlideControl style={albumImage}>
@@ -201,6 +201,8 @@ const FullScreenPlayer = ({ setFullScreen }) => {
 	const song = useSong()
 	const insets = useSafeAreaInsets()
 	const navigation = useNavigation()
+	const { width, height } = useWindowDimensions()
+	const compact = width < 420 || height < 700
 	const [isPreview, setIsPreview] = React.useState(preview.COVER)
 	const [isOptArtists, setIsOptArtists] = React.useState(false)
 	const [isOpt, setIsOpt] = React.useState(false)
@@ -225,8 +227,8 @@ const FullScreenPlayer = ({ setFullScreen }) => {
 					/>
 					<IconButton
 						style={{
-							paddingVertical: 20,
-							paddingHorizontal: 25,
+							paddingVertical: compact ? 12 : 20,
+							paddingHorizontal: compact ? 15 : 25,
 							flex: 1,
 						}}
 						icon="chevron-down"
@@ -235,8 +237,8 @@ const FullScreenPlayer = ({ setFullScreen }) => {
 					/>
 					<IconButton
 						style={{
-							paddingVertical: 20,
-							paddingHorizontal: 25,
+							paddingVertical: compact ? 12 : 20,
+							paddingHorizontal: compact ? 15 : 25,
 						}}
 						icon="ellipsis-h"
 						color={theme.primaryText}
@@ -281,20 +283,20 @@ const FullScreenPlayer = ({ setFullScreen }) => {
 							id={song.songInfo.id}
 							isFavorited={stars.some(s => s.id === song.songInfo.id)}
 							rating={song.songInfo?.userRating ?? song.songInfo?.rating ?? 0}
-							style={{ padding: 20, paddingEnd: 0 }}
+							style={{ padding: compact ? 12 : 20, paddingEnd: 0 }}
 						/>
 					</View>
 					<TimeBar />
-					<View style={{ flexDirection: 'row', width: '100%', marginVertical: 30, alignItems: 'center', justifyContent: 'center', gap: 30 }}>
+					<View style={{ flexDirection: 'row', width: '100%', marginVertical: compact ? 10 : 30, alignItems: 'center', justifyContent: 'center', gap: compact ? 10 : 30 }}>
 						<IconButton
 							icon="step-backward"
-							size={size.icon.large}
+							size={compact ? 25 : size.icon.large}
 							color={theme.primaryText}
 							style={{ padding: 10 }}
 							onPress={() => Player.previousSong(config, song, songDispatch)}
 						/>
 						<PlayButton
-							size={50}
+							size={compact ? 40 : 50}
 							color={theme.primaryText}
 							style={{
 								paddingHorizontal: 10,
@@ -306,7 +308,7 @@ const FullScreenPlayer = ({ setFullScreen }) => {
 						/>
 						<IconButton
 							icon="step-forward"
-							size={size.icon.large}
+							size={compact ? 25 : size.icon.large}
 							color={theme.primaryText}
 							style={{ padding: 10 }}
 							onPress={() => Player.nextSong(config, song, songDispatch)}
@@ -317,14 +319,14 @@ const FullScreenPlayer = ({ setFullScreen }) => {
 							icon="comment-o"
 							size={17}
 							color={isPreview == preview.LYRICS ? theme.primaryTouch : theme.secondaryText}
-							style={{ paddingVertical: 10, paddingEnd: 10 }}
+							style={{ paddingVertical: compact ? 5 : 10, paddingEnd: 10 }}
 							onPress={() => setIsPreview(isPreview == preview.LYRICS ? preview.COVER : preview.LYRICS)}
 						/>
 						<IconButton
 							icon="repeat"
 							size={17}
 							color={song.actionEndOfSong == 'repeat' ? theme.primaryTouch : theme.secondaryText}
-							style={{ paddingVertical: 10, paddingHorizontal: 10 }}
+							style={{ paddingVertical: compact ? 5 : 10, paddingHorizontal: 10 }}
 							onPress={() => {
 								Player.setRepeat(songDispatch, song.actionEndOfSong === 'repeat' ? 'next' : 'repeat')
 							}}
@@ -332,20 +334,20 @@ const FullScreenPlayer = ({ setFullScreen }) => {
 						<ConnectButton
 							size={20}
 							color={theme.secondaryText}
-							style={{ paddingVertical: 10, paddingStart: 10 }}
+							style={{ paddingVertical: compact ? 5 : 10, paddingStart: 10 }}
 						/>
 						<IconButton
 							icon="random"
 							size={17}
 							color={song.actionEndOfSong == 'random' ? theme.primaryTouch : theme.secondaryText}
-							style={{ paddingVertical: 10, paddingHorizontal: 10 }}
+							style={{ paddingVertical: compact ? 5 : 10, paddingHorizontal: 10 }}
 							onPress={() => Player.setRepeat(songDispatch, song.actionEndOfSong === 'random' ? 'next' : 'random')}
 						/>
 						<IconButton
 							icon="bars"
 							size={17}
 							color={isPreview == preview.QUEUE ? theme.primaryTouch : theme.secondaryText}
-							style={{ paddingVertical: 10, paddingStart: 10 }}
+							style={{ paddingVertical: compact ? 5 : 10, paddingStart: 10 }}
 							onPress={() => setIsPreview(isPreview == preview.QUEUE ? preview.COVER : preview.QUEUE)}
 						/>
 					</View>

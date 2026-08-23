@@ -1,5 +1,5 @@
 import React from 'react'
-import { Text, View, Pressable } from 'react-native'
+import { Text, View, Pressable, useWindowDimensions } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useTranslation } from 'react-i18next'
 import Icon from 'react-native-vector-icons/FontAwesome'
@@ -10,7 +10,7 @@ import mainStyles from '~/styles/main'
 import size from '~/styles/size'
 import useKeyboardIsOpen from '~/utils/useKeyboardIsOpen'
 
-const TabItem = ({ route, index, state, descriptors, navigation }) => {
+const TabItem = ({ route, index, state, descriptors, navigation, compact }) => {
 	const { t } = useTranslation()
 	const config = useConfig()
 	const theme = useTheme()
@@ -49,13 +49,13 @@ const TabItem = ({ route, index, state, descriptors, navigation }) => {
 			onLongPress={onLongPress}
 			style={({ pressed }) => ([mainStyles.opacity({ pressed }), {
 				flex: 1,
-				paddingBottom: 3,
-				paddingTop: 11,
+				paddingBottom: compact ? 2 : 3,
+				paddingTop: compact ? 6 : 11,
 			}])}
 			disabled={(!config.query && route.name !== 'Settings')}
 		>
-			<Icon name={options.icon} size={size.icon.tiny} color={color} style={{ alignSelf: 'center', marginBottom: 2, height: 24 }} />
-			<Text numberOfLines={1} style={{ color: color, textAlign: 'center', height: 19, fontSize: 14 }}>
+			<Icon name={options.icon} size={compact ? 17 : size.icon.tiny} color={color} style={{ alignSelf: 'center', marginBottom: 2, height: compact ? 20 : 24 }} />
+			<Text numberOfLines={1} style={{ color: color, textAlign: 'center', height: compact ? 15 : 19, fontSize: compact ? 11 : 14 }}>
 				{t(`tabs.${options.title}`)}
 			</Text>
 		</Pressable>
@@ -67,6 +67,8 @@ const BottomBar = ({ state, descriptors, navigation }) => {
 	const config = useConfig()
 	const theme = useTheme()
 	const keyboardIsOpen = useKeyboardIsOpen()
+	const { width } = useWindowDimensions()
+	const compact = width < 420
 
 	if (!config.url) return null
 	return (
@@ -87,6 +89,7 @@ const BottomBar = ({ state, descriptors, navigation }) => {
 					index={index}
 					descriptors={descriptors}
 					navigation={navigation}
+					compact={compact}
 				/>
 			))}
 		</View>
