@@ -305,12 +305,16 @@
       (`OptionsSongsList`, `OptionsPlayer`, `OptionsQueue`). Silently skips — the popup just closes.
 
 20. **Playlist Swipe — fix + customizable** ✅ done (2026-08-23, needs on-device verify)
-    - ✅ Fix: action layers now always mounted behind an opaque row, revealed by the drag itself
+    - ✅ Fix: action layers always mounted behind an opaque row, revealed by the drag itself
       (before: mounted only when open → black background, zero feedback). Gesture gate relaxed
-      (dx>5, 1:1 dominance) to win vs LegendList scroll.
+      (dx>5, 1:1 dominance) to win vs LegendList scroll; gesture handlers resolve actions from a
+      ref at event time (LegendList row recycling fired stale closures).
     - ✅ Customizable: Settings > Playlists > "Swipe right"/"Swipe left" (queue / play next /
-      remove / action menu / none; menu = left only). `PlaylistSwipeRow` is generic
-      (onQueue/onNext/onRemove) and reads `settings.swipeRightAction`/`swipeLeftAction`.
+      remove / none). `PlaylistSwipeRow` is generic (onQueue/onNext/onRemove) and reads
+      `settings.swipeRightAction`/`swipeLeftAction`.
+    - ✅ Revised (user): NO action panel — both directions are direct hint actions
+      (defaults: right=queue, left=play next; "Remove" only via long-press menu or settings).
+      Legacy persisted 'menu' value maps to 'next'.
     - ✅ Wired into Music tab list view (SongExplorer songs, AlbumExplorer albums via
       `utils/albumActions.js` — whole-album queue/next, no remove) and SearchMore list (song+album).
     - ⚠️ Gesture feel + Tracks/search swipe to verify on device.

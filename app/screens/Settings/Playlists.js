@@ -106,7 +106,7 @@ const PlaylistsSettings = () => {
 				<View style={settingStyles.optionsContainer(theme)}>
 					{[
 						{ value: 'queue', name: 'Queue', icon: 'plus' },
-						{ value: 'next', name: 'Play next', icon: 'indent' },
+						{ value: 'next', name: 'Play next', icon: 'play-circle' },
 						{ value: 'remove', name: 'Remove', icon: 'trash-o' },
 						{ value: 'none', name: 'None', icon: 'ban' },
 					].map((opt, index) => (
@@ -122,9 +122,8 @@ const PlaylistsSettings = () => {
 				<Text style={settingStyles.titleContainer(theme)}>{t('Swipe left')}</Text>
 				<View style={[settingStyles.optionsContainer(theme), { marginBottom: 5 }]}>
 					{[
-						{ value: 'menu', name: 'Action menu', icon: 'ellipsis-h' },
+						{ value: 'next', name: 'Play next', icon: 'play-circle' },
 						{ value: 'queue', name: 'Queue', icon: 'plus' },
-						{ value: 'next', name: 'Play next', icon: 'indent' },
 						{ value: 'remove', name: 'Remove', icon: 'trash-o' },
 						{ value: 'none', name: 'None', icon: 'ban' },
 					].map((opt, index) => (
@@ -134,7 +133,7 @@ const PlaylistsSettings = () => {
 							icon={opt.icon}
 							isSelect={settings.swipeLeftAction === opt.value}
 							onPress={() => setSettings({ ...settings, swipeLeftAction: opt.value })}
-							isLast={index === 4}
+							isLast={index === 3}
 						/>
 					))}
 				</View>

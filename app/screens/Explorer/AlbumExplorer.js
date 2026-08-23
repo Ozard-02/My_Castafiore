@@ -35,7 +35,6 @@ const AlbumExplorer = ({ layout = 'list', showHeader = true, title = null }) => 
 	const [offset, setOffset] = React.useState(0)
 	const [isLoading, setIsLoading] = React.useState(false)
 	const [indexOptions, setIndexOptions] = React.useState(-1)
-	const [openAlbumIndex, setOpenAlbumIndex] = React.useState(null)
 
 	React.useEffect(() => {
 		setIsLoading(true)
@@ -66,9 +65,6 @@ const AlbumExplorer = ({ layout = 'list', showHeader = true, title = null }) => 
 
 	const renderItem = React.useCallback(({ item, index }) => (
 		<PlaylistSwipeRow
-			open={openAlbumIndex === index}
-			onOpen={() => setOpenAlbumIndex(index)}
-			onClose={() => setOpenAlbumIndex(null)}
 			onQueue={() => addAlbumToQueue(config, songDispatch, item.id)}
 			onNext={() => addAlbumToQueue(config, songDispatch, item.id, true)}
 		>
@@ -81,7 +77,7 @@ const AlbumExplorer = ({ layout = 'list', showHeader = true, title = null }) => 
 				isFavorited={item.starred}
 			/>
 		</PlaylistSwipeRow>
-	), [config, songDispatch, navigation, openAlbumIndex])
+	), [config, songDispatch, navigation])
 
 
 	const renderActivityIndicator = () => {

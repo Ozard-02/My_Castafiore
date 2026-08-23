@@ -48,7 +48,6 @@ const Playlist = ({ route: { params } }) => {
 	const [searchQuery, setSearchQuery] = React.useState('')
 	const [sortOption, setSortOption] = React.useState(settings.sortPlaylist || null)
 	const [isSortOpen, setIsSortOpen] = React.useState(false)
-	const [openSongId, setOpenSongId] = React.useState(null)
 	const song = useSong()
 	const songDispatch = useSongDispatch()
 
@@ -100,20 +99,14 @@ const Playlist = ({ route: { params } }) => {
 
 	const removeFromPlaylist = React.useCallback((track) => {
 		getApi(config, 'updatePlaylist', { playlistId: params.playlist.id, songIndexToRemove: track.index })
-			.then(() => {
-				setOpenSongId(null)
-				refresh()
-			})
-			.catch(() => setOpenSongId(null))
+			.then(() => refresh())
+			.catch(() => { })
 	}, [config, params.playlist.id, refresh])
 
 	const sortRef = React.useRef()
 
 	const renderItem = React.useCallback(({ item, index }) => (
 		<PlaylistSwipeRow
-			open={openSongId === item.id}
-			onOpen={() => setOpenSongId(item.id)}
-			onClose={() => setOpenSongId(null)}
 			onQueue={() => addQueue(item)}
 			onNext={() => playNext(item)}
 			onRemove={() => removeFromPlaylist(item)}
@@ -128,7 +121,7 @@ const Playlist = ({ route: { params } }) => {
 				}}
 			/>
 		</PlaylistSwipeRow>
-	), [filteredSortedSongs, openSongId, addQueue, playNext, removeFromPlaylist])
+	), [filteredSortedSongs, addQueue, playNext, removeFromPlaylist])
 
 	return (
 		<>

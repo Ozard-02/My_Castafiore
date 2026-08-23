@@ -115,7 +115,7 @@ export const defaultSettings = {
 	orderPlaylist: 'title',
 	previewFavorited: 3,
 	swipeRightAction: 'queue',
-	swipeLeftAction: 'menu',
+	swipeLeftAction: 'next',
 	language: null,
 }
 

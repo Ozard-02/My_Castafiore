@@ -17,7 +17,6 @@ const SongsList = ({ songs, isIndex = false, listToPlay = null, isMargin = true,
 	const song = useSong()
 	const songDispatch = useSongDispatch()
 	const [indexOptions, setIndexOptions] = React.useState(-1)
-	const [openSongIndex, setOpenSongIndex] = React.useState(null)
 	const isMultiCD = React.useMemo(() => songs?.some(item => item.discNumber !== songs[0].discNumber), [songs])
 
 	const addQueue = React.useCallback((track) => {
@@ -46,9 +45,6 @@ const SongsList = ({ songs, isIndex = false, listToPlay = null, isMargin = true,
 							</View>
 						}
 						<PlaylistSwipeRow
-							open={openSongIndex === index}
-							onOpen={() => setOpenSongIndex(index)}
-							onClose={() => setOpenSongIndex(null)}
 							onQueue={() => addQueue(item)}
 							onNext={() => playNext(item)}
 						>

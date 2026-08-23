@@ -31,7 +31,6 @@ const SongExplorer = ({ layout = 'list', showHeader = true, title = null }) => {
 	const [offset, setOffset] = React.useState(0)
 	const [isLoading, setIsLoading] = React.useState(false)
 	const [indexOptions, setIndexOptions] = React.useState(-1)
-	const [openSongIndex, setOpenSongIndex] = React.useState(null)
 
 	React.useEffect(() => {
 		setIsLoading(true)
@@ -75,9 +74,6 @@ const SongExplorer = ({ layout = 'list', showHeader = true, title = null }) => {
 
 	const renderItem = React.useCallback(({ item, index }) => (
 		<PlaylistSwipeRow
-			open={openSongIndex === index}
-			onOpen={() => setOpenSongIndex(index)}
-			onClose={() => setOpenSongIndex(null)}
 			onQueue={() => addQueue(item)}
 			onNext={() => playNext(item)}
 		>
@@ -92,7 +88,7 @@ const SongExplorer = ({ layout = 'list', showHeader = true, title = null }) => {
 				}}
 			/>
 		</PlaylistSwipeRow>
-	), [songs, addQueue, playNext, openSongIndex])
+	), [songs, addQueue, playNext])
 
 
 	const renderActivityIndicator = () => {
