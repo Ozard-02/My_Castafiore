@@ -6,8 +6,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useTranslation } from 'react-i18next'
 
 import { useTheme } from '~/contexts/theme'
+import { useSongDispatch } from '~/contexts/song'
 import { getApiNetworkFirst } from '~/utils/api'
 import { useConfig } from '~/contexts/config'
+import { addAlbumToQueue } from '~/utils/albumActions'
+import PlaylistSwipeRow from '~/components/item/PlaylistSwipeRow'
 import mainStyles from '~/styles/main'
 import PresHeaderIcon from '~/components/PresHeaderIcon'
 import Selector from '~/components/Selector'
@@ -26,6 +29,7 @@ const AlbumExplorer = ({ layout = 'list', showHeader = true, title = null }) => 
 	const theme = useTheme()
 	const navigation = useNavigation()
 	const config = useConfig()
+	const songDispatch = useSongDispatch()
 	const [albums, setAlbums] = React.useState([])
 	const [type, setType] = React.useState('newest')
 	const [offset, setOffset] = React.useState(0)
@@ -60,15 +64,20 @@ const AlbumExplorer = ({ layout = 'list', showHeader = true, title = null }) => 
 	}
 
 	const renderItem = React.useCallback(({ item, index }) => (
-		<ExplorerItem
-			item={item}
-			title={item.name || item.album || item.title}
-			subTitle={`${item.artist || 'Unknown Artist'} · ${item.year || ''}`}
-			onPress={() => navigation.navigate('Album', item)}
-			onLongPress={() => setIndexOptions(index)}
-			isFavorited={item.starred}
-		/>
-	), [])
+		<PlaylistSwipeRow
+			onQueue={() => addAlbumToQueue(config, songDispatch, item.id)}
+			onNext={() => addAlbumToQueue(config, songDispatch, item.id, true)}
+		>
+			<ExplorerItem
+				item={item}
+				title={item.name || item.album || item.title}
+				subTitle={`${item.artist || 'Unknown Artist'} · ${item.year || ''}`}
+				onPress={() => navigation.navigate('Album', item)}
+				onLongPress={() => setIndexOptions(index)}
+				isFavorited={item.starred}
+			/>
+		</PlaylistSwipeRow>
+	), [config, songDispatch, navigation])
 
 
 	const renderActivityIndicator = () => {

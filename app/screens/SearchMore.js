@@ -8,12 +8,14 @@ import { useTranslation } from 'react-i18next'
 import { useTheme } from '~/contexts/theme'
 import { getApiNetworkFirst } from '~/utils/api'
 import { useConfig } from '~/contexts/config'
-import { playSong } from '~/utils/player'
-import { useSongDispatch } from '~/contexts/song'
+import { playSong, addToQueue, addToUpNext } from '~/utils/player'
+import { addAlbumToQueue } from '~/utils/albumActions'
+import { useSong, useSongDispatch } from '~/contexts/song'
 import mainStyles from '~/styles/main'
 import size from '~/styles/size'
 import ExplorerItem from '~/components/item/ExplorerItem'
 import AllItem from '~/components/item/AllItem'
+import PlaylistSwipeRow from '~/components/item/PlaylistSwipeRow'
 import IconButton from '~/components/button/IconButton'
 import logger from '~/utils/logger'
 import Header from '~/components/Header'
@@ -26,6 +28,7 @@ const SearchMore = ({ route: { params: { query, results, type } } }) => {
 	const theme = useTheme()
 	const navigation = useNavigation()
 	const config = useConfig()
+	const song = useSong()
 	const songDispatch = useSongDispatch()
 	const [items, setItems] = React.useState(results || [])
 	const [offset, setOffset] = React.useState(results?.length || 0)
@@ -78,16 +81,36 @@ const SearchMore = ({ route: { params: { query, results, type } } }) => {
 		if (type === 'song') playSong(config, songDispatch, items, index)
 	}
 
-	const renderItem = React.useCallback(({ item, index }) => (
-		<ExplorerItem
-			item={item}
-			title={item.name || item.title}
-			subTitle={type !== 'artist' ? item.artist : ''}
-			onPress={() => goTo(item, index)}
-			isFavorited={item.starred}
-			borderRadius={type === 'artist' ? size.radius.circle : undefined}
-		/>
-	), [items, config])
+	const addQueue = React.useCallback((track) => {
+		if (song.queue) addToQueue(songDispatch, track)
+		else playSong(config, songDispatch, [track], 0)
+	}, [song.queue, songDispatch, config])
+
+	const playNext = React.useCallback((track) => {
+		if (song.queue) addToUpNext(songDispatch, track, true)
+		else playSong(config, songDispatch, [track], 0)
+	}, [song.queue, songDispatch, config])
+
+	const renderItem = React.useCallback(({ item, index }) => {
+		const content = (
+			<ExplorerItem
+				item={item}
+				title={item.name || item.title}
+				subTitle={type !== 'artist' ? item.artist : ''}
+				onPress={() => goTo(item, index)}
+				isFavorited={item.starred}
+				borderRadius={type === 'artist' ? size.radius.circle : undefined}
+			/>
+		)
+		if (type === 'song') return <PlaylistSwipeRow onQueue={() => addQueue(item)} onNext={() => playNext(item)}>{content}</PlaylistSwipeRow>
+		if (type === 'album') return (
+			<PlaylistSwipeRow
+				onQueue={() => addAlbumToQueue(config, songDispatch, item.id)}
+				onNext={() => addAlbumToQueue(config, songDispatch, item.id, true)}
+			>{content}</PlaylistSwipeRow>
+		)
+		return content
+	}, [items, config, type, songDispatch, addQueue, playNext])
 
 
 	const renderActivityIndicator = () => {

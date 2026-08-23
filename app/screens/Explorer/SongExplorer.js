@@ -5,12 +5,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useTranslation } from 'react-i18next'
 
 import { useTheme } from '~/contexts/theme'
-import { useSongDispatch } from '~/contexts/song'
+import { useSong, useSongDispatch } from '~/contexts/song'
 import { getApiNetworkFirst } from '~/utils/api'
 import { useConfig } from '~/contexts/config'
-import { playSong } from '~/utils/player'
+import { playSong, addToQueue, addToUpNext } from '~/utils/player'
 import SongItem from '~/components/item/SongItem'
 import AllItem from '~/components/item/AllItem'
+import PlaylistSwipeRow from '~/components/item/PlaylistSwipeRow'
 import OptionsSongsList from '~/components/options/OptionsSongsList'
 import mainStyles from '~/styles/main'
 import PresHeaderIcon from '~/components/PresHeaderIcon'
@@ -24,6 +25,7 @@ const SongExplorer = ({ layout = 'list', showHeader = true, title = null }) => {
 	const insets = useSafeAreaInsets()
 	const theme = useTheme()
 	const config = useConfig()
+	const song = useSong()
 	const songDispatch = useSongDispatch()
 	const [songs, setSongs] = React.useState([])
 	const [offset, setOffset] = React.useState(0)
@@ -60,18 +62,30 @@ const SongExplorer = ({ layout = 'list', showHeader = true, title = null }) => {
 		}
 	}
 
+	const addQueue = React.useCallback((track) => {
+		if (song.queue) addToQueue(songDispatch, track)
+		else playSong(config, songDispatch, [track], 0)
+	}, [song.queue, songDispatch, config])
+
+	const playNext = React.useCallback((track) => {
+		if (song.queue) addToUpNext(songDispatch, track, true)
+		else playSong(config, songDispatch, [track], 0)
+	}, [song.queue, songDispatch, config])
+
 	const renderItem = React.useCallback(({ item, index }) => (
-		<SongItem
-			song={item}
-			queue={songs}
-			index={index}
-			isFavorited={item.starred}
-			setIndexOptions={setIndexOptions}
-			style={{
-				paddingHorizontal: 20,
-			}}
-		/>
-	), [songs])
+		<PlaylistSwipeRow onQueue={() => addQueue(item)} onNext={() => playNext(item)}>
+			<SongItem
+				song={item}
+				queue={songs}
+				index={index}
+				isFavorited={item.starred}
+				setIndexOptions={setIndexOptions}
+				style={{
+					paddingHorizontal: 20,
+				}}
+			/>
+		</PlaylistSwipeRow>
+	), [songs, addQueue, playNext])
 
 
 	const renderActivityIndicator = () => {

@@ -191,6 +191,10 @@
     "Exclude from shuffle": "Escludi dallo shuffle",
     "Include in shuffle": "Includi nello shuffle",
     "Queue": "Coda",
-    "Remove": "Rimuovi"
+    "Remove": "Rimuovi",
+    "Swipe right": "Scorri a destra",
+    "Swipe left": "Scorri a sinistra",
+    "Action menu": "Menù azioni",
+    "None": "Nessuna"
   }
 }

@@ -101,6 +101,43 @@ const PlaylistsSettings = () => {
 					/>
 				</View>
 				<Text style={settingStyles.description(theme)}>{t('settings.playlists.Reverse playlist tracks Description')}</Text>
+
+				<Text style={settingStyles.titleContainer(theme)}>{t('Swipe right')}</Text>
+				<View style={settingStyles.optionsContainer(theme)}>
+					{[
+						{ value: 'queue', name: 'Queue', icon: 'plus' },
+						{ value: 'next', name: 'Play next', icon: 'indent' },
+						{ value: 'remove', name: 'Remove', icon: 'trash-o' },
+						{ value: 'none', name: 'None', icon: 'ban' },
+					].map((opt, index) => (
+						<SelectItem
+							key={index}
+							text={t(opt.name)}
+							icon={opt.icon}
+							isSelect={settings.swipeRightAction === opt.value}
+							onPress={() => setSettings({ ...settings, swipeRightAction: opt.value })}
+						/>
+					))}
+				</View>
+				<Text style={settingStyles.titleContainer(theme)}>{t('Swipe left')}</Text>
+				<View style={[settingStyles.optionsContainer(theme), { marginBottom: 5 }]}>
+					{[
+						{ value: 'menu', name: 'Action menu', icon: 'ellipsis-h' },
+						{ value: 'queue', name: 'Queue', icon: 'plus' },
+						{ value: 'next', name: 'Play next', icon: 'indent' },
+						{ value: 'remove', name: 'Remove', icon: 'trash-o' },
+						{ value: 'none', name: 'None', icon: 'ban' },
+					].map((opt, index) => (
+						<SelectItem
+							key={index}
+							text={t(opt.name)}
+							icon={opt.icon}
+							isSelect={settings.swipeLeftAction === opt.value}
+							onPress={() => setSettings({ ...settings, swipeLeftAction: opt.value })}
+							isLast={index === 4}
+						/>
+					))}
+				</View>
 			</View>
 		</View>
 	)

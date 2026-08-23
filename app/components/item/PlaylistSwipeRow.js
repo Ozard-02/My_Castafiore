@@ -3,6 +3,7 @@ import { Animated, PanResponder, Pressable, StyleSheet, Text, View } from 'react
 import Icon from 'react-native-vector-icons/FontAwesome'
 import { useTranslation } from 'react-i18next'
 
+import { useSettings } from '~/contexts/settings'
 import { useTheme } from '~/contexts/theme'
 import size from '~/styles/size'
 
@@ -10,13 +11,35 @@ const ACTION_WIDTH = 160
 const HINT_WIDTH = 80
 const SWIPE_THRESHOLD = 60
 
-const PlaylistSwipeRow = ({ open, onOpen, onClose, onEnqueue, onPlayNext, onRemove, children }) => {
+// direct swipe actions; 'menu' (left only) opens the action panel, 'none' disables
+const SWIPE_ACTIONS = {
+	queue: { icon: 'plus', labelKey: 'Queue' },
+	next: { icon: 'indent', labelKey: 'Play next' },
+	remove: { icon: 'trash-o', labelKey: 'Remove' },
+}
+
+const PlaylistSwipeRow = ({ open, onOpen, onClose, onQueue, onNext, onRemove, children }) => {
 	const { t } = useTranslation()
 	const theme = useTheme()
+	const settings = useSettings()
 	const translateX = React.useRef(new Animated.Value(0)).current
 
-	const stateRef = React.useRef({ open, onOpen, onClose, onEnqueue, onPlayNext, onRemove })
-	stateRef.current = { open, onOpen, onClose, onEnqueue, onPlayNext, onRemove }
+	const handlers = { queue: onQueue, next: onNext, remove: onRemove }
+	const resolveAction = (name) => {
+		if (name === 'menu') return onRemove || onNext ? { menu: true } : null
+		if (SWIPE_ACTIONS[name] && handlers[name]) return SWIPE_ACTIONS[name]
+		return null
+	}
+	const rightAction = resolveAction(settings.swipeRightAction)
+	const leftResolved = resolveAction(settings.swipeLeftAction)
+	const leftIsMenu = !!leftResolved?.menu
+	const leftHint = leftIsMenu ? null : leftResolved
+	const swipeEnabled = !!(rightAction || leftResolved)
+
+	const stateRef = React.useRef({ open, onOpen, onClose })
+	stateRef.current = { open, onOpen, onClose }
+
+	const fire = (name) => handlers[name]?.()
 
 	const animateTo = React.useCallback((value) => {
 		Animated.spring(translateX, {
@@ -34,51 +57,67 @@ const PlaylistSwipeRow = ({ open, onOpen, onClose, onEnqueue, onPlayNext, onRemo
 
 	const pan = React.useRef(PanResponder.create({
 		onStartShouldSetPanResponder: () => false,
-		onMoveShouldSetPanResponder: (_evt, g) => Math.abs(g.dx) > 5 && Math.abs(g.dx) > Math.abs(g.dy),
+		onMoveShouldSetPanResponder: swipeEnabled
+			? (_evt, g) => Math.abs(g.dx) > 5 && Math.abs(g.dx) > Math.abs(g.dy)
+			: undefined,
 		onPanResponderGrant: () => translateX.stopAnimation(),
 		onPanResponderMove: (_evt, g) => {
-			const st = stateRef.current
-			const next = (st.open ? -ACTION_WIDTH : 0) + g.dx
-			translateX.setValue(Math.min(120, Math.max(-ACTION_WIDTH, next)))
+			const start = stateRef.current.open ? -ACTION_WIDTH : 0
+			translateX.setValue(Math.min(120, Math.max(leftIsMenu ? -ACTION_WIDTH : -120, start + g.dx)))
 		},
 		onPanResponderRelease: (_evt, g) => {
-			const st = stateRef.current
-			const total = (st.open ? -ACTION_WIDTH : 0) + g.dx
+			const start = stateRef.current.open ? -ACTION_WIDTH : 0
+			const total = start + g.dx
 			if (total > SWIPE_THRESHOLD) {
-				st.onClose()
-				st.onEnqueue()
+				if (rightAction) fire(settings.swipeRightAction)
+				stateRef.current.onClose()
 				animateTo(0)
-			} else if (total < -ACTION_WIDTH / 2) {
-				st.onOpen()
-				animateTo(-ACTION_WIDTH)
+			} else if (total < -(leftIsMenu ? ACTION_WIDTH / 2 : SWIPE_THRESHOLD)) {
+				if (leftIsMenu) {
+					stateRef.current.onOpen()
+					animateTo(-ACTION_WIDTH)
+				} else {
+					if (leftHint) fire(settings.swipeLeftAction)
+					stateRef.current.onClose()
+					animateTo(0)
+				}
 			} else {
-				st.onClose()
-				animateTo(st.open ? -ACTION_WIDTH : 0)
+				stateRef.current.onClose()
+				animateTo(stateRef.current.open ? -ACTION_WIDTH : 0)
 			}
 		},
 		onPanResponderTerminate: () => {
-			const st = stateRef.current
-			st.onClose()
-			animateTo(st.open ? -ACTION_WIDTH : 0)
+			stateRef.current.onClose()
+			animateTo(stateRef.current.open ? -ACTION_WIDTH : 0)
 		},
 	})).current
 
+	const renderHint = (action, style) => (
+		<View style={[styles.hint, style, { backgroundColor: theme.secondaryBack }]}>
+			<Icon name={action.icon} size={size.icon.small} color={theme.primaryTouch} />
+			<Text style={[styles.actionText, { color: theme.primaryText }]}>{t(action.labelKey)}</Text>
+		</View>
+	)
+
 	return (
 		<View style={{ position: 'relative' }}>
-			<View style={[styles.hint, { backgroundColor: theme.secondaryBack }]}>
-				<Icon name="plus" size={size.icon.small} color={theme.primaryTouch} />
-				<Text style={[styles.actionText, { color: theme.primaryText }]}>{t('Queue')}</Text>
-			</View>
-			<View style={[styles.actions, { width: ACTION_WIDTH, backgroundColor: theme.secondaryBack }]}>
-				<Pressable style={[styles.action, { backgroundColor: '#b3261e' }]} onPress={() => onRemove()}>
-					<Icon name="trash-o" size={size.icon.small} color="#fff" />
-					<Text style={styles.actionText}>{t('Remove')}</Text>
-				</Pressable>
-				<Pressable style={[styles.action, { backgroundColor: theme.primaryTouch }]} onPress={() => onPlayNext()}>
-					<Icon name="indent" size={size.icon.small} color="#fff" />
-					<Text style={styles.actionText}>{t('Play next')}</Text>
-				</Pressable>
-			</View>
+			{rightAction && renderHint(rightAction, styles.hintLeft)}
+			{leftIsMenu ? (
+				<View style={[styles.actions, { width: ACTION_WIDTH, backgroundColor: theme.secondaryBack }]}>
+					{onRemove && (
+						<Pressable style={[styles.action, { backgroundColor: '#b3261e' }]} onPress={() => { onClose(); onRemove() }}>
+							<Icon name="trash-o" size={size.icon.small} color="#fff" />
+							<Text style={styles.actionText}>{t('Remove')}</Text>
+						</Pressable>
+					)}
+					{onNext && (
+						<Pressable style={[styles.action, { backgroundColor: theme.primaryTouch }]} onPress={() => { onClose(); onNext() }}>
+							<Icon name="indent" size={size.icon.small} color="#fff" />
+							<Text style={styles.actionText}>{t('Play next')}</Text>
+						</Pressable>
+					)}
+				</View>
+			) : leftHint ? renderHint(leftHint, styles.hintRight) : null}
 			<Animated.View {...pan.panHandlers} style={{ transform: [{ translateX }], backgroundColor: theme.primaryBack }}>
 				{children}
 				{open && <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />}
@@ -92,12 +131,17 @@ const styles = StyleSheet.create({
 		position: 'absolute',
 		top: 0,
 		bottom: 0,
-		left: 0,
 		width: HINT_WIDTH,
 		justifyContent: 'center',
 		alignItems: 'center',
 		gap: 4,
 		borderRadius: 4,
+	},
+	hintLeft: {
+		left: 0,
+	},
+	hintRight: {
+		right: 0,
 	},
 	actions: {
 		position: 'absolute',

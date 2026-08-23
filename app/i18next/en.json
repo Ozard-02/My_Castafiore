@@ -256,6 +256,10 @@
     "Are you sure you want to delete this playlist?": "Are you sure you want to delete this playlist?",
     "Exclude from shuffle": "Exclude from shuffle",
     "Include in shuffle": "Include in shuffle",
-    "Remove": "Remove"
+    "Remove": "Remove",
+    "Swipe right": "Swipe right",
+    "Swipe left": "Swipe left",
+    "Action menu": "Action menu",
+    "None": "None"
   }
 }

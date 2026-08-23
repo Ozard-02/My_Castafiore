@@ -114,8 +114,8 @@ const Playlist = ({ route: { params } }) => {
 			open={openSongId === item.id}
 			onOpen={() => setOpenSongId(item.id)}
 			onClose={() => setOpenSongId(null)}
-			onEnqueue={() => addQueue(item)}
-			onPlayNext={() => playNext(item)}
+			onQueue={() => addQueue(item)}
+			onNext={() => playNext(item)}
 			onRemove={() => removeFromPlaylist(item)}
 		>
 			<SongItem
