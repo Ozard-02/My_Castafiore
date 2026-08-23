@@ -22,22 +22,56 @@ const BoxPlayer = ({ setFullScreen }) => {
 	const theme = useTheme()
 	const isKeyboardOpen = useKeyboardIsOpen()
 	const translateY = React.useRef(new Animated.Value(0)).current
+	const translateX = React.useRef(new Animated.Value(0)).current
+	const axisRef = React.useRef(null)
+	const prevSongRef = React.useRef({ id: null, index: -1 })
 
 	const songRef = React.useRef(song)
 	songRef.current = song
 	const configRef = React.useRef(config)
 	configRef.current = config
 
+	// directional slide-in when the song changes: next enters from the right, previous from the left
+	React.useEffect(() => {
+		const info = song?.songInfo
+		if (!info?.id) return
+		if (prevSongRef.current.id === info.id) return
+		let direction = 'next'
+		const queue = song.queue
+		if (queue?.length && prevSongRef.current.id) {
+			const oldIndex = prevSongRef.current.index
+			const newIndex = song.index
+			if (newIndex === oldIndex - 1 || (oldIndex === 0 && newIndex === queue.length - 1)) direction = 'prev'
+		}
+		prevSongRef.current = { id: info.id, index: song.index }
+		translateX.setValue(direction === 'next' ? 80 : -80)
+		Animated.timing(translateX, {
+			toValue: 0,
+			duration: 160,
+			useNativeDriver: Platform.OS !== 'web',
+		}).start()
+	}, [song?.songInfo?.id])
+
 	const panResponder = React.useRef(PanResponder.create({
 		onStartShouldSetPanResponder: () => false,
 		onMoveShouldSetPanResponder: (_, gestureState) => Math.abs(gestureState.dx) > 6 || Math.abs(gestureState.dy) > 6,
+		onPanResponderGrant: () => {
+			axisRef.current = null
+			translateY.stopAnimation()
+		},
 		onPanResponderMove: (_, gestureState) => {
-			translateY.setValue(Math.min(90, Math.max(-90, gestureState.dy)))
+			// axis lock: the first 10px decide horizontal vs vertical, the other axis stays untouched
+			if (!axisRef.current && (Math.abs(gestureState.dx) > 10 || Math.abs(gestureState.dy) > 10)) {
+				axisRef.current = Math.abs(gestureState.dx) > Math.abs(gestureState.dy) ? 'x' : 'y'
+			}
+			if (axisRef.current === 'y') {
+				translateY.setValue(Math.min(90, Math.max(-90, gestureState.dy)))
+			}
 		},
 		onPanResponderRelease: (_, gestureState) => {
 			Animated.timing(translateY, {
 				toValue: 0,
-				duration: 200,
+				duration: 120,
 				useNativeDriver: Platform.OS !== 'web',
 			}).start()
 			const { dx, dy } = gestureState
@@ -58,7 +92,7 @@ const BoxPlayer = ({ setFullScreen }) => {
 				left: insets.left,
 				right: insets.right,
 
-				transform: [{ translateY }],
+				transform: [{ translateY }, { translateX }],
 				display: isKeyboardOpen ? 'none' : undefined,
 			}}
 			touchAction="none"
