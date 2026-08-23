@@ -102,9 +102,12 @@ Core functions for Subsonic API calls:
 | `getApiCacheFirst(config, path, query)` | Returns cached data if available; otherwise fetches from network and caches. |
 | `getApiNetworkFirst(config, path, query)` | Fetches from network first; falls back to cache on failure. |
 
+### app/utils/playerCore.js - Shared Player Core
+Platform-agnostic logic used by both `player.native.js` and `player.web.js`: `createSongControls({ loadSong })` (returns `playSong`/`nextSong`/`previousSong`/`setIndex` — the backend only supplies its `loadSong`), plus `setRepeat`, `secondToTime`, and all queue-mutation dispatchers (`removeFromQueue`, `addToQueue`, `addToUpNext`, `removeFromUpNext`, `moveUpNext`, `moveInQueue`, `moveTrack`). Both platform files re-export these, so consumers see one identical API on every platform.
+
 ### app/utils/player.js (platform-resolved)
-- **Native** (`player.native.js`): Delegates to `LocalPlayer`, `CastPlayer`, or `UpnpPlayer` based on the current `type` variable (`"local"`, `"chromecast"`, `"upnp"`). Provides `connect()`, `disconnect()`, `switchPlayer()`, `saveState()`, `restoreState()`.
-- **Web** (`player.web.js`): Uses the HTML5 `<audio>` element. Implements all playback controls and MediaSession API integration.
+- **Native** (`player.native.js`): Delegates to `LocalPlayer`, `CastPlayer`, or `UpnpPlayer` based on the current `type` variable (`"local"`, `"chromecast"`, `"upnp"`). Provides `connect()`, `disconnect()`, `switchPlayer()`, `saveState()`, `restoreState()`. Song navigation + queue mutations come from `playerCore.js`.
+- **Web** (`player.web.js`): Uses the HTML5 `<audio>` element. Implements playback controls (load/pause/seek/volume) and MediaSession API integration; song navigation + queue mutations come from `playerCore.js`.
 
 ### app/utils/player/ - Native Player Implementations
 | File | Description |
@@ -218,9 +221,9 @@ Playback state enum: `Playing`, `Paused`, `Stopped`, `Loading`, `Error`, `None`.
 | File | Description |
 |---|---|
 | Player.js | Top-level player container. Shows `BoxPlayer` or `FullScreenPlayer` based on state. |
-| BoxPlayer.js | Mini player (mobile, fixed at bottom). Cover, title, play/next buttons. PanResponder swipe: horizontal = next/prev song, vertical up = expand. |
+| BoxPlayer.js | Mini player (mobile, fixed at bottom). Cover, title, artist, cast + favourite + play/pause buttons (next/prev are swipe gestures only). PanResponder swipe: horizontal = next/prev song, vertical up = expand, vertical down = dismiss + stop playback (returns on new song/queue). |
 | BoxDesktopPlayer.js | Mini player for desktop layout (fixed sidebar). Includes progress bar and volume. |
-| FullScreenPlayer.js | Full-screen modal player with cover, queue view (pinned "Now playing" + "Up next" + main queue), lyrics. Lyrics background fills the whole screen. The current song is shown only in the pinned row — it is filtered out of the queue list (display-level). |
+| FullScreenPlayer.js | Full-screen modal player with cover, lyrics card (fills free space, toggles the lyrics view), queue view (pinned "Now playing" + "Up next" + main queue). Lyrics background fills the whole screen. The current song is shown only in the pinned row — it is filtered out of the queue list (display-level). Bottom row: repeat, cast, random, queue. |
 | FullScreenHorizontalPlayer.js | Full-screen horizontal layout of player (desktop); same queue view with right-aligned rows and a drag handle. |
 | QueueDrag.js | Cross-section drag-and-drop for the queue view: `QueueDragProvider` (one manager for both lists — lists are direct children of one container, their `onLayout` `boxY`/`boxH` + the gesture `dy` resolve the drop target with no window-coordinate measurement; region detection uses "Up next" only when that box exists; edge-autoscrolls the active list; springs sibling rows ±`rowHeight` to open a live gap; `bottomAligned` queues get a bottom-pad correction) + `QueueDragRow` (grab-handle PanResponder row; lifted row styled with `backgroundColor`, no elevation). Drop → `moveTrack` (`moveUpNext`/`moveInQueue`/`moveUpNextToQueue`/`moveQueueToUpNext`). |
 | Lyric.js | Synchronized lyrics display. Fetches from server, caches locally, falls back to LrcLib API. |
@@ -251,7 +254,6 @@ Playback state enum: `Playing`, `Paused`, `Stopped`, `Loading`, `Error`, `None`.
 | SongsList.js | Vertical song list used in Pres screens. |
 | VerticalPlaylist.js | Vertical playlist list used in Playlists tab. |
 | CustomFlat.js | Custom FlatList wrapper with themed styling. |
-| CustomScroll.js | Custom ScrollView wrapper with themed styling. |
 
 ### Item Components (app/components/item/)
 | File | Description |

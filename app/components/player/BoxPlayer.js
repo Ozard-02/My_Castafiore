@@ -9,8 +9,8 @@ import { useTheme } from '~/contexts/theme'
 import { urlCover } from '~/utils/url'
 import PlayButton from '~/components/button/PlayButton'
 import Player from '~/utils/player'
-import IconButton from '~/components/button/IconButton'
 import ImageError from '~/components/ImageError'
+import FavoritedButton from '~/components/button/FavoritedButton'
 import size from '~/styles/size'
 import useKeyboardIsOpen from '~/utils/useKeyboardIsOpen'
 
@@ -91,6 +91,7 @@ const BoxPlayer = ({ setFullScreen }) => {
 				setFullScreen(true)
 			} else if (dy > 60) {
 				setIsDismissed(true)
+				Player.stopSong()
 			}
 		},
 	})).current
@@ -133,13 +134,15 @@ const BoxPlayer = ({ setFullScreen }) => {
 						<Text style={{ color: theme.playerSecondaryText, textAlign: 'left', flex: 1 }} numberOfLines={1}>{song?.songInfo?.artist ? song.songInfo.artist : 'Artist'}</Text>
 					</View>
 				</Animated.View>
-				<IconButton
-					icon="step-forward"
-					size={size.icon.small}
-					color={theme.playerButton}
-					style={{ width: 35, alignItems: 'center' }}
-					onPress={() => Player.nextSong(config, song, songDispatch)}
-				/>
+				{song?.songInfo?.id && (
+					<FavoritedButton
+						id={song.songInfo.id}
+						isFavorited={!!song.songInfo.starred}
+						rating={song.songInfo?.userRating ?? song.songInfo?.rating ?? 0}
+						size={size.icon.small}
+						style={{ paddingVertical: 5, paddingHorizontal: 6 }}
+					/>
+				)}
 				<PlayButton
 					size={size.icon.small}
 					color={theme.playerButton}

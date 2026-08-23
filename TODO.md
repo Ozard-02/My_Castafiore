@@ -373,6 +373,24 @@
     - Snappier return animation (shorten existing timing; do NOT introduce springs where none exist).
     - Song-change transition on the pill: outgoing/incoming slide — next song enters from the right,
       previous returns from the left.
+    - ✅ Swipe-down dismiss now also stops playback (`Player.stopSong()`, 2026-08-23).
+
+26. **Pill: play/pause only + gestures** ✅ done (2026-08-23, needs on-device verify)
+    - ✅ Removed the "next track" button from the pill; play/pause + swipe gestures remain.
+    - ✅ Button row (left→right): cast (ConnectButton), favourite (FavoritedButton, guarded on
+      song id, starred from `songInfo.starred`), play/pause — i.e. right-to-left:
+      playpause, favourite, cast as requested (Spotify ref).
+
+27. **Player UI overhaul** ⏳ done 2026-08-23, needs on-device verify
+    - Full-screen player (Spotify refs ~/Pictures/castafiore/): big **Lyrics card** between
+      transport and bottom row fills the free vertical space (`flex:1`, cap 160) and toggles
+      the existing full lyrics view (label Lyrics ↔ Hide lyrics); small `comment-o` icon
+      removed from the bottom row (now repeat/cast/random/queue). Play button enlarged
+      (icon 54, box 70×66), transport margins tightened. NO share button (explicit).
+    - Pill: see #26.
+    - Skipped: scroll-with-resistance lyrics reveal (card button covers it — revisit if it
+      feels wrong on device). Desktop horizontal player untouched.
+    - Plan: `plans/player-ui.md`.
 
 ---
 

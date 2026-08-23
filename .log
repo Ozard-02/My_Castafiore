@@ -408,3 +408,81 @@
 - eslint: `npx eslint app -c eslint.config.mjs`.
 - `rg -rn` is a landmine: `-r` is ripgrep's `--replace`, so `rg -rn <pat>` replaces every
   match with the literal `n`. Use `rg -n` or `--no-config`.
+## 2026-08-23 — KISS whole-repo audit (report only, nothing applied)
+- Deps: all 15 runtime deps verified used (`events`→upnpEvents, `md5`→settings/AddServer,
+  `fast-xml-parser`→UPnP, netinfo→networkAutoSwitch, udp→SSDP). None removable.
+- delete candidates: `app/components/lists/CustomScroll.js` (0 importers, 71 ln);
+  `clearSongCache` export in cache.native.js + cache.web.js (0 callers);
+  `getCache` stub in cache.native.js (web uses its own internally);
+  `size.title.large` (styles/size.js:12); App.js:12-13 global defaults are stale
+  (overwritten by settings' updateGlobalSettings effect).
+- Duplication, ranked by recoverable lines:
+  1. Explorer trio + SearchMore (~350 ln): renderActivityIndicator ×3, renderFooter ×3,
+     handleEndReached ×3, fetch-append effect ×3, grid/list LegendList configs ×4,
+     identical styles ×3. ShowAll.native/web near-twins (~55 ln). Fix = usePagedList hook.
+     Already drifting: PAGE_SIZE 100 (Song) vs 20 (SearchMore)?
+  2. options/ dir (~1433 ln total): addToPlaylist flow ×3 byte-similar, goToArtist
+     multi-artist block ×3, share handler ×5, playSimilarSongs ×5, move top/up/down/bottom
+     set ×2, info row ×6, popup scaffold ×12. Factories save ~250 ln.
+  3. player.web.js vs player.native.js facade: nextSong/previousSong/playSong/setIndex/
+     setRepeat/secondToTime + 7 queue-mutation wrappers character-identical (~180 ln).
+     Real drift risk: bug fixes must land twice.
+  4. FullScreenPlayer vs FullScreenHorizontalPlayer: queue render (pinned+upnext+queue),
+     TimeBar scrub state machine, transport row, favorited/stars wiring (~180 ln dup,
+     ~140 recoverable with shared QueuePanel/TimeBar).
+  5. SideBar vs BottomBar TabItem: color/onPress/onLongPress/disabled identical (~50 ln).
+     Inside SideBar: FavoritedItem ≈ PlaylistItem (~35 ln).
+  6. SearchResults: 3 identical shortcut Pressables + 3 section fragments (~35 ln, map them).
+- Not audited here (out of scope): correctness bugs, perf, security.
+- Plan file: plans/kiss-audit.md. Next session: pick items 1–4 to actually refactor.
+
+## 2026-08-23 — KISS refactor batch 1 (deletes + player core dedup)
+- Deleted: `CustomScroll.js` (dead, 0 importers), `clearSongCache` (cache.native+web),
+  `getCache` stub (cache.native), `size.title.large`, App.js stale globals
+  (`global.maxBitRate/streamFormat` — overwritten by settings effect anyway).
+- NEW `app/utils/playerCore.js` (~91 ln): platform-agnostic player logic shared by
+  native facade + web. `createSongControls({ loadSong })` → playSong/nextSong/previousSong/
+  setIndex; plus setRepeat/secondToTime + all queue-mutation dispatchers.
+  - `player.native.js` / `player.web.js` re-export the core names explicitly AND spread
+    `import * as core` into their default objects. Named imports
+    (`import { playSong } from '~/utils/player'`) keep working on both platforms.
+  - GOTCHA hit during refactor: names in `export { x } from './playerCore'` are NOT local
+    bindings — the default object needs the namespace import (or plain import) too.
+  - Behavior note: shared setIndex now awaits loadSong on native (was fire-and-forget).
+    Strictly better ordering; all callers are fire-and-forget or awaiting already.
+  - Also removed: noop `unloadSong` named exports from both platform files (0 callers;
+    backends keep their own internal ones).
+- eslint clean. Net: ~310 lines removed. APK not rebuilt yet; verify playback +
+  queue actions on device before release build.
+- Remaining audit items (not started): Explorer usePagedList hook (~350), Options
+  factories (~250), FullScreenPlayer QueuePanel/TimeBar share (~140), SideBar/BottomBar (~85).
+- BoxPlayer swipe-down dismiss now also calls `Player.stopSong()` (user request):
+  pill hides AND playback stops on all backends. PlayButton already handles the
+  Stopped state (play icon → resumeSong), queue survives.
+- CRASH FIX (pill swipe): `Player.nextSong`/`previousSong`/`playSong`/`setIndex` were
+  MISSING from the default exports of player.native.js/player.web.js after the
+  playerCore refactor — they come from `createSongControls()`'s return value, not from
+  playerCore's module exports, so the `...core` spread didn't include them. Named
+  imports (`import { playSong }`) kept working; DEFAULT-object calls
+  (`Player.nextSong(...)` — pill swipe, transport buttons, PlayButton's !isSongLoad path)
+  hit `undefined is not a function` → release crash.
+  GOTCHA: `export { x } from './y'` and a factory's return value are NOT local bindings;
+  the default object must list them explicitly. Checker: rg all `Player.x` accesses vs
+  both default objects (web intentionally lacks connect/disconnect/saveState/
+  restoreState/switchPlayer).
+
+## 2026-08-23 — Player UI overhaul (Spotify refs, plans/player-ui.md)
+- Pill (BoxPlayer): next-track button removed; row is now cast | favourite | play/pause
+  (right-to-left: playpause, favourite, cast). FavoritedButton guarded on song id,
+  starred read from songInfo.starred (no getStarred2 fetch in the pill).
+- FullScreenPlayer (portrait): big Lyrics card between transport and bottom row
+  (flex:1, minHeight 44/60, maxHeight 160) toggles isPreview COVER↔LYRICS; label
+  Lyrics ↔ Hide lyrics; hidden in QUEUE preview. comment-o icon removed from bottom
+  row (repeat/cast/random/queue remain). Play button 50→54, box 70×66; margins 30→20.
+- i18n: `Lyrics` + `Hide lyrics` added to en/de under `translation` (GOTCHA: keys must
+  live inside the `translation` object, not at JSON root).
+- No share button (explicit user request). Desktop horizontal player untouched.
+- eslint clean. APK not rebuilt; verify on device (normal + compact/Z Flip + queue).
+- Pill feedback round: cast button removed from pill (not enough space) → row is
+  favourite | play/pause. Lyrics card fixed height (52, compact 40) instead of flex:1 —
+  it was eating all free vertical space.

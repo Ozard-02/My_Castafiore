@@ -3,6 +3,7 @@ import { Text, View, Modal, FlatList, StyleSheet, useWindowDimensions, Pressable
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useNavigation } from '@react-navigation/native'
 import { useTranslation } from 'react-i18next'
+import Icon from 'react-native-vector-icons/FontAwesome'
 
 import { useConfig } from '~/contexts/config'
 import { useSong, useSongDispatch } from '~/contexts/song'
@@ -201,6 +202,7 @@ const FullScreenPlayer = ({ setFullScreen }) => {
 	const song = useSong()
 	const insets = useSafeAreaInsets()
 	const navigation = useNavigation()
+	const { t } = useTranslation()
 	const { width, height } = useWindowDimensions()
 	const compact = width < 420 || height < 700
 	const [isPreview, setIsPreview] = React.useState(preview.COVER)
@@ -287,7 +289,7 @@ const FullScreenPlayer = ({ setFullScreen }) => {
 						/>
 					</View>
 					<TimeBar />
-					<View style={{ flexDirection: 'row', width: '100%', marginVertical: compact ? 6 : 30, alignItems: 'center', justifyContent: 'center', gap: compact ? 10 : 30 }}>
+					<View style={{ flexDirection: 'row', width: '100%', marginVertical: compact ? 6 : 20, alignItems: 'center', justifyContent: 'center', gap: compact ? 10 : 30 }}>
 						<IconButton
 							icon="step-backward"
 							size={compact ? 22 : size.icon.large}
@@ -296,12 +298,12 @@ const FullScreenPlayer = ({ setFullScreen }) => {
 							onPress={() => Player.previousSong(config, song, songDispatch)}
 						/>
 						<PlayButton
-							size={compact ? 36 : 50}
+							size={compact ? 36 : 54}
 							color={theme.primaryText}
 							style={{
 								paddingHorizontal: 10,
-								minWidth: compact ? 48 : 63,
-								minHeight: compact ? 48 : 60,
+								minWidth: compact ? 48 : 70,
+								minHeight: compact ? 48 : 66,
 								justifyContent: 'center',
 								alignItems: 'center',
 							}}
@@ -314,14 +316,32 @@ const FullScreenPlayer = ({ setFullScreen }) => {
 							onPress={() => Player.nextSong(config, song, songDispatch)}
 						/>
 					</View>
+					{isPreview !== preview.QUEUE && (
+						<Pressable
+							onPress={() => setIsPreview(isPreview === preview.LYRICS ? preview.COVER : preview.LYRICS)}
+							style={{
+								width: '100%',
+								height: compact ? 40 : 52,
+								marginBottom: compact ? 6 : 14,
+								paddingHorizontal: 15,
+								borderRadius: 10,
+								backgroundColor: theme.secondaryBack,
+								flexDirection: 'row',
+								alignItems: 'center',
+								gap: 12,
+							}}
+						>
+							<Icon
+								name={isPreview === preview.LYRICS ? 'chevron-up' : 'comment-o'}
+								size={size.icon.small}
+								color={isPreview === preview.LYRICS ? theme.primaryTouch : theme.secondaryText}
+							/>
+							<Text style={{ color: theme.primaryText, fontSize: size.text.medium, fontWeight: 'bold' }}>
+								{isPreview === preview.LYRICS ? t('Hide lyrics') : t('Lyrics')}
+							</Text>
+						</Pressable>
+					)}
 					<View style={{ flexDirection: 'row', width: '100%', justifyContent: 'space-between' }}>
-						<IconButton
-							icon="comment-o"
-							size={17}
-							color={isPreview == preview.LYRICS ? theme.primaryTouch : theme.secondaryText}
-							style={{ paddingVertical: compact ? 4 : 10, paddingEnd: 10 }}
-							onPress={() => setIsPreview(isPreview == preview.LYRICS ? preview.COVER : preview.LYRICS)}
-						/>
 						<IconButton
 							icon="repeat"
 							size={17}
