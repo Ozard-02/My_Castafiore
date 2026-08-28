@@ -59,10 +59,11 @@ const Genre = ({ route: { params: { name, albumCount = 0, songCount = 0 } } }) =
 
 	const getRandomSongs = () => {
 		getApiNetworkFirst(config, 'getRandomSongs', { genre: name, size: 50 })
-			.then((json) => {
+			.then(async (json) => {
 				const songs = json.randomSongs?.song
 				if (!songs) return
-				playSong(config, songDispatch, songs, 0)
+				await playSong(config, songDispatch, songs, 0)
+				songDispatch({ type: 'setRadioMode', value: true })
 			})
 			.catch(() => { })
 	}

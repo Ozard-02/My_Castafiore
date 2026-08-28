@@ -90,6 +90,7 @@ export const songReducer = (state, action) => {
 				index: action.song.index || 0,
 				actionEndOfSong: action.song.actionEndOfSong || 'next',
 				originalQueue: action.song.originalQueue || (action.song.actionEndOfSong === 'random' ? action.song.queue : null),
+				radioMode: !!action.song.radioMode,
 				isSongLoad: action.isSongLoad || false,
 			})
 		case 'setQueue': {
@@ -100,6 +101,7 @@ export const songReducer = (state, action) => {
 				queue: newQueue,
 				upNext: [],
 				originalQueue: null,
+				radioMode: false,
 				isSongLoad: true,
 			}, true)
 		}
@@ -290,6 +292,8 @@ export const songReducer = (state, action) => {
 			return newSong(state, {
 				actionEndOfSong: action.action,
 			}, true)
+		case 'setRadioMode':
+			return newSong(state, { radioMode: !!action.value }, true)
 		case 'reset':
 			return newSong(state, {
 				...defaultSong,
@@ -310,5 +314,6 @@ export const defaultSong = {
 	index: 0,
 	actionEndOfSong: 'next',
 	originalQueue: null,
+	radioMode: false,
 	state: State.Stopped,
 }

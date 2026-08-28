@@ -18,9 +18,10 @@ const RandomButton = ({ songList, size = 23 }) => {
 			.map(({ value }) => value)
 	}
 
-	const shuffleSong = () => {
+	const shuffleSong = async () => {
 		if (songList?.length) {
-			playSong(config, songDispatch, shuffle(songList), 0)
+			await playSong(config, songDispatch, shuffle(songList), 0)
+			songDispatch({ type: 'setRadioMode', value: true })
 		}
 	}
 

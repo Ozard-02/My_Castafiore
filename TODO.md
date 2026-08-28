@@ -392,7 +392,48 @@
       feels wrong on device). Desktop horizontal player untouched.
     - Plan: `plans/player-ui.md`.
 
+28. **Endless shuffle radio + exclusion refresh** ✅ done 2026-08-24, needs on-device verify
+    - Home random button leaked excluded songs: NOT a parsing bug (`comment.includes(tag)`
+      matches `Auto-imported from 'BL34J1.m3u8'#esplor02-exclusive` fine) — the excluded-id
+      cache only refreshed on manual in-app toggle, so m3u8 re-syncs/server edits leaked.
+      Fix: `clickRandomSong` awaits `refreshExcludedSongIds` before filtering.
+    - Random sessions no longer stop at end of queue: new persisted `song.radioMode` flag set
+      by every shuffle entry point (Home random button, RandomButton [Favorited/Album/Playlist],
+      Genre.js, Artist.js). Cleared by any normal playback (setQueue) / reset; survives restore.
+      When queue+up next are drained and `!repeatQueue`, `nextSong` (playerCore) fetches
+      `getRandomSongs size=50`, filters exclusions, dedupes against current queue ids, appends
+      via addToQueue and advances reading fresh `global.song.queue`. End-of-queue stop branches
+      in servicePlayback + playerCast + playerUpnp now fall through to nextSong when radioMode.
+    - Uniform top-up: always library-wide randoms (genre/artist-aware refill skipped — would
+      need serializable fetchers). Player shuffle toggle (`actionEndOfSong`) untouched.
+    - Plan: `plans/endless-shuffle.md`.
+
 ---
+
+29. **Next/prev loops on the same song (icons & Bluetooth, not swipe)** ✅ done 2026-08-28, needs on-device verify
+    - Symptom: pressing next/prev (full-screen transport / notification / Bluetooth) sometimes
+      plays the same song from the start 3-5× before advancing. Swipe gestures never do.
+    - Root cause: KISS refactor `d8ffc98` made `playerCore.setIndex` dispatch `setIndex` only
+      AFTER `await loadSong(...)` (native was fire-and-forget + immediate dispatch before). During
+      the load window `global.song.index` is stale → any re-trigger (natural `PlaybackQueueEnded`
+      near song end, Bluetooth double event, fast double-tap) issues a second `load()` of the same
+      track → restarts until the deferred dispatch lands.
+    - Trigers (same root defect): (1) natural-end collision, (2) double-invocation of the skip,
+      (3) repeat-ON `setPosition(0)+resume` during the window (benign, left as-is).
+    - Fix: dedupe concurrent loads of the same track id in `setIndex` via `loadingKey`
+      (try/finally cleared) — a repeat request only syncs state. Covers local/cast/upnp/web since
+      all auto-advance routes funnel through this one `setIndex`. Plan: `plans/fix-next-prev-looping.md`.
+
+30. **Radio loops same 50 + exclusions never filter** ✅ done 2026-08-28, needs on-device verify
+    - Radio loop: `repeatQueue` defaults ON (`settings.js:109`) and `nextSong` gated the radio top-up
+      on `!repeatQueue` → queue wrapped at the end instead of extending. Fix: at the last index,
+      `radioMode` always extends (repeatQueue ignored); non-radio keeps stop/wrap behavior.
+      Plan: `plans/radio-loop-exclusions.md`.
+    - Exclusions dead since `cf9f526`: `exclusions.js` keyed everything on `config.folderCache`,
+      but `useConfig()` returns the stored config which has no `folderCache` (only `global.config`
+      does) → every guard early-returned an empty set → `filterExcluded` never ran. Fix: key on
+      `config.url` (storage key, memory key, guards, invalidate). No migration needed (nothing
+      was ever written); hidden tags re-derive on next Home random press.
 
 ## Build & Release (local APK)
 

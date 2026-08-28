@@ -26,7 +26,7 @@ ConfigProvider -> SongProvider -> SettingsProvider -> ThemeProvider -> UpdateApi
 ```
 
 - **ConfigProvider**: Loads server connection config from AsyncStorage into `global.config`.
-- **SongProvider**: Music playback state via a reducer (`songReducer`). Holds main queue (`queue`), a separate "up next" list (`upNext`), current index, playback state, action-on-end-of-song mode, random indices.
+- **SongProvider**: Music playback state via a reducer (`songReducer`). Holds main queue (`queue`), a separate "up next" list (`upNext`), current index, playback state, action-on-end-of-song mode, and `radioMode` (endless-shuffle flag set by random/shuffle buttons, cleared by any normal playback).
 - **SettingsProvider**: App settings (theme, language, home layout, cache, player prefs). Persists to AsyncStorage. Exports `defaultSettings` and `homeSections`.
 - **ThemeProvider**: Resolves theme object from `settings.theme` + `settings.themePlayer`. Sets `window` background on web.
 - **UpdateApiProvider**: Lightweight pub/sub for cache invalidation -- fires `updateApi` changes so other components can re-read their cache.
@@ -103,7 +103,7 @@ Core functions for Subsonic API calls:
 | `getApiNetworkFirst(config, path, query)` | Fetches from network first; falls back to cache on failure. |
 
 ### app/utils/playerCore.js - Shared Player Core
-Platform-agnostic logic used by both `player.native.js` and `player.web.js`: `createSongControls({ loadSong })` (returns `playSong`/`nextSong`/`previousSong`/`setIndex` — the backend only supplies its `loadSong`), plus `setRepeat`, `secondToTime`, and all queue-mutation dispatchers (`removeFromQueue`, `addToQueue`, `addToUpNext`, `removeFromUpNext`, `moveUpNext`, `moveInQueue`, `moveTrack`). Both platform files re-export these, so consumers see one identical API on every platform.
+Platform-agnostic logic used by both `player.native.js` and `player.web.js`: `createSongControls({ loadSong })` (returns `playSong`/`nextSong`/`previousSong`/`setIndex` — the backend only supplies its `loadSong`), plus `setRepeat`, `secondToTime`, and all queue-mutation dispatchers (`removeFromQueue`, `addToQueue`, `addToUpNext`, `removeFromUpNext`, `moveUpNext`, `moveInQueue`, `moveTrack`). Both platform files re-export these, so consumers see one identical API on every platform. Endless-shuffle radio: when a session started via a random/shuffle button (`song.radioMode`) drains queue + up next (and `!repeatQueue`), `nextSong` calls `extendRadio()` — fetches `getRandomSongs size=50`, filters exclusions, dedupes vs current queue, appends via `addToQueue`, then advances using fresh `global.song.queue`.
 
 ### app/utils/player.js (platform-resolved)
 - **Native** (`player.native.js`): Delegates to `LocalPlayer`, `CastPlayer`, or `UpnpPlayer` based on the current `type` variable (`"local"`, `"chromecast"`, `"upnp"`). Provides `connect()`, `disconnect()`, `switchPlayer()`, `saveState()`, `restoreState()`. Song navigation + queue mutations come from `playerCore.js`.
@@ -134,7 +134,7 @@ Playback state enum: `Playing`, `Paused`, `Stopped`, `Loading`, `Error`, `None`.
 ### Other Utils
 - **url.js**: `urlCover()` resolves cover art URLs (handles navidrome/ampache/generic Subsonic types). `urlStream()` resolves audio stream URLs.
 - **tools.js**: `shuffle()`, `saveQueue()`.
-- **exclusions.js**: Negative playlists — songs of playlists tagged `#<username>-exclusive` in their comment (same mechanism as pins) are excluded from the Home random-shuffle button. Per-server ID set (`excludedSongs:<folderCache>` in AsyncStorage + memory cache), refreshed on toggle in `OptionsPlaylist`. `filterExcluded()` is the single filter point (`Home.js clickRandomSong`).
+- **exclusions.js**: Negative playlists — songs of playlists tagged `#<username>-exclusive` in their comment (same mechanism as pins) are excluded from the Home random-shuffle button. Per-server ID set (`excludedSongs:<folderCache>` in AsyncStorage + memory cache), refreshed on toggle in `OptionsPlaylist` and before every Home random click (`refreshExcludedSongIds`). `filterExcluded()` is the single filter point (`Home.js clickRandomSong`, `playerCore.extendRadio`).
 - **albumActions.js**: `addAlbumToQueue(config, songDispatch, albumId, asNext)` — fetches album songs and queues them (or plays the album when no queue is active). Used by swipe actions on album rows (AlbumExplorer, SearchMore).
 - **lrc.js**: `parseLrc()` parses LRC-format lyrics into `{ time, text }` objects.
 - **logger.js**: In-memory log buffer (`global.logs`, max 1000 entries). Provides `info()`, `debug()`, `error()`, `get()`.

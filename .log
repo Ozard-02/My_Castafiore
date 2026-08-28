@@ -1,5 +1,26 @@
 # Castafiore - Session Log
 
+## 2026-08-28 — Fix: next/prev loops on same song (icons + Bluetooth, not swipe)
+- Symptom: pressing next/prev (full-screen transport / notification / Bluetooth) sometimes plays
+  the same song from the start 3-5× before advancing; swipe never does.
+- Root cause: commit `d8ffc98` (KISS refactor) changed native `setIndex` from fire-and-forget
+  load + immediate dispatch to `await loadSong` + deferred dispatch. During the load window
+  `global.song.index` stays stale → a re-trigger (natural `PlaybackQueueEnded` near song end,
+  Bluetooth double event, fast double-tap) issues a second `load()` of the same track → the
+  song restarts until the deferred dispatch lands. Verified the KotlinAudio fork only emits
+  `AudioPlayerState.ENDED` (→ `PlaybackQueueEnded`) on genuine end of playback, and `MusicService`
+  emits QueueEnded on every `ENDED` transition → the cascade.
+- "Not swipe": swipes land mid-song (no ENDED, single invocation); icons/Bluetooth are pressed
+  at/near song end and double-fire.
+- Fix: `playerCore.setIndex` dedupes in-flight loads of the same track id (`loadingKey`,
+  try/finally cleared) — a repeat request for an already-loading track only dispatches state.
+  One shared chokepoint covers local/cast/upnp/web auto-advance routes
+  (`servicePlayback.PlaybackQueueEnded`, cast `onMediaPlaybackEnded`, upnp `TRACK_ENDED`, web `ended`).
+- eslint clean. Plan: `plans/fix-next-prev-looping.md`. TODO #29. On-device verify pending.
+- Not fixed (known, benign): (a) different-target rapid double-skip still briefly races two
+  distinct loads (pre-existing `load()` semantics, not a loop); (b) repeat-ON transient restart
+  during the window before `setRepeat('next')` lands. UpNext branch unaffected (loads directly).
+
 ## 2026-08-10 (18th)
 - Offline-mode feature REVERTED per user ("undo all offline feature", "we will work later").
   - Deleted `app/components/button/OfflineButton.js` + `app/utils/offline.js`.
@@ -498,3 +519,20 @@
   useTranslation removed. eslint clean, installed on phone.
   GOTCHA: when replacing a JSX block, verify the old block is actually gone — rg the
   icon names afterwards.
+
+## 2026-08-28 — Fix radio loop (same 50) + exclusions never filtering
+- Root cause 1 (loop): `settings.repeatQueue` defaults true (`contexts/settings.js:109`), and
+  `playerCore.nextSong` gated the radio top-up on `!global.repeatQueue` → repeat ON skipped the
+  extend branch → queue wrapped via modulo → same 50 loop forever. Fix: at the last index,
+  radioMode always calls extendRadio (repeatQueue ignored); non-radio unchanged (stop if repeat
+  OFF, wrap if ON). servicePlayback stop-check already falls to nextSong for radio on both repeats.
+- Root cause 2 (exclusions dead since cf9f526): `exclusions.js` keyed on `config.folderCache`,
+  but `useConfig()` returns the STORED config (no folderCache — only `global.config` gets it,
+  config.js:28). The `if (!config?.folderCache) return new Set()` guards always fired → excluded
+  set always empty → filterExcluded no-op → hidden (#user-exclusive) playlist songs always played.
+  Fix: key on `config.url` (storage key, memory key, guards, invalidate). Server-side tag was
+  already written correctly; no local data to migrate (guard prevented any writes).
+  GOTCHA: config context state ≠ global.config — global.config alone carries computed folderCache.
+  Any per-server util keyed on folderCache from a useConfig() config object silently no-ops.
+- Files: `app/utils/playerCore.js` (nextSong branch), `app/utils/exclusions.js` (url keying).
+  Plan: `plans/radio-loop-exclusions.md`. eslint clean. Build+install pending device verify.

@@ -7,7 +7,7 @@ import { useTranslation } from 'react-i18next'
 import { useConfig } from '~/contexts/config'
 import { getApi, getApiNetworkFirst } from '~/utils/api'
 import { playSong } from '~/utils/player'
-import { filterExcluded } from '~/utils/exclusions'
+import { filterExcluded, refreshExcludedSongIds } from '~/utils/exclusions'
 import { useSettings } from '~/contexts/settings'
 import { useSongDispatch } from '~/contexts/song'
 import { useTheme } from '~/contexts/theme'
@@ -28,12 +28,15 @@ const Home = () => {
 	const [statusRefresh, setStatusRefresh] = React.useState()
 	const [refresh, setRefresh] = React.useState(0)
 
-	const clickRandomSong = () => {
+	const clickRandomSong = async () => {
+		// exclusions cache is otherwise stale until a manual toggle (m3u8 re-syncs, server edits)
+		await refreshExcludedSongIds(config)
 		getApiNetworkFirst(config, 'getRandomSongs', 'size=50')
 			.then(async (json) => {
 				const songs = await filterExcluded(config, json.randomSongs?.song || [])
 				if (!songs.length) return
-				playSong(config, songDispatch, songs, 0)
+				await playSong(config, songDispatch, songs, 0)
+				songDispatch({ type: 'setRadioMode', value: true })
 			})
 			.catch(() => { })
 	}

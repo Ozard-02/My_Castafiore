@@ -52,7 +52,7 @@ const useEvent = (_song, songDispatch, nextSong) => {
 				.catch(() => { })
 			if (global.song.actionEndOfSong === 'repeat') {
 				client.seek(0)
-			} else if (!global.repeatQueue && global.song.index === global.song.queue.length - 1 && !global.song.upNext?.length) {
+			} else if (!global.repeatQueue && !global.song.radioMode && global.song.index === global.song.queue.length - 1 && !global.song.upNext?.length) {
 				client.stop()
 			} else nextSong(global.config, global.song, songDispatch)
 		}))

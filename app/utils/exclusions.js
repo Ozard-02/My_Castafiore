@@ -6,7 +6,7 @@ import logger from '~/utils/logger'
 // won't propagate until then. Add a TTL/background sync if that ever matters.
 
 const exclusiveTag = (username) => `#${username}-exclusive`
-const storageKey = (config) => `excludedSongs:${config.folderCache}`
+const storageKey = (config) => `excludedSongs:${config.url}`
 
 const memory = {}
 
@@ -33,8 +33,8 @@ const fetchExcludedIds = async (config) => {
 }
 
 export const getExcludedSongIds = async (config) => {
-	if (!config?.folderCache) return new Set()
-	if (memory[config.folderCache]) return memory[config.folderCache]
+	if (!config?.url) return new Set()
+	if (memory[config.url]) return memory[config.url]
 	let ids = new Set()
 	try {
 		const raw = await AsyncStorage.getItem(storageKey(config))
@@ -42,14 +42,14 @@ export const getExcludedSongIds = async (config) => {
 	} catch (error) {
 		logger.error('exclusions', 'Error reading exclusions:', error)
 	}
-	memory[config.folderCache] = ids
+	memory[config.url] = ids
 	return ids
 }
 
 export const refreshExcludedSongIds = async (config) => {
-	if (!config?.folderCache) return new Set()
+	if (!config?.url) return new Set()
 	const ids = await fetchExcludedIds(config)
-	memory[config.folderCache] = ids
+	memory[config.url] = ids
 	try {
 		await AsyncStorage.setItem(storageKey(config), JSON.stringify([...ids]))
 	} catch (error) {
@@ -59,7 +59,7 @@ export const refreshExcludedSongIds = async (config) => {
 }
 
 export const invalidateExclusions = (config) => {
-	delete memory[config?.folderCache]
+	delete memory[config?.url]
 }
 
 export const isPlaylistExclusive = (config, playlist) => {

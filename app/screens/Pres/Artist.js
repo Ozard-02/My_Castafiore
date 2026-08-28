@@ -61,7 +61,8 @@ const Artist = ({ navigation, route: { params } }) => {
 			})
 			allSongs.current = (await Promise.all(songsPending)).flat()
 		}
-		playSong(config, songDispatch, shuffle(allSongs.current), 0)
+		await playSong(config, songDispatch, shuffle(allSongs.current), 0)
+		songDispatch({ type: 'setRadioMode', value: true })
 	}
 
 	return (
