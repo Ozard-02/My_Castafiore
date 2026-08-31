@@ -67,7 +67,7 @@ const RadioList = ({ radios }) => {
 					style={{
 						color: theme.primaryText,
 						fontSize: size.text.medium,
-						fontWeight: 'bold',
+						fontWeight: '600',
 						overflow: 'hidden',
 					}}
 				>
@@ -109,7 +109,7 @@ const RadioList = ({ radios }) => {
 						numberOfLines={1}
 						style={[mainStyles.mediumText(theme.primaryText), {
 							flex: 1,
-							fontWeight: 'bold',
+							fontWeight: '600',
 						}]}
 					>
 						{item.name}
@@ -198,13 +198,13 @@ const styles = StyleSheet.create({
 		flexDirection: 'row',
 		alignItems: 'center',
 		justifyContent: 'flex-start',
-		borderRadius: 7,
+		borderRadius: size.radius.standard,
 	}),
 	image: {
 		height: '100%',
 		aspectRatio: 1,
 		marginRight: 10,
-		borderRadius: 3,
+		borderRadius: size.radius.standard,
 	},
 })
 

@@ -39,34 +39,34 @@ const HorizontalQueue = ({ current, queue }) => {
 				flexDirection: 'row',
 				alignItems: 'center',
 				gap: 10,
-				borderRadius: 5,
-				overflow: 'hidden'
+			borderRadius: size.radius.standard,
+			overflow: 'hidden'
+		}}
+	>
+		{
+			settings.isDesktop ?
+				<ImageError
+					source={{ uri: urlCover(config, currentTrack) }}
+					blurRadius={10}
+					style={{
+						position: 'absolute',
+						top: 0,
+						left: 0,
+						bottom: 0,
+						right: 0,
+						borderRadius: size.radius.standard,
+						opacity: 0.2
+					}}
+				/> : null
+		}
+		<ImageError
+			source={{ uri: urlCover(config, currentTrack) }}
+			style={{
+				height: settings.isDesktop ? size.image.large : size.image.medium,
+				width: settings.isDesktop ? size.image.large : size.image.medium,
+				borderRadius: size.radius.standard
 			}}
-		>
-			{
-				settings.isDesktop ?
-					<ImageError
-						source={{ uri: urlCover(config, currentTrack) }}
-						blurRadius={10}
-						style={{
-							position: 'absolute',
-							top: 0,
-							left: 0,
-							bottom: 0,
-							right: 0,
-							borderRadius: 5,
-							opacity: 0.2
-						}}
-					/> : null
-			}
-			<ImageError
-				source={{ uri: urlCover(config, currentTrack) }}
-				style={{
-					height: settings.isDesktop ? size.image.large : size.image.medium,
-					width: settings.isDesktop ? size.image.large : size.image.medium,
-					borderRadius: 5
-				}}
-			/>
+		/>
 			<View style={{ flex: 1, gap: 5 }}>
 				<Text style={[mainStyles.mediumText(theme.primaryText), { fontSize: settings.isDesktop ? size.text.large : undefined }]} numberOfLines={1}>
 					{currentTrack.title}

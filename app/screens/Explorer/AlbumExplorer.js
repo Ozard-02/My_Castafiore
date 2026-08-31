@@ -70,7 +70,7 @@ const AlbumExplorer = ({ layout = 'list', showHeader = true, title = null }) => 
 		>
 			<ExplorerItem
 				item={item}
-				title={item.name || item.album || item.title}
+				title={item.title || item.name}
 				subTitle={`${item.artist || 'Unknown Artist'} · ${item.year || ''}`}
 				onPress={() => navigation.navigate('Album', item)}
 				onLongPress={() => setIndexOptions(index)}
@@ -189,7 +189,7 @@ const styles = StyleSheet.create({
 	titleSelector: (theme) => ({
 		color: theme.primaryText,
 		fontSize: size.text.medium,
-		fontWeight: 'bold',
+		fontWeight: '600',
 		marginHorizontal: 20,
 		marginBottom: 10,
 	}),

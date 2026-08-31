@@ -32,7 +32,7 @@ const ItemPlaylist = ({ item }) => {
 	}, [item.id, settings.reversePlaylist])
 
 	return (
-		<View style={{ width: 350, flexDirection: 'column', alignItems: 'start', padding: 10, borderRadius: 5, backgroundColor: theme.secondaryBack }}>
+		<View style={{ width: 350, flexDirection: 'column', alignItems: 'start', padding: 10, borderRadius: size.radius.standard, backgroundColor: theme.secondaryBack }}>
 			<Pressable
 				style={(pressed) => ([mainStyles.opacity(pressed), { flexDirection: 'row', alignItems: 'center', width: '100%' }])}
 				onPress={() => navigation.navigate('Playlist', { playlist: item })}
@@ -46,7 +46,7 @@ const ItemPlaylist = ({ item }) => {
 						{item.name}
 					</Text>
 					<Text numberOfLines={1} style={{ color: theme.secondaryText, fontSize: size.text.medium, width: '100%' }}>
-						{(item.duration / 60) | 1} {t('min')} · {item.songCount} {t('songs')}
+						{Math.floor(item.duration / 60)} {t('min')} · {item.songCount} {t('songs')}
 					</Text>
 				</View>
 			</Pressable>
@@ -65,7 +65,7 @@ const ItemPlaylist = ({ item }) => {
 						>
 							<ImageError
 								source={{ uri: urlCover(config, item) }}
-								style={{ width: size.image.tiny, height: size.image.tiny, marginEnd: 10, borderRadius: 4 }}
+								style={{ width: size.image.tiny, height: size.image.tiny, marginEnd: 10, borderRadius: size.radius.standard }}
 							/>
 							<View style={{ flexDirection: 'column', flex: 1, marginEnd: 10 }}>
 								<Text numberOfLines={1} style={mainStyles.smallText(theme.primaryText)}>
@@ -75,7 +75,7 @@ const ItemPlaylist = ({ item }) => {
 									{item.artist}
 								</Text>
 							</View>
-							<FavoritedButton song={item} style={{ padding: 0 }} size={size.icon.tiny} />
+							<FavoritedButton id={item.id} isFavorited={!!item.starred} style={{ padding: 0 }} size={size.icon.tiny} />
 						</Pressable>
 					))
 				}

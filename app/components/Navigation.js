@@ -30,9 +30,11 @@ const Navigation = () => {
 					navigationBarColor: theme.primaryBack,
 					tabBarPosition: settings.isDesktop ? 'left' : 'bottom',
 					tabBarStyle: {
-						backgroundColor: theme.secondaryBack,
-						borderTopColor: theme.secondaryBack,
-						tabBarActiveTintColor: theme.primaryTouch,
+						backgroundColor: 'transparent',
+						borderTopColor: 'transparent',
+						elevation: 0,
+						shadowOpacity: 0,
+						height: 0,
 					}
 				}}
 			>

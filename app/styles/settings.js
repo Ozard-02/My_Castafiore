@@ -6,7 +6,7 @@ export default StyleSheet.create({
 		width: '100%',
 		fontSize: 12,
 		textTransform: 'uppercase',
-		fontWeight: 'bold',
+		fontWeight: '600',
 		color: theme.secondaryText,
 		marginBottom: 5,
 		marginStart: 10,
@@ -17,7 +17,7 @@ export default StyleSheet.create({
 		paddingVertical: 1,
 		paddingHorizontal: 17,
 		backgroundColor: theme.secondaryBack,
-		borderRadius: 10,
+		borderRadius: size.radius.card,
 		marginBottom: isDescription ? 5 : 20,
 	}),
 	description: theme => ({

@@ -51,7 +51,7 @@ const OptionItem = ({ option }) => {
 						style={{
 							width: 35,
 							height: 35,
-							borderRadius: option.borderRadius || 5,
+							borderRadius: option.borderRadius || size.radius.standard,
 						}}
 						source={{ uri: option.image }}
 					/>
@@ -164,7 +164,7 @@ const OptionsPopup = ({ ref, visible, close, options, item = null }) => {
 									width: 50,
 									height: 50,
 									marginRight: 10,
-									borderRadius: 5,
+									borderRadius: size.radius.standard,
 								}}
 								source={{ uri: urlCover(config, item, 100) }}
 							/>

@@ -53,7 +53,7 @@ const Tracks = () => {
 							textAlign: 'left',
 							padding: 8,
 							paddingStart: 42,
-							borderRadius: 10,
+							borderRadius: size.radius.standard,
 							backgroundColor: theme.secondaryBack,
 							outline: 'none',
 						}}

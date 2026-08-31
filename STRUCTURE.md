@@ -362,6 +362,7 @@ Playback state enum: `Playing`, `Paused`, `Stopped`, `Loading`, `Error`, `None`.
 | metro.config.js | Metro bundler config. |
 | eslint.config.mjs | ESLint config. |
 | workbox-config.js | Workbox config for web PWA service worker. |
+| UI.md | Style comparison vs BitChord + ranked UI/UX improvement guide (no code). |
 | docker-compose.yml | Docker compose for development. |
 | Dockerfile | Docker build for the app. |
 | eas.json | EAS build profiles. |

@@ -25,7 +25,7 @@ const Cached = ({ song }) => {
 
 	React.useEffect(() => {
 		if (!settings.showCache) return
-		isSongCached(config, song.id, settings.streamFormat, settings.maxBitrate)
+		isSongCached(config, song.id, settings.streamFormat, settings.maxBitRate)
 			.then((res) => {
 				setIsCached(res)
 			})
@@ -85,7 +85,7 @@ const SongItem = ({ song, queue, index, isIndex = false, isPlaying = false, setI
 				return setIndexOptions(index)
 			}}
 		>
-			<View style={[mainStyles.coverSmall(theme), { overflow: 'hidden', marginRight: 10 }]}>
+			<View style={[mainStyles.coverSmall(theme), { overflow: 'hidden', marginRight: 10, borderWidth: 0.5, borderColor: 'rgba(255,255,255,0.10)' }]}>
 				{isPlaying && (
 					<View style={{
 						position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1,
@@ -133,7 +133,7 @@ const styles = StyleSheet.create({
 		alignItems: 'center',
 		height: size.image.small,
 		marginBottom: 10,
-		borderRadius: 4,
+		borderRadius: size.radius.standard,
 	},
 })
 

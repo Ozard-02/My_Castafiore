@@ -37,7 +37,8 @@ const styles = StyleSheet.create({
 	title: theme => ({
 		color: theme.primaryText,
 		fontSize: size.text.large,
-		fontWeight: 'bold',
+		fontWeight: '700',
+		letterSpacing: -0.3,
 		flex: 1,
 		textAlign: 'center',
 	}),

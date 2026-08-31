@@ -114,7 +114,7 @@ const styles = StyleSheet.create({
 	title: {
 		color: '#F9F2F3',
 		fontSize: 50,
-		fontWeight: 'bold',
+		fontWeight: '700',
 		textAlign: 'center',
 	},
 	cover: {

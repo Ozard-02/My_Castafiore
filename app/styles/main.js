@@ -8,7 +8,7 @@ export default StyleSheet.create({
 	}),
 	contentMainContainer: (insets, statusBar = true) => ({
 		paddingTop: statusBar ? insets.top : 0,
-		paddingBottom: 80,
+		paddingBottom: 120,
 		paddingStart: insets.left,
 		paddingEnd: insets.right,
 	}),
@@ -44,8 +44,7 @@ export default StyleSheet.create({
 	coverSmall: theme => ({
 		height: size.image.small,
 		width: size.image.small,
-		// marginStart: 10,
-		borderRadius: 4,
+		borderRadius: size.radius.standard,
 		backgroundColor: theme.secondaryBack,
 	}),
 	icon: {
@@ -72,4 +71,12 @@ export default StyleSheet.create({
 		fontSize: size.text.large,
 		textAlign: 'left',
 	}),
+	hairline: {
+		borderWidth: 0.5,
+		borderColor: 'rgba(255,255,255,0.10)',
+	},
+	hairlineLight: {
+		borderWidth: 0.5,
+		borderColor: 'rgba(0,0,0,0.15)',
+	},
 })

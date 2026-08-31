@@ -9,7 +9,8 @@ export default StyleSheet.create({
 	title: theme => ({
 		color: theme.primaryText,
 		fontSize: size.title.medium,
-		fontWeight: 'bold',
+		fontWeight: '700',
+		letterSpacing: -0.5,
 		margin: 20,
 		marginBottom: 0,
 		marginTop: 13,

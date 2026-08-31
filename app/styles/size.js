@@ -15,7 +15,20 @@ export default {
 		medium: 16,
 		large: 20,
 	},
+	type: {
+		display: { fontWeight: '800', fontSize: 34, letterSpacing: -0.8 },
+		headline: { fontWeight: '800', fontSize: 30, letterSpacing: -0.7 },
+		title: { fontWeight: '700', fontSize: 25, letterSpacing: -0.5 },
+		titleSmall: { fontWeight: '700', fontSize: 20, letterSpacing: -0.3 },
+		subtitle: { fontWeight: '600', fontSize: 16, letterSpacing: -0.2 },
+		body: { fontWeight: '400', fontSize: 16, letterSpacing: -0.2 },
+		bodySmall: { fontWeight: '400', fontSize: 14, letterSpacing: -0.1 },
+		label: { fontWeight: '600', fontSize: 12, letterSpacing: 0 },
+	},
 	radius: {
+		standard: 8,
+		card: 16,
+		sheet: 20,
 		circle: 999,
 	},
 	icon: {

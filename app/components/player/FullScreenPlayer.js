@@ -256,7 +256,7 @@ const FullScreenPlayer = ({ setFullScreen }) => {
 									setFullScreen(false)
 								}}
 							>
-								<Text numberOfLines={1} style={{ color: theme.primaryText, fontSize: size.title.small, textAlign: 'left', fontWeight: 'bold' }}>{song.songInfo.title}</Text>
+								<Text numberOfLines={1} style={{ color: theme.primaryText, fontSize: size.title.small, textAlign: 'left', fontWeight: '700', letterSpacing: -0.5 }}>{song.songInfo.title}</Text>
 							</Pressable>
 							<Pressable
 								style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}

@@ -52,7 +52,7 @@ const SearchResult = ({ state, query, results, history, setHistory, setQuery, ad
 					<Text numberOfLines={1} style={{
 						color: theme.primaryText,
 						fontSize: size.text.large,
-						fontWeight: 'bold',
+						fontWeight: '600',
 					}}>{t('Artists')}</Text>
 				</Pressable>
 				<Pressable
@@ -63,7 +63,7 @@ const SearchResult = ({ state, query, results, history, setHistory, setQuery, ad
 					<Text numberOfLines={1} style={{
 						color: theme.primaryText,
 						fontSize: size.text.large,
-						fontWeight: 'bold',
+						fontWeight: '600',
 					}}>{t('Albums')}</Text>
 				</Pressable>
 				<Pressable
@@ -74,7 +74,7 @@ const SearchResult = ({ state, query, results, history, setHistory, setQuery, ad
 					<Text numberOfLines={1} style={{
 						color: theme.primaryText,
 						fontSize: size.text.large,
-						fontWeight: 'bold',
+						fontWeight: '600',
 					}}>{t('Songs')}</Text>
 				</Pressable>
 			</View>

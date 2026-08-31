@@ -407,7 +407,7 @@ const styles = StyleSheet.create({
 	title: {
 		color: color.primary,
 		fontSize: size.title.medium,
-		fontWeight: 'bold',
+		fontWeight: '700', letterSpacing: -0.5,
 		textAlign: 'left',
 		marginHorizontal: 20,
 	},

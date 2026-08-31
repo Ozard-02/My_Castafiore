@@ -536,3 +536,137 @@
   Any per-server util keyed on folderCache from a useConfig() config object silently no-ops.
 - Files: `app/utils/playerCore.js` (nextSong branch), `app/utils/exclusions.js` (url keying).
   Plan: `plans/radio-loop-exclusions.md`. eslint clean. Build+install pending device verify.
+
+## 2026-08-28 — Codebase hygiene (audit leftovers)
+- Audited the `.log` audit list: `usePagedList` (~350) is GONE (removed by the LegendList
+  refactor) — Explorers are self-contained, not worth re-extracting (YAGNI). Options
+  factories (~250) are tiny presentational repeats; abstraction is net-negative. Both skipped.
+- SHIPPED: the SideBar/BottomBar duplication was real — identical color/focus memos + tabPress
+  emit + disabled logic in both bars, and SideBar called hooks inside `.map()` (anti-pattern).
+  New `app/utils/useTabItem.js` hook returns options/isFocused/color/onPress/onLongPress/disabled;
+  BottomBar TabItem + new SideBarItem (extracted from the map body) consume it.
+  GOTCHA: extracting tabPress emit into a shared hook must also take `navigation` (emit + navigate).
+- Dead code: dropped commented `albumArtists` block in OptionsSongsList.js; unused
+  `titleSelector` style in SongExplorer.js.
+- eslint clean, net ~50 lines removed. Plan: `plans/codebase-hygiene.md`. Build pending.
+- Deferred: the 9 "needs on-device verify" TODO items (manual device pass, not code).
+
+## 2026-08-29 — FIX: Favorited show-all labels songs by album (not title)
+- Report: "favourite section in the home tab: songs indicated by album not name".
+- Root cause: label fallback `item.name || item.album || item.title` — songs have
+  `title`+`album` but no `name`, so the expression hit `album` and never reached `title`.
+  Hit the ShowAll.native grid (tap "Favorited" header; section isShowAll). Home horizontal
+  row (HorizontalSongs) was already correct (bare `item.title`).
+- Fix: reorder to `item.title || item.name` in all 5 identical spots: AllItem, HorizontalAlbums,
+  AlbumExplorer, ShowAll.native, ArtistAlbums. `album` middle-arm removed.
+- Verified against demo.navidrome.org getStarred2 payload (songs always carry title).
+- eslint clean, built, installed phone + tablet.
+
+## 2026-08-29 — Bug-fix pass: codebase audit (Tier 1 + Tier 2 + hearts)
+- Shipped the confirmed findings from the audit report; eslint clean; built; installed phone.
+  Tablet install pending (device R52Y80837NY offline; a Z Flip was connected instead).
+- Tier 1:
+  - playerCore.js: empty queue (`[]` is truthy) crashed next/prev on `% 0 = NaN` when
+    repeatQueue on -> both now gated on `song.queue?.length`. Radio now tops up instead of
+    stopping: retries getRandomSongs size=200 after a 50-empty response and falls through to
+    the wrap/stop branch when nothing new is found, instead of returning early.
+  - playerCore.js + exclusions.js: refreshExcludedSongIds() per radio top-up, so Genre/Artist
+    radio honors newly-excluded songs (memory cache otherwise stale there).
+  - api.js: cache-write race — a slow getCachedAndApi fetch could overwrite fresh getStarred2
+    cache written by a star toggle. New module-level cacheVersions map: refreshApi bumps the
+    version after a successful write; in-flight fetch skips its write when the version moved.
+    Also wrapped setJsonCache in try/catch and added `.catch(() => resolve(json))` to both
+    getApiCacheFirst setJsonCache callbacks (unhandled rejections when the cache write fails).
+  - provider.js: `covertArt` -> `coverArt` (converted/saved queue songs dropped cover art on
+    LMS-class servers; masked on Navidrome by the albumId fallback).
+  - FavoritedButton.js: setUpdateApi({...}) moved into `.finally()`, so subscribers still get
+    told when the getStarred2 refresh fails (was: silent stale screens forever).
+  - HorizontalPlaylists.js: `<FavoritedButton song={item}>` -> `id={item.id} isFavorited={!!item.starred}`
+    (was a dead heart + API calls with undefined id). `(item.duration/60)|1` -> Math.floor.
+  - Pres/Playlist.js: `| 1` -> Math.floor (bitwise OR rounded ~50% of values up a minute).
+  - network.web.js: added `requestLocationPermission` (async no-op) — AddServer's "Use current
+    network" crashed on web with a missing export.
+  - ShowAll.native.js: effect deps aligned to web's `[section.path, section.query]`.
+  - SongItem + OptionsSongsList: `settings.maxBitrate` -> `settings.maxBitRate` (lowercase
+    typo; key mismatch broke cached-download key math for non-raw formats).
+- Tier 2:
+  - OptionsMultiArtists.js: findIndex result `-1` is truthy -> `.filter` never excluded
+    anything; now `!== -1`.
+  - OptionsFavorited.js: download-collection key `config.favorite` (never stored) -> `config.url`.
+  - updateApi.js: isUpdatable compared object queries by reference -> JSON.stringify comparison
+    (getAlbum/getTopSongs/getPlaylist/genre lists never invalidated cross-instance).
+  - OptionsSongsList.js: single render guard `indexOptions < 0 || !songs[indexOptions]` killing
+    every unguarded `songs[indexOptions].id` crash path.
+  - ArtistExplorer.js: `item.name[0].toUpperCase()` -> `item.name?.[0]?.toUpperCase() || ''`.
+  - Settings/Downloads.js + Settings/Home.js: parseInt can yield NaN; NaN persisted to async
+    storage. Added Number.isNaN guards.
+  - ImageError.js: dropped the `React.memo(Image, uri-only)` — style changes (e.g. dark mode)
+    never re-rendered the image, so covers kept stale tint/radius until remount.
+- Hearts (Tier 3 pick): new `app/utils/starred.js` `useStarredIds()` -> Set of favorited song
+  ids, reactive via getStarred2 cache + updateApi. BoxPlayer's heart used the stale
+  `song.songInfo.starred` snapshot; now reads the live Set. ShowAll.native song grids merge
+  `starredIds.has(item.id)` for hearts that survive star toggles.
+- Deferred / skipped (logged, not forgotten):
+  - FavoritedButton star/unstar still sends `{albumId:id, artistId:id}` for every entity type —
+    kept as-is, too risky to spread ids that might break the working album/artist flow.
+  - FullScreenPlayer/FullScreenHorizontalPlayer/BoxDesktopPlayer compute hearts inline with
+    `stars.some()`; work correctly today — left as-is, can adopt useStarredIds later.
+  - settings.js snapshot writes (lost-update) and downloadManager native (leaks/pause-race)
+    deferred: need careful design + device testing.
+  - Playlists.js JSX sort effect: deps `[settings.orderPlaylist]` verified correct (closure is
+    current on re-run) — no change.
+  - useKeyboardIsOpen: Android/web only; no iOS variant exists upstream either — skip.
+- On-device: radio-loop/exclusions verify (ddd4c6c) still outstanding from the user.
+
+## 2026-08-29 — FIX: UI lags actual playback after screen-off resume
+- Report: "when the screen turns off, song alternates; when I turn it on again it's
+  misaligned with the actual state and I have to catch the actual one."
+- Root cause: AUTO-ADVANCE ONLY RUNS IN THE HEADLESS SERVICE (servicePlayback.js) and
+  dispatches via fakeSongDispatch = (action) => songReducer(global.song, action) — mutates
+  global.song, NEVER React state. Lock-screen notification skips (RemoteNext/Previous) do
+  the same. React's only catch-up was useEvent's PlaybackActiveTrackChanged drift-compare
+  (playerLocal.native.js), which is unreliable while backgrounded (throttled/dozed JS), so
+  the UI stayed pinned on the old index/song until a manual next/prev forced a setIndex.
+- Fix: new LocalPlayer.reconcileState(songDispatch) — reads TrackPlayer.getActiveTrack()
+  (native truth); if active.id matches global.song.songInfo.id -> dispatch 'syncGlobal'
+  (heals queue/index/songInfo/upNext); else map active.id into global.song.queue -> setIndex.
+  Exported via player.native (optional-call `?.` = no-op for cast/upnp/web). SongProvider
+  gained an AppState listener: on 'active', when song.isInit, Player.reconcileState?.(dispatch).
+- Decision: notification skip buttons keep fakeSongDispatch for now (per user); reconcile
+  heals React on resume. Upgrade path if lock-screen liveness ever matters: use
+  global.songDispatch (real React dispatch, set in initPlayer) in the service when app alive.
+- Verify pending: eslint clean; build+install (connected device only). Manual test: play a
+  queue, screen off, let a few tracks advance, unlock -> title/artwork/queue highlight must
+  already match audio. Plan: plans/background-reconcile.md.
+
+## 2026-08-30 — Docs: UI.md (style comparison vs BitChord)
+- Created UI.md: style-only comparison of Castafiore vs BitChord (github.com/kushagrasinghx/BitChord),
+  plus a ranked improvement guide (quick wins → big). No code changed.
+- Compared: typography, color/theming, surfaces/depth, corners, bars/nav, players, detail pages,
+  motion/haptics, icons. Both codebases read end-to-end for file:line refs.
+- Biggest gaps found: no type scale/letter-spacing, no shadows/blur/gradients/haptics,
+  ad-hoc corner radii, sharp-edged page headers, flat full-screen player, opacity-only presses.
+- Quickest wins: type scale + negative tracking, bundled font token, radius + 0.5dp hairline sweep.
+- STRUCTURE.md: added UI.md row to the config/root-files table.
+
+## 2026-08-30 — FIX: background auto-advance reverts index (same song restarts)
+- Report: screen off + natural song end -> same song restarts; next must be pressed 2-3x to
+  finally advance. No loop enabled.
+- Evidence: instrumented the service + playerCore with logger (Playback events, setIndex,
+  nextSong, loadSong). logcat revealed: after a natural end, nextSong setIndex 20 + loadSong 20
+  succeeded, then `global.song.index` REVERTED to 19; next presses recomputed setIndex 20 and
+  RELOADED track 20 (same song restarts) until a 3rd press finally moved.
+- Root cause: songReducer's newSong sets `global.song = { ...state, ...action }` USING REACT'S
+  STATE SNAPSHOT. Background advances run through the headless service's fakeSongDispatch and
+  mutate global.song but never React's snapshot. The next ordinary React dispatch (useEvent's
+  PlaybackState -> setState) then merged the STALE snapshot, reverting global.song's already-
+  advanced index/songInfo. Any skip during that window reloaded the current track.
+- Fix (2 lines + comment):
+  1) songReducer: `state = global.song ?? state` at the top — every transition computes from the
+     canonical global.song, never the stale snapshot. React's snapshot lags global.song only, so
+     global.song is always the correct base. This kills the revert for good.
+  2) servicePlayback: new getSongDispatch() = global.songDispatch || fakeSongDispatch — when the
+     app is alive, background advances dispatch to the REAL React reducer, so UI (and global.song)
+     move together; fake dispatch stays as cold-headless fallback.
+- Instrumentation kept (Settings -> Logs / logcat) pending user's on-device verdict.
+- Installed: connected phone only (tablet R52Y80837NY offline).

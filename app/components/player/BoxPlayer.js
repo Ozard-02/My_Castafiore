@@ -13,6 +13,7 @@ import ImageError from '~/components/ImageError'
 import FavoritedButton from '~/components/button/FavoritedButton'
 import size from '~/styles/size'
 import useKeyboardIsOpen from '~/utils/useKeyboardIsOpen'
+import { useStarredIds } from '~/utils/starred'
 
 const BoxPlayer = ({ setFullScreen }) => {
 	const song = useSong()
@@ -20,6 +21,7 @@ const BoxPlayer = ({ setFullScreen }) => {
 	const config = useConfig()
 	const insets = useSafeAreaInsets()
 	const theme = useTheme()
+	const starredIds = useStarredIds()
 	const isKeyboardOpen = useKeyboardIsOpen()
 	const { width } = useWindowDimensions()
 	// keep in sync with BottomBar's compact threshold: shorter bar -> smaller offset
@@ -97,12 +99,12 @@ const BoxPlayer = ({ setFullScreen }) => {
 	})).current
 
 	return (
-		<Animated.View
+			<Animated.View
 			style={{
 				position: 'absolute',
-				bottom: (insets.bottom ? insets.bottom : 10) + (compactBar ? 45 : 59),
-				left: insets.left,
-				right: insets.right,
+				bottom: (insets.bottom || 10) + (compactBar ? 54 : 66),
+				left: insets.left + 12,
+				right: insets.right + 12,
 
 				transform: [{ translateY }],
 				display: isDismissed || isKeyboardOpen ? 'none' : undefined,
@@ -119,6 +121,8 @@ const BoxPlayer = ({ setFullScreen }) => {
 					padding: 10,
 					margin: 10,
 					borderRadius: 10,
+					borderWidth: 0.5,
+					borderColor: 'rgba(255,255,255,0.10)',
 				}}>
 				<Animated.View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', overflow: 'hidden', transform: [{ translateX }] }}>
 					<ImageError
@@ -130,14 +134,14 @@ const BoxPlayer = ({ setFullScreen }) => {
 						</View>
 					</ImageError>
 					<View style={{ flex: 1 }}>
-						<Text style={{ color: theme.playerPrimaryText, textAlign: 'left', flex: 1, fontWeight: 'bold' }} numberOfLines={1}>{song?.songInfo?.track ? `${song?.songInfo?.track}. ` : null}{song?.songInfo?.title ? song.songInfo.title : 'Song title'}</Text>
+						<Text style={{ color: theme.playerPrimaryText, textAlign: 'left', flex: 1, fontWeight: '700', letterSpacing: -0.3 }} numberOfLines={1}>{song?.songInfo?.track ? `${song?.songInfo?.track}. ` : null}{song?.songInfo?.title ? song.songInfo.title : 'Song title'}</Text>
 						<Text style={{ color: theme.playerSecondaryText, textAlign: 'left', flex: 1 }} numberOfLines={1}>{song?.songInfo?.artist ? song.songInfo.artist : 'Artist'}</Text>
 					</View>
 				</Animated.View>
 				{song?.songInfo?.id && (
 					<FavoritedButton
 						id={song.songInfo.id}
-						isFavorited={!!song.songInfo.starred}
+						isFavorited={starredIds.has(song.songInfo.id)}
 						rating={song.songInfo?.userRating ?? song.songInfo?.rating ?? 0}
 						size={size.icon.small}
 						style={{ paddingVertical: 5, paddingHorizontal: 6 }}
@@ -158,7 +162,7 @@ const styles = StyleSheet.create({
 		height: size.image.player,
 		width: size.image.player,
 		marginRight: 10,
-		borderRadius: 4,
+		borderRadius: size.radius.standard,
 		alignItems: 'center',
 		justifyContent: 'center',
 	},

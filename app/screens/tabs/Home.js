@@ -134,8 +134,8 @@ const styles = StyleSheet.create({
 	textRandom: theme => ({
 		fontSize: 18,
 		color: theme.innerTouch,
-		fontWeight: 'bold',
-	}),
+		fontWeight: '700',
+	})
 })
 
 export default Home

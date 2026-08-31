@@ -51,7 +51,7 @@ const styles = StyleSheet.create({
 	genreText: {
 		color: 'white',
 		fontSize: size.text.large,
-		fontWeight: 'bold',
+		fontWeight: '600',
 		position: 'absolute',
 		bottom: 10,
 		left: 10,

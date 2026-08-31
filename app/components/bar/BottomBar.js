@@ -6,41 +6,14 @@ import Icon from 'react-native-vector-icons/FontAwesome'
 
 import { useConfig } from '~/contexts/config'
 import { useTheme } from '~/contexts/theme'
+import { useTabItem } from '~/utils/useTabItem'
 import mainStyles from '~/styles/main'
 import size from '~/styles/size'
 import useKeyboardIsOpen from '~/utils/useKeyboardIsOpen'
 
 const TabItem = ({ route, index, state, descriptors, navigation, compact }) => {
 	const { t } = useTranslation()
-	const config = useConfig()
-	const theme = useTheme()
-
-	const options = React.useMemo(() => descriptors[route.key].options, [])
-	const isFocused = React.useMemo(() => state.index === index, [state.index, index])
-	const color = React.useMemo(() => {
-		if (isFocused) return theme.primaryTouch
-		if (!config.query && route.name !== 'Settings') return theme.secondaryText
-		return theme.primaryText
-	}, [isFocused, config.query, route.name, theme])
-
-	const onPress = () => {
-		const event = navigation.emit({
-			type: 'tabPress',
-			target: route.key,
-			canPreventDefault: true,
-		})
-
-		if (!isFocused && !event.defaultPrevented) {
-			navigation.navigate(route.name, route.params)
-		}
-	}
-
-	const onLongPress = () => {
-		navigation.emit({
-			type: 'tabLongPress',
-			target: route.key,
-		})
-	}
+	const { options, color, onPress, onLongPress, disabled } = useTabItem(route, index, state, descriptors, navigation)
 
 	return (
 		<Pressable
@@ -52,7 +25,7 @@ const TabItem = ({ route, index, state, descriptors, navigation, compact }) => {
 				paddingBottom: compact ? 2 : 3,
 				paddingTop: compact ? 6 : 11,
 			}])}
-			disabled={(!config.query && route.name !== 'Settings')}
+			disabled={disabled}
 		>
 			<Icon name={options.icon} size={compact ? 17 : size.icon.tiny} color={color} style={{ alignSelf: 'center', marginBottom: 2, height: compact ? 20 : 24 }} />
 			<Text numberOfLines={1} style={{ color: color, textAlign: 'center', height: compact ? 15 : 19, fontSize: compact ? 11 : 14 }}>
@@ -74,12 +47,21 @@ const BottomBar = ({ state, descriptors, navigation }) => {
 	if (!config.url) return null
 	return (
 		<View style={{
+			position: 'absolute',
+			bottom: insets.bottom + 6,
+			left: 12 + insets.left,
+			right: 12 + insets.right,
 			flexDirection: 'row',
-			backgroundColor: theme.secondaryBack,
-			paddingLeft: insets.left,
-			paddingRight: insets.right,
-			paddingBottom: insets.bottom ? insets.bottom : 10,
+			backgroundColor: theme.secondaryBack + 'E0',
+			paddingHorizontal: 10,
+			paddingTop: compact ? 6 : 10,
+			paddingBottom: compact ? 2 : 4,
+			borderRadius: size.radius.circle,
+			borderWidth: 0.5,
+			borderColor: 'rgba(255,255,255,0.10)',
 			display: keyboardIsOpen ? 'none' : undefined,
+			alignSelf: 'center',
+			maxWidth: 440,
 		}}
 		>
 			{state.routes.map((route, index) => (

@@ -23,7 +23,7 @@ const AllItem = ({ item, type, onPress, onLongPress = () => { } }) => {
 				source={{ uri: urlCover(config, item) }}
 				iconError={['artist', 'artist_all'].includes(type) ? 'user' : 'music'}
 			/>
-			<Text numberOfLines={1} style={styles.title(theme, type)}>{item.name || item.album || item.title}</Text>
+			<Text numberOfLines={1} style={styles.title(theme, type)}>{item.title || item.name}</Text>
 			<Text numberOfLines={1} style={styles.subTitle(theme)}>{item.artist}</Text>
 		</Pressable>
 	)
@@ -39,7 +39,7 @@ const styles = StyleSheet.create({
 		width: "100%",
 		aspectRatio: 1,
 		marginBottom: 6,
-		borderRadius: ['artist', 'artist_all'].includes(type) ? size.radius.circle : 0,
+		borderRadius: ['artist', 'artist_all'].includes(type) ? size.radius.circle : size.radius.standard,
 	}),
 	title: (theme, type) => ({
 		textAlign: ['artist', 'artist_all'].includes(type) ? 'center' : 'left',

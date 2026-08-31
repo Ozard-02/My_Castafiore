@@ -35,7 +35,7 @@ const HorizontalAlbums = ({ albums, year = false, onPress = () => { } }) => {
 				style={[styles.albumCover, { backgroundColor: theme.secondaryBack }]}
 				source={{ uri: urlCover(config, item) }}
 			/>
-			<Text numberOfLines={1} style={styles.titleAlbum(theme)}>{item.name || item.album || item.title}</Text>
+			<Text numberOfLines={1} style={styles.titleAlbum(theme)}>{item.title || item.name}</Text>
 			<Text numberOfLines={1} style={styles.artist(theme)}>{year ? item.year : (item.artist || '-')}</Text>
 		</Pressable>
 	), [theme, config, onPress])
@@ -66,6 +66,9 @@ const styles = StyleSheet.create({
 		width: size.image.large,
 		height: size.image.large,
 		marginBottom: 6,
+		borderRadius: size.radius.standard,
+		borderWidth: 0.5,
+		borderColor: 'rgba(255,255,255,0.10)',
 	},
 	titleAlbum: (theme) => ({
 		color: theme.primaryText,
