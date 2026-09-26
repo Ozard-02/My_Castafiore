@@ -13,12 +13,13 @@ const initService = async () => {
 	TrackPlayer.registerPlaybackService(() => require('~/services/servicePlayback'))
 }
 
+// RNTP State -> MyState. State.Loading/Connecting were missing: they fell through to the
+// catch-all and reported Stopped, so the play button showed no spinner during a load.
 const convertState = (state) => {
 	if (state === State.Playing) return MyState.Playing
-	else if (state === State.Paused) return MyState.Paused
-	else if (state === State.Stopped || state === State.None) return MyState.Stopped
-	else if (state === State.Buffering) return MyState.Loading
-	else if (state === State.Ready) return MyState.Paused
+	else if (state === State.Paused || state === State.Ready) return MyState.Paused
+	else if (state === State.Stopped || state === State.None || state === State.Ended) return MyState.Stopped
+	else if (state === State.Buffering || state === State.Loading || state === State.Connecting) return MyState.Loading
 	else if (state === State.Error) return MyState.Error
 	else return MyState.Stopped
 }
@@ -27,16 +28,34 @@ const initPlayer = async (songDispatch) => {
 	global.songDispatch = songDispatch
 	const song = await AsyncStorage.getItem('song')
 		.then((song) => song ? JSON.parse(song) : null)
+	let isSetup = false
 	try {
 		await TrackPlayer.setupPlayer()
+		isSetup = true
 	} catch (error) {
-		if (error?.code === 'android_cannot_setup_player_in_background') return
+		// 'player_already_initialized' is benign (the headless service set us up already),
+		// so the rest of the setup still applies.
+		if (error?.code === 'player_already_initialized') isSetup = true
+		else {
+			// 'android_cannot_setup_player_in_background' means the OS started us headless
+			// before any Activity existed. Return WITHOUT dispatching 'init' so SongProvider
+			// keeps retrying on the next foreground — dispatching left song.isInit false
+			// forever: no player options, no resume reconcile, no retry.
+			logger.error('initPlayer', 'setupPlayer failed:', error?.code || error?.message)
+		}
 	}
+	if (!isSetup) return
 	songDispatch({ type: 'init' })
 	await TrackPlayer.updateOptions({
 		android: {
+			// user decision: closing the app (swipe out of recents) stops playback and drops
+			// the notification. Background playback while the app is merely backgrounded is
+			// unaffected.
 			appKilledPlaybackBehavior: AppKilledPlaybackBehavior.StopPlaybackAndRemoveNotification,
-			alwaysPauseOnInterruption: true,
+			// no alwaysPauseOnInterruption here: it made the RemoteDuck handler in
+			// servicePlayback dead code (the OS had already paused, so its
+			// `state === State.Playing` check never held) and any notification or other
+			// app's audio left playback paused forever with no auto-resume.
 		},
 		capabilities: [
 			Capability.Play,
@@ -52,7 +71,10 @@ const initPlayer = async (songDispatch) => {
 			Capability.SkipToPrevious,
 			Capability.SeekTo
 		],
-		progressUpdateEventInterval: -1,
+		// -1 disabled PlaybackProgressUpdated, which is what drives the progress bar and
+		// scrubber on the Android notification — it stayed frozen at 0. useProgress polls
+		// getProgress() itself, so the in-app bar never needed this.
+		progressUpdateEventInterval: 1,
 		icon: require('~/../assets/icon.png')
 	})
 	// Set the player to the current song
@@ -160,7 +182,16 @@ const reconcileState = async (songDispatch) => {
 			return
 		}
 		const index = global.song.queue.findIndex(track => track.id === active.id)
-		if (index !== -1) songDispatch({ type: 'setIndex', index })
+		if (index !== -1) {
+			songDispatch({ type: 'setIndex', index })
+			return
+		}
+		// The active track is not in the queue — an "Up next" track playing after the queue
+		// slot was left behind, or a stale index. Previously this fell through and returned
+		// without dispatching, so after a resume the UI kept showing the previous song's
+		// title/cover. Trust the native player and heal the pointer instead.
+		logger.info('reconcileState', `active track ${active.id} not in queue -> syncGlobal`)
+		songDispatch({ type: 'syncGlobal', song: { ...global.song, songInfo: active } })
 	} catch {
 		// player not set up yet — nothing to reconcile against
 	}

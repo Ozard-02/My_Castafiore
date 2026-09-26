@@ -139,7 +139,6 @@ const SearchResult = ({ state, query, results, history, setHistory, setQuery, ad
 						/>
 						<SongsList songs={results.song} onPress={(item) => {
 							addHistory({ ...item, mediaType: 'song' })
-							return true
 						}} />
 					</>
 				}

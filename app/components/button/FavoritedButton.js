@@ -26,7 +26,11 @@ const FavoritedButton = ({ id, isFavorited = false, rating: initialRating = unde
 	const onPressFavorited = () => {
 		getApi(config, favorited ? 'unstar' : 'star', { id, albumId: id, artistId: id })
 			.then(() => {
-				setFavorited(!favorited)
+				const starred = !favorited
+				setFavorited(starred)
+				// keep the persisted queue/up-next copy in step: SongItem reads
+				// track.starred, and only the player views override it with a live set
+				songDispatch({ type: 'setRating', id, rating: initialRating ?? 0, starred })
 				// fire-and-forget: publish even if the refresh fails, so subscribers at
 				// least re-read the (possibly stale) cache instead of never being told
 				refreshApi(config, 'getStarred2', null)

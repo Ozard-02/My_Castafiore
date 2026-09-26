@@ -42,7 +42,7 @@ const CoverItem = ({ isPreview, song, setFullScreen, stars }) => {
 	const [indexOptions, setIndexOptions] = React.useState(-1)
 	const [upNextOptions, setUpNextOptions] = React.useState(-1)
 	const { width, height } = useWindowDimensions()
-	const { scroll, upNextScroll, queueOffset, queueViewport, upNextOffset, upNextViewport, queueBoxY, queueBoxH, upNextBoxY, upNextBoxH, rowHeight, isCurrentInQueue, queueItems, queueRealIndex, lists, handleMove } = useQueueDnD(song, songDispatch, { scrollAnimated: true })
+	const { scroll, upNextScroll, queueOffset, queueViewport, upNextOffset, upNextViewport, queueBoxY, queueBoxH, upNextBoxY, upNextBoxH, rowHeight, isCurrentInQueue, queueItems, queueKeys, upNextKeys, queueRealIndex, lists, handleMove } = useQueueDnD(song, songDispatch, { scrollAnimated: true })
 
 	const albumImage = React.useMemo(() => {
 		const size = Math.min(width - 50, 450, Math.max(110, height - 420))
@@ -78,7 +78,8 @@ const CoverItem = ({ isPreview, song, setFullScreen, stars }) => {
 								queue={song.queue}
 								index={song.index}
 								setIndexOptions={() => { }}
-								onPress={() => false}
+								onPress={() => { }}
+								playsOnPress={false}
 								isPlaying
 							/>
 						</View>
@@ -90,7 +91,7 @@ const CoverItem = ({ isPreview, song, setFullScreen, stars }) => {
 								<FlatList
 									ref={upNextScroll}
 									data={song.upNext}
-									keyExtractor={(item, index) => 'up' + item.id + index}
+									keyExtractor={(_, index) => upNextKeys[index] ?? index}
 									showsVerticalScrollIndicator={false}
 									getItemLayout={(_, index) => ({ length: rowHeight, offset: rowHeight * index, index })}
 									onScroll={(e) => { upNextOffset.current = e.nativeEvent.contentOffset.y }}
@@ -103,7 +104,8 @@ const CoverItem = ({ isPreview, song, setFullScreen, stars }) => {
 												queue={song.upNext}
 												index={index}
 												setIndexOptions={setUpNextOptions}
-												onPress={() => false}
+												onPress={() => { }}
+											playsOnPress={false}
 												isPlaying={false}
 											/>
 										</QueueDragRow>
@@ -119,7 +121,7 @@ const CoverItem = ({ isPreview, song, setFullScreen, stars }) => {
 							style={{ flex: 1 }}
 							contentContainerStyle={{ width: '100%' }}
 							data={queueItems}
-							keyExtractor={(_, index) => index}
+							keyExtractor={(_, index) => queueKeys[index] ?? index}
 							showsVerticalScrollIndicator={false}
 							onLayout={(e) => { queueViewport.current = e.nativeEvent.layout.height; if (isCurrentInQueue && queueItems.length > 0) scroll.current?.scrollToIndex({ index: 0, animated: false, viewOffset: 0, viewPosition: 0 }) }}
 							getItemLayout={(_, index) => ({ length: rowHeight, offset: rowHeight * index, index })}
@@ -136,8 +138,10 @@ const CoverItem = ({ isPreview, song, setFullScreen, stars }) => {
 											index={realIndex}
 											setIndexOptions={setIndexOptions}
 											onPress={(_track, queue, index) => {
-												Player.setIndex(config, songDispatch, queue, index)
+												// explicit user jump: drop up next + radio, like starting a new queue
+												Player.setIndex(config, songDispatch, queue, index, { clearUpNext: true, clearRadio: true }).catch(() => { })
 											}}
+											playsOnPress={false}
 											isPlaying={false}
 										/>
 									</QueueDragRow>
@@ -164,6 +168,8 @@ const TimeBar = () => {
 	const time = Player.updateTime()
 
 	React.useEffect(() => {
+		// deps had to include the track: two songs with the same native duration (or a radio
+		// station) kept the previous track's total, so the bar and the ∞:∞ label disagreed
 		if (song.songInfo?.isLiveStream) {
 			setDuration(Infinity)
 		} else if ((time.duration === 0 || time.duration === Infinity) && song.songInfo?.duration) {
@@ -171,7 +177,7 @@ const TimeBar = () => {
 		} else {
 			setDuration(time.duration)
 		}
-	}, [time.duration])
+	}, [time.duration, song.songInfo?.id, song.songInfo?.isLiveStream, song.songInfo?.duration])
 
 	return (
 		<>

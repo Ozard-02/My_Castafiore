@@ -26,8 +26,8 @@ ConfigProvider -> SongProvider -> SettingsProvider -> ThemeProvider -> UpdateApi
 ```
 
 - **ConfigProvider**: Loads server connection config from AsyncStorage into `global.config`.
-- **SongProvider**: Music playback state via a reducer (`songReducer`). Holds main queue (`queue`), a separate "up next" list (`upNext`), current index, playback state, action-on-end-of-song mode, and `radioMode` (endless-shuffle flag set by random/shuffle buttons, cleared by any normal playback).
-- **SettingsProvider**: App settings (theme, language, home layout, cache, player prefs). Persists to AsyncStorage. Exports `defaultSettings` and `homeSections`.
+- **SongProvider**: Music playback state via a reducer (`songReducer`). Holds main queue (`queue`), a separate "up next" list (`upNext`), current index, playback state, action-on-end-of-song mode, `radioMode` (endless-shuffle flag set by random/shuffle buttons, cleared by any normal playback), `queueEnded` (set when the queue ran out and stopped — makes the play button restart from the top) and `isSongLoad`. On Android it calls `Player.initPlayer()` immediately when `AppState.currentState === 'active'` and **retries on every foreground** until the player is set up (the OS can boot the playback service headless, where `setupPlayer` fails with `android_cannot_setup_player_in_background`). A second AppState listener calls `Player.reconcileState` on resume once `song.isInit`.
+- **SettingsProvider**: App settings (theme, language, home layout, cache, player prefs). Persists to AsyncStorage. Exports `defaultSettings` and `homeSections`. The `global.*` mirrors (`streamFormat`, `maxBitRate`, `cacheNextSong`, `parallelDownloads`, `isSongCaching`, `saveQueue`, `repeatQueue`) are plain `useEffect`s here, for the player/download code that runs outside React.
 - **ThemeProvider**: Resolves theme object from `settings.theme` + `settings.themePlayer`. Sets `window` background on web.
 - **UpdateApiProvider**: Lightweight pub/sub for cache invalidation -- fires `updateApi` changes so other components can re-read their cache.
 - **RemoteProvider**: (Native only) Manages remote playback device connections (Chromecast, UPnP). Orchestrates transfer of playback between devices.
@@ -60,7 +60,7 @@ A `PlayerEvent` component within `AppProvider` wires `Player.useEvent()` to sync
 ### app/contexts/settings.js
 - `SettingsProvider` exposes `settings` and `saveSettings`.
 - Loads/saves to AsyncStorage. Merges with `defaultSettings`.
-- `updateGlobalSettings()` sets globals: `streamFormat`, `maxBitRate`, `cacheNextSong`, `isSongCaching`, `saveQueue`, `repeatQueue`.
+- **updateGlobalSettings()** sets globals: `streamFormat`, `maxBitRate`, `cacheNextSong`, `isSongCaching`, `saveQueue`, `repeatQueue`.
 - Exports `defaultSettings`, `demoServers`, and `homeSections` (array defining Home screen widgets).
 
 ### app/contexts/song/
@@ -103,7 +103,12 @@ Core functions for Subsonic API calls:
 | `getApiNetworkFirst(config, path, query)` | Fetches from network first; falls back to cache on failure. |
 
 ### app/utils/playerCore.js - Shared Player Core
-Platform-agnostic logic used by both `player.native.js` and `player.web.js`: `createSongControls({ loadSong })` (returns `playSong`/`nextSong`/`previousSong`/`setIndex` — the backend only supplies its `loadSong`), plus `setRepeat`, `secondToTime`, and all queue-mutation dispatchers (`removeFromQueue`, `addToQueue`, `addToUpNext`, `removeFromUpNext`, `moveUpNext`, `moveInQueue`, `moveTrack`). Both platform files re-export these, so consumers see one identical API on every platform. Endless-shuffle radio: when a session started via a random/shuffle button (`song.radioMode`) drains queue + up next (and `!repeatQueue`), `nextSong` calls `extendRadio()` — fetches `getRandomSongs size=50`, filters exclusions, dedupes vs current queue, appends via `addToQueue`, then advances using fresh `global.song.queue`.
+Platform-agnostic logic used by both `player.native.js` and `player.web.js`. Three shared decisions live here so the four backends can't drift again:
+- `endOfTrackAction(song)` → `'none' | 'reset' | 'repeat' | 'stop' | 'next'`. **Single source of truth for "the track just ended"** — previously written out five times (service, cast, upnp, web, core) and the copies had diverged: cast/upnp seeked to 0 without resuming (repeat-one stalled), web had no stop branch, and the end-of-queue predicate was duplicated with and without the radio/up-next guards.
+- `scrobbleTrack(config, song, submission)` — end-of-track scrobble, failures swallowed.
+- `stopAtQueueEnd(songDispatch, stop)` — dispatches `setQueueEnded` then stops, so the play button can restart the queue instead of calling `resumeSong()` on an ended track.
+
+`createSongControls({ loadSong, stopSong })` returns `playSong`/`nextSong`/`previousSong`/`setIndex` (the backend supplies `loadSong` + `stopSong`), plus `setRepeat`, `secondToTime`, and all queue-mutation dispatchers (`removeFromQueue`, `addToQueue`, `addToUpNext`, `removeFromUpNext`, `moveUpNext`, `moveInQueue`, `moveTrack`). Both platform files re-export these, so consumers see one identical API on every platform. `setIndex` takes an options object: `{ clearUpNext, clearRadio }` — an explicit user jump in the queue view drops the Up-next list and leaves a radio session; plain next/previous and the resume reconcile preserve both. Endless-shuffle radio: when a session started via a random/shuffle button (`song.radioMode`) drains queue + up next (and `!repeatQueue`), `nextSong` calls `extendRadio()` — refreshes exclusions, fetches `getRandomSongs size=50` (200 if that yields nothing new), filters exclusions, dedupes against the current queue **and within the page** (the server repeats ids, which played back-to-back), appends via `addToQueue`, then advances using fresh `global.song.queue`. If the top-up fails, playback **stops** rather than wrapping — silently looping the queue was reported as "the playlist loops". Repeat-one (`actionEndOfSong === 'repeat'`) is cleared *before* awaiting the load, so a `PlaybackQueueEnded` landing in the load window can't seek the freshly loaded track back to 0.
 
 ### app/utils/player.js (platform-resolved)
 - **Native** (`player.native.js`): Delegates to `LocalPlayer`, `CastPlayer`, or `UpnpPlayer` based on the current `type` variable (`"local"`, `"chromecast"`, `"upnp"`). Provides `connect()`, `disconnect()`, `switchPlayer()`, `saveState()`, `restoreState()`. Song navigation + queue mutations come from `playerCore.js`.
@@ -112,7 +117,7 @@ Platform-agnostic logic used by both `player.native.js` and `player.web.js`: `cr
 ### app/utils/player/ - Native Player Implementations
 | File | Description |
 |---|---|
-| `playerLocal.native.js` | `react-native-track-player` based local playback. Handles download/caching of songs. |
+| `playerLocal.native.js` | `react-native-track-player` based local playback. Handles download/caching of songs. `convertState` maps RNTP `State`→`MyState` (incl. `Loading`/`Connecting`→Loading, `Ended`→Stopped). `reconcileState` heals React against `getActiveTrack()`, falling back to `syncGlobal` when the active track is not in the queue (up-next playback). `appKilledPlaybackBehavior: StopPlaybackAndRemoveNotification` (user decision: swiping the app away stops playback) and **no** `alwaysPauseOnInterruption` (it made the service's duck handler dead code and left playback paused forever after a notification). |
 | `playerCast.native.js` | Google Cast (Chromecast) playback via `react-native-google-cast`. |
 | `playerUpnp.native.js` | UPnP / DLNA playback. |
 
@@ -133,7 +138,7 @@ Playback state enum: `Playing`, `Paused`, `Stopped`, `Loading`, `Error`, `None`.
 
 ### Other Utils
 - **url.js**: `urlCover()` resolves cover art URLs (handles navidrome/ampache/generic Subsonic types). `urlStream()` resolves audio stream URLs.
-- **tools.js**: `shuffle()`, `saveQueue()`.
+- **tools.js**: `shuffle()`, `saveQueue()` (caps the id list — the whole queue travels in the query string and a 1000-track radio queue produced a multi-KB URL servers reject).
 - **exclusions.js**: Negative playlists — songs of playlists tagged `#<username>-exclusive` in their comment (same mechanism as pins) are excluded from the Home random-shuffle button. Per-server ID set (`excludedSongs:<folderCache>` in AsyncStorage + memory cache), refreshed on toggle in `OptionsPlaylist` and before every Home random click (`refreshExcludedSongIds`). `filterExcluded()` is the single filter point (`Home.js clickRandomSong`, `playerCore.extendRadio`).
 - **albumActions.js**: `addAlbumToQueue(config, songDispatch, albumId, asNext)` — fetches album songs and queues them (or plays the album when no queue is active). Used by swipe actions on album rows (AlbumExplorer, SearchMore).
 - **lrc.js**: `parseLrc()` parses LRC-format lyrics into `{ time, text }` objects.
@@ -141,7 +146,7 @@ Playback state enum: `Playing`, `Paused`, `Stopped`, `Loading`, `Error`, `None`.
 - **alert.js**: `confirmAlert()` - cross-platform confirm dialog (native `Alert` / web `window.confirm`).
 - **useKeyboardIsOpen** (platform-resolved): Native uses Keyboard API; Web returns `false`.
 - **PlaylistSwipeRow.js**: Generic swipeable row (playlist rows, Music tab songs/albums, search results). Actions per direction from `settings.swipeRightAction`/`swipeLeftAction` (queue / play next / remove / action menu (left only) / none); configured action is revealed as a hint during the drag (layers always mounted behind an opaque row); 'menu' keeps the remove+play-next panel with parent-driven `open` state (safe with LegendList row recycling).
-- **useQueueDnD.js**: All queue drag-and-drop state shared by both full-screen players: list refs (`scroll`/`upNextScroll`), scroll offsets, viewports, `onLayout` box positions (`boxY`/`boxH`), `rowHeight`, the `isCurrentInQueue`/`queueItems` derivation (queue **rotated** to start at the current song — next song first, previous songs wrapped to the bottom; current song stays pinned above, `song.queue` remains the source of truth), `queueRealIndex` (display→real index mapping `(index + 1 + i) % queue.length`), the `lists` memo for `QueueDragProvider`, `handleMove` (routes through `Player.moveTrack`), and the scroll-to-top effect. Options: `bottomAligned` (desktop flex-end queue), `scrollAnimated`.
+- **useQueueDnD.js**: All queue drag-and-drop state shared by both full-screen players: list refs (`scroll`/`upNextScroll`), scroll offsets, viewports, `onLayout` box positions (`boxY`/`boxH`), `rowHeight`, the `isCurrentInQueue`/`queueItems` derivation (queue **rotated** to start at the current song — next song first, previous songs wrapped to the bottom; current song stays pinned above, `song.queue` remains the source of truth). The rotation anchors on **where `songInfo` actually sits in the queue**, not on `song.index` (up-next playback moves `songInfo` without moving `index`). `queueRealIndex` (display→real index mapping `(index + 1 + i) % queue.length`), `queueKeys`/`upNextKeys` (occurrence-aware row keys — `id` plus a duplicate counter — because plain indices carried the previous occupant's per-row state across a rotation and plain ids collide when a track is queued twice), the `lists` memo for `QueueDragProvider`, `handleMove` (routes through `Player.moveTrack`), and the scroll-to-top effect. Options: `bottomAligned` (desktop flex-end queue), `scrollAnimated`.
 
 ---
 
@@ -226,7 +231,7 @@ Playback state enum: `Playing`, `Paused`, `Stopped`, `Loading`, `Error`, `None`.
 | FullScreenPlayer.js | Full-screen modal player with cover, queue view (pinned "Now playing" + "Up next" + main queue). Transport row: shuffle / prev / play / next / repeat (shuffle+repeat tinted when active). Bottom row: lyrics toggle, cast, queue. Lyrics background fills the whole screen. The current song is shown only in the pinned row — it is filtered out of the queue list (display-level). |
 | FullScreenHorizontalPlayer.js | Full-screen horizontal layout of player (desktop); same queue view with right-aligned rows and a drag handle. |
 | QueueDrag.js | Cross-section drag-and-drop for the queue view: `QueueDragProvider` (one manager for both lists — lists are direct children of one container, their `onLayout` `boxY`/`boxH` + the gesture `dy` resolve the drop target with no window-coordinate measurement; region detection uses "Up next" only when that box exists; edge-autoscrolls the active list; springs sibling rows ±`rowHeight` to open a live gap; `bottomAligned` queues get a bottom-pad correction) + `QueueDragRow` (grab-handle PanResponder row; lifted row styled with `backgroundColor`, no elevation). Drop → `moveTrack` (`moveUpNext`/`moveInQueue`/`moveUpNextToQueue`/`moveQueueToUpNext`). |
-| Lyric.js | Synchronized lyrics display. Fetches from server, caches locally, falls back to LrcLib API. |
+| Lyric.js | Synchronized lyrics display. Fetches from server, caches locally, falls back to LrcLib API. Keyed on `song.songInfo?.id` (not the songInfo object, which every `setRating`/`syncGlobal` replaced, re-triggering the fetch and flashing "Loading lyrics..."), with a cancellation guard so a late response can't paint the previous track's lyrics. |
 
 ### Bar Components (app/components/bar/)
 | File | Description |
@@ -258,7 +263,7 @@ Playback state enum: `Playing`, `Paused`, `Stopped`, `Loading`, `Error`, `None`.
 ### Item Components (app/components/item/)
 | File | Description |
 |---|---|
-| SongItem.js | Single song row with cover, title, artist, favorited button, cached indicator. |
+| SongItem.js | Single song row with cover, title, artist, favorited button, cached indicator. `playsOnPress` (default `true`) decides whether the row calls `playSong` itself — set `false` when `onPress` owns playback (queue-view jumps). The old contract inferred this from `onPress`'s return value, so a handler returning a Promise (always truthy) made the row fire a second `playSong` on top of its own `setIndex`. |
 | ExplorerItem.js | Item with cover, title, subtitle for explorer lists. |
 | AllItem.js | Grid tile for the `LegendList numColumns={2}` grids (Tracks/Explorer grids, SearchMore, Playlists, ShowAll). Root is `width:'100%'` to fill its numColumns cell. |
 | LBAlbumItem.js | Album item from ListenBrainz (used in FreshReleases). |
@@ -269,7 +274,7 @@ Playback state enum: `Playing`, `Paused`, `Stopped`, `Loading`, `Error`, `None`.
 ### Button Components (app/components/button/)
 | File | Description |
 |---|---|
-| PlayButton.js | Play/pause button. Switches icon based on `song.state`. Shows `ActivityIndicator` while loading. |
+| PlayButton.js | Play/pause button. Switches icon based on `song.state`. Shows `ActivityIndicator` while loading. When `song.queueEnded` it restarts the queue from the top instead of resuming (resuming an already-ended track did nothing). |
 | IconButton.js | Generic icon button using `react-native-vector-icons`. |
 | FavoritedButton.js | Heart toggle button. Long-press opens rating popup. Calls `star`/`unstar` API. |
 | BackButton.js | Back navigation button (white chevron with dark text-shadow halo so it reads over any cover/theme). |

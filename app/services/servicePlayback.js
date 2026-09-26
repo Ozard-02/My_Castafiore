@@ -1,8 +1,8 @@
 import TrackPlayer, { Event, State } from "react-native-track-player"
 
 import Player from "~/utils/player"
-import { getApi } from "~/utils/api"
 import { downloadNextSong } from "~/utils/player"
+import { endOfTrackAction, scrobbleTrack, stopAtQueueEnd } from "~/utils/playerCore"
 import { songReducer } from "~/contexts/song"
 import logger from "~/utils/logger"
 
@@ -78,28 +78,31 @@ module.exports = async () => {
 			})
 	})
 	TrackPlayer.addEventListener(Event.PlaybackQueueEnded, (_event) => {
-		logger.info('Playback', `QueueEnded track=${global.song?.songInfo?.id} idx=${global.song?.index}/${global.song?.queue?.length} action=${global.song?.actionEndOfSong} radio=${!!global.song?.radioMode} repeatQ=${!!global.repeatQueue} upNext=${global.song?.upNext?.length}`)
-		if (!global.song?.queue?.length) return
-		if (global.song?.songInfo?.id === 'tuktuktuk') return Player.resetAudio(global.songDispatch)
-		getApi(global.config, 'scrobble', { id: global.song.songInfo.id, submission: true })
-			.catch(() => { })
-		if (global.song.actionEndOfSong === 'repeat') {
-			logger.info('Playback', 'QueueEnded -> looping same track (action=repeat)')
+		const song = global.song
+		const action = endOfTrackAction(song)
+		logger.info('Playback', `QueueEnded track=${song?.songInfo?.id} idx=${song?.index}/${song?.queue?.length} action=${song?.actionEndOfSong} radio=${!!song?.radioMode} repeatQ=${!!global.repeatQueue} upNext=${song?.upNext?.length} -> ${action}`)
+		if (action === 'none') return
+		if (action === 'reset') return Player.resetAudio(getSongDispatch())
+		scrobbleTrack(global.config, song, true)
+		if (action === 'repeat') {
 			Player.setPosition(0)
 			Player.resumeSong()
-		} else if (!global.repeatQueue && !global.song.radioMode && global.song.index === global.song.queue.length - 1 && !global.song.upNext?.length) {
+		} else if (action === 'stop') {
 			logger.info('Playback', 'QueueEnded -> stop (end of queue)')
-			Player.stopSong()
+			stopAtQueueEnd(getSongDispatch(), () => Player.stopSong())
 		} else {
 			logger.info('Playback', 'QueueEnded -> nextSong')
-			Player.nextSong(global.config, global.song, getSongDispatch())
+			Player.nextSong(global.config, song, getSongDispatch())
 				.then(() => logger.info('Playback', 'QueueEnded nextSong done'))
 				.catch(e => logger.error('Playback', 'QueueEnded nextSong error', e?.message))
 		}
 	})
 	TrackPlayer.addEventListener(Event.PlaybackActiveTrackChanged, async (event) => {
 		logger.info('Playback', `ActiveTrackChanged track=${event.track?.id} globalIdx=${global.song?.index} globalSong=${global.song?.songInfo?.id}`)
-		if (!lockDownload) {
+		// global.song is null/uninitialised in a cold headless start (service booted by the
+		// notification, before React or the AsyncStorage restore ran) — the unguarded
+		// global.song.queue read below threw and took the scrobble with it.
+		if (!lockDownload && global.song?.queue?.length) {
 			lockDownload = true
 			downloadNextSong(global.song.queue, global.song.index)
 				.then(() => {
@@ -114,8 +117,7 @@ module.exports = async () => {
 		if (event.track) {
 			const now = Date.now()
 			if (lastScrobble.id !== event.track.id || now - lastScrobble.time > 10 * 1000) {
-				getApi(global.config, 'scrobble', { id: event.track.id, submission: false })
-					.catch(() => { })
+				scrobbleTrack(global.config, { songInfo: event.track }, false)
 				lastScrobble = {
 					id: event.track.id,
 					time: now,

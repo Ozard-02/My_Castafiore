@@ -11,14 +11,12 @@ const ImageError = ({ source, style = {}, children = null, iconError = null, blu
 	const theme = useTheme()
 
 	React.useEffect(() => {
-		if (lastSource.uri === source?.uri) return
-		if (!source?.uri) {
-			setIsImage(false)
-			setLastSource(source)
-		} else {
-			setLastSource(source)
-			setIsImage(true)
-		}
+		// normalise first: storing a nullish `source` left lastSource undefined and the next
+		// run threw on `lastSource.uri`
+		const uri = source?.uri ?? null
+		if (lastSource.uri === uri) return
+		setLastSource({ uri })
+		setIsImage(!!uri)
 	}, [source, source?.uri])
 
 	if (isImage) return <Image source={lastSource} onError={() => setIsImage(false)} style={style} blurRadius={blurRadius} />

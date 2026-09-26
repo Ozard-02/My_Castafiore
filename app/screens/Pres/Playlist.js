@@ -127,7 +127,7 @@ const Playlist = ({ route: { params } }) => {
 		<>
 			<LegendList
 				data={filteredSortedSongs}
-				keyExtractor={(item, index) => index}
+				keyExtractor={(item, index) => `${item.id}-${item.index ?? index}`}
 				style={mainStyles.mainContainer(theme)}
 				contentContainerStyle={[mainStyles.contentMainContainer(insets, false)]}
 				recycleItems={true}

@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 import * as serviceWorkerRegistration from '~/services/serviceWorkerRegistration'
 
 import { getApi } from '~/utils/api'
+import { endOfTrackAction, scrobbleTrack, stopAtQueueEnd } from './playerCore'
 import { urlStream, urlCover } from './url'
 import State from '~/utils/playerState'
 import logger from '~/utils/logger'
@@ -12,12 +13,15 @@ import * as core from './playerCore'
 export {
 	addToQueue,
 	addToUpNext,
+	endOfTrackAction,
 	moveInQueue,
 	moveTrack,
 	moveUpNext,
 	removeFromQueue,
 	removeFromUpNext,
+	scrobbleTrack,
 	setRepeat,
+	stopAtQueueEnd,
 	secondToTime,
 } from './playerCore'
 
@@ -73,22 +77,28 @@ export const initPlayer = async (songDispatch) => {
 	sound.volume = 0.99
 	sound.volume = 1
 	sound.addEventListener('ended', () => {
-		const songId = global.song.songInfo.id
-
-		if (global.song.actionEndOfSong === 'repeat') {
-			if (audio().duration < 1) {
-				reload()
-				// This return is necessary to avoid scrobble if a bug occurs
-				return
-			} else {
-				setPosition(0)
-				resumeSong()
-			}
-		} else {
-			nextSong(global.config, global.song, songDispatch)
+		const song = global.song
+		const action = endOfTrackAction(song)
+		if (action === 'none') return
+		// a zero/absent duration means the media never really played (failed load):
+		// reload without scrobbling it, same as before this was centralised
+		if (action === 'repeat' && audio().duration < 1) {
+			reload()
+			return
 		}
-		getApi(global.config, 'scrobble', { id: songId, submission: true })
-			.catch(() => { })
+		scrobbleTrack(global.config, song, true)
+		if (action === 'repeat') {
+			setPosition(0)
+			resumeSong()
+		} else if (action === 'reset') {
+			resetAudio(songDispatch)
+		} else if (action === 'stop') {
+			// the web player had no end-of-queue stop at all — the last track just sat
+			// there ended with song.state still reading Playing
+			stopAtQueueEnd(songDispatch, stopSong)
+		} else {
+			nextSong(global.config, song, songDispatch)
+		}
 	})
 	sound.addEventListener('canplaythrough', () => {
 		downloadNextSong(global.config, global.song.queue, global.song.index)
@@ -171,19 +181,22 @@ export const updateTime = () => {
 	return time
 }
 
-export const downloadSong = async (url, _id) => {
-	return fetch(url)
+export const downloadSong = async (song, _source = null) => {
+	return fetch(urlStream(global.config, song?.id, global.streamFormat, global.maxBitRate))
 }
 
 const downloadNextSong = async (config, queue, currentIndex) => {
-	if (!global.isSongCaching) return
+	if (!global.isSongCaching || !queue?.length) return
 	const maxIndex = Math.min(global.cacheNextSong, queue.length)
 
 	for (let i = -1; i < maxIndex; i++) {
 		const index = (currentIndex + queue.length + i) % queue.length
-		if (!queue[index].isDownloaded && queue[index].id.match(/^[a-zA-Z0-9-]*$/)) {
-			await fetch(urlStream(config, queue[index].id, global.streamFormat, global.maxBitRate))
-				.then(() => { queue[index].isDownloaded = true })
+		const track = queue[index]
+		// isLiveStream only exists on the stored track now (convertTrack keeps it) —
+		// without it this used to try to download a live radio stream, forever
+		if (track && !track.isLiveStream && !track.isDownloaded && track.id?.match(/^[a-zA-Z0-9-]*$/)) {
+			await fetch(urlStream(config, track.id, global.streamFormat, global.maxBitRate))
+				.then(() => { track.isDownloaded = true })
 				.catch(() => { })
 		}
 	}
@@ -210,7 +223,11 @@ const loadSong = async (config, queue, index) => {
 	})
 }
 
-export const { playSong, nextSong, previousSong, setIndex } = core.createSongControls({ loadSong })
+// lazy arrow: stopSong is declared further down, so it must not be read at module-eval time
+export const { playSong, nextSong, previousSong, setIndex } = core.createSongControls({
+	loadSong,
+	stopSong: () => stopSong(),
+})
 
 export const reload = async () => {
 	audio().load()
@@ -323,6 +340,9 @@ export default {
 	reload,
 	resetAudio,
 	switchServer,
+	loadSong,
+	downloadSong,
+	downloadNextSong,
 	State,
 	...core,
 }

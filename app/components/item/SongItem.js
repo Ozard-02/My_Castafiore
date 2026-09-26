@@ -63,7 +63,12 @@ const Cached = ({ song }) => {
 	return null
 }
 
-const SongItem = ({ song, queue, index, isIndex = false, isPlaying = false, setIndexOptions = () => { }, onPress = () => true, style = {}, handle = null }) => {
+// playsOnPress: SongItem owns the playSong call. Set false when the row's own onPress
+// handles playback (queue view jumps via Player.setIndex) — the old contract inferred this
+// from onPress's return value, so a handler returning a Promise (always truthy) made
+// SongItem fire a second playSong on top of it: two loads of one track plus a setQueue
+// that wiped upNext/originalQueue/radioMode and reset actionEndOfSong to 'next'.
+const SongItem = ({ song, queue, index, isIndex = false, isPlaying = false, setIndexOptions = () => { }, onPress = () => { }, playsOnPress = true, style = {}, handle = null }) => {
 	const songDispatch = useSongDispatch()
 	const theme = useTheme()
 	const config = useConfig()
@@ -76,7 +81,8 @@ const SongItem = ({ song, queue, index, isIndex = false, isPlaying = false, setI
 			onHoverIn={() => { settings.isDesktop && setIsHover(true) }}
 			onHoverOut={() => { settings.isDesktop && setIsHover(false) }}
 			onPress={() => {
-				if (onPress(song, queue, index)) playSong(config, songDispatch, queue, index)
+				onPress(song, queue, index)
+				if (playsOnPress) playSong(config, songDispatch, queue, index).catch(() => { })
 			}}
 			delayLongPress={200}
 			onLongPress={() => setIndexOptions(index)}

@@ -13,21 +13,26 @@ export const SongProvider = ({ children }) => {
 
 	React.useEffect(() => {
 		if (!song.isInit) {
-			if (Platform.OS === 'android') {
-				const subscription = AppState.addEventListener('change', (appState) => {
-					if (appState === 'active') {
-						Player.initPlayer(dispatch)
-						subscription.remove()
-					}
-				})
-				return () => {
-					subscription.remove()
+			// Android may boot the playback service headless (from the notification) before
+			// any Activity exists, which makes TrackPlayer.setupPlayer fail with
+			// android_cannot_setup_player_in_background. Retry on every foreground until it
+			// succeeds — the old code removed the listener after a single attempt, so one
+			// early failure left the player un-setup for the whole session.
+			const tryInit = () => {
+				if (AppState.currentState === 'active' || Platform.OS !== 'android') {
+					Player.initPlayer(dispatch)
 				}
-			} else {
-				Player.initPlayer(dispatch)
+			}
+			tryInit()
+			if (Platform.OS !== 'android') return
+			const subscription = AppState.addEventListener('change', (appState) => {
+				if (appState === 'active') tryInit()
+			})
+			return () => {
+				subscription.remove()
 			}
 		}
-	}, [])
+	}, [song.isInit, dispatch])
 
 	// Background auto-advance + lock-screen skips run in the headless service and only
 	// mutate global.song; re-sync React state against the native player when resuming,
@@ -71,6 +76,13 @@ const convertTrack = (track) => {
 		size: track.size,
 		index: track.index,
 		mediaType: track.mediaType,
+		// radio: convertToTrack derives isLiveStream from track.type, but the stored queue
+		// track is what downloadNextSong / TimeBar / OptionsQueue actually read — dropping
+		// it here made the downloader try to cache live streams and showed a finite
+		// duration for them.
+		isLiveStream: track.isLiveStream ?? track.type === 'radio',
+		albumArtists: track.albumArtists,
+		discNumber: track.discNumber,
 		// radio
 		homePageUrl: track.homePageUrl,
 		name: track.name,
@@ -112,6 +124,7 @@ export const songReducer = (state, action) => {
 				actionEndOfSong: action.song.actionEndOfSong || 'next',
 				originalQueue: action.song.originalQueue || (action.song.actionEndOfSong === 'random' ? action.song.queue : null),
 				radioMode: !!action.song.radioMode,
+				queueEnded: !!action.song.queueEnded,
 				isSongLoad: action.isSongLoad || false,
 			})
 		case 'setQueue': {
@@ -123,15 +136,22 @@ export const songReducer = (state, action) => {
 				upNext: [],
 				originalQueue: null,
 				radioMode: false,
+				queueEnded: false,
 				isSongLoad: true,
 			}, true)
 		}
 		case 'setIndex':
 			if (!state.queue || state.queue?.length <= action.index) return state
+			// upNext/radioMode are only dropped on an explicit user jump (clearUpNext /
+			// clearRadio from the queue view). Wiping them on every setIndex meant a plain
+			// next/previous, a drag, or a resume-reconcile silently deleted the whole
+			// "Up next" list and dropped the user out of a radio session.
 			return newSong(state, {
 				index: action.index,
 				songInfo: state.queue[action.index],
-				upNext: [],
+				queueEnded: false,
+				...(action.clearUpNext ? { upNext: [] } : {}),
+				...(action.clearRadio ? { radioMode: false } : {}),
 			}, true)
 		case 'setState': {
 			if (action.state === state.state || !action.state) return state
@@ -142,16 +162,20 @@ export const songReducer = (state, action) => {
 		case 'addToQueue': {
 			if (!state.songInfo || !state.queue) return state
 			const newQueue = [...state.queue]
-			if (action.index === null || action.index >= newQueue.length) {
-				newQueue.push(action.track)
+			// A non-numeric index means "append". Guarding on `=== null` only used to let
+			// `splice(undefined, 0, track)` through, and splice coerces undefined to 0 — so
+			// extendRadio's 50-track top-up was prepended at the front in reverse order
+			// instead of appended, leaving index pointing at a different track.
+			if (typeof action.index !== 'number' || action.index < 0 || action.index >= newQueue.length) {
+				newQueue.push(convertTrack(action.track))
 			} else {
-				newQueue.splice(action.index, 0, action.track)
+				newQueue.splice(action.index, 0, convertTrack(action.track))
 			}
 
 			return newSong(state, {
 				queue: newQueue,
 				index: (typeof action.index === 'number' && state.index >= action.index) ? state.index + 1 : state.index,
-				originalQueue: state.originalQueue ? [...state.originalQueue, action.track] : null,
+				originalQueue: state.originalQueue ? [...state.originalQueue, convertTrack(action.track)] : null,
 			}, true)
 		}
 		case 'setRating': {
@@ -162,12 +186,14 @@ export const songReducer = (state, action) => {
 					...track,
 					userRating: action.rating,
 					rating: action.rating,
+					...(action.starred === undefined ? {} : { starred: action.starred }),
 				}
 			})
 			const songInfo = state.songInfo?.id === action.id ? {
 				...state.songInfo,
 				userRating: action.rating,
 				rating: action.rating,
+				...(action.starred === undefined ? {} : { starred: action.starred }),
 			} : state.songInfo
 			return newSong(state, {
 				queue: newQueue,
@@ -192,7 +218,7 @@ export const songReducer = (state, action) => {
 		}
 		case 'addToUpNext': {
 			if (!state.songInfo || !state.queue) return state
-			const tracks = Array.isArray(action.track) ? action.track : [action.track]
+			const tracks = (Array.isArray(action.track) ? action.track : [action.track]).map(convertTrack)
 			const upNext = [...(state.upNext || [])]
 			if (action.atStart) upNext.unshift(...tracks)
 			else upNext.push(...tracks)
@@ -315,6 +341,8 @@ export const songReducer = (state, action) => {
 			}, true)
 		case 'setRadioMode':
 			return newSong(state, { radioMode: !!action.value }, true)
+		case 'setQueueEnded':
+			return newSong(state, { queueEnded: !!action.value }, true)
 		case 'reset':
 			return newSong(state, {
 				...defaultSong,
@@ -336,5 +364,6 @@ export const defaultSong = {
 	actionEndOfSong: 'next',
 	originalQueue: null,
 	radioMode: false,
+	queueEnded: false,
 	state: State.Stopped,
 }

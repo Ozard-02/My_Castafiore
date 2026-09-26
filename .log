@@ -1,5 +1,87 @@
 # Castafiore - Session Log
 
+## 2026-09-26 — FIX: playback correctness pass (background / looping / wrong cover)
+- Report: "problems with the app running in the background, songs looping, not correct update of
+  the cover, and sometimes playlist looping". Treated the three symptoms as hints and audited the
+  whole playback path: queue reducer, `playerCore`, all 4 backends, the headless service, and the
+  player components. Two parallel subagent sweeps (playback-logic divergence + UI state
+  inconsistency) produced the inventory; root causes below.
+- Baseline commit `ba8b982` (checkpointed the previously uncommitted reconcile/Tier-3 work first,
+  per AGENTS.md). Plan: `plans/playback-correctness.md`. TODO #31.
+- **Queue-row double play (mobile)** — `SongItem` decided whether to *also* `playSong` from
+  `onPress`'s return value; `FullScreenPlayer`'s queue rows returned a Promise (always truthy) →
+  one tap ran `setIndex` AND `playSong` → two `load()`s of one track (restart from 0) and a
+  `setQueue` that wiped `upNext`/`originalQueue`/`radioMode` and reset `actionEndOfSong` to 'next'.
+  Desktop was never affected — `FullScreenHorizontalPlayer` uses its own `QueueRow` (a plain
+  `Pressable`), not `SongItem`, so the earlier claim that both players were affected was wrong.
+  Replaced the truthiness contract with an explicit `playsOnPress` prop so it can't regress.
+- **Radio top-up PREPENDED** — `extendRadio` dispatched `addToQueue` with no `index` and the
+  reducer only guarded `index === null`, so `splice(undefined)` coerced to 0: every 50-track
+  top-up rebuilt the queue at the FRONT in reverse order and left `index` pointing at a different
+  track. This is very likely the actual "playlist loops" + wrong now-playing cause. Fixed the
+  guard to `typeof action.index !== 'number'` and deduped within the fetched page (getRandomSongs
+  repeats ids, and those played back-to-back).
+- **Wrong cover after resume** — up-next playback moves `songInfo` without moving `index`, so
+  `reconcileState`'s `findIndex(active.id)` returned -1 and it bailed WITHOUT dispatching → the UI
+  kept the previous song's title/cover. Now heals via `syncGlobal` with the native track.
+  `useQueueDnD` also anchors the rotation on songInfo's real position instead of the stale index.
+- **Up next wiped on every navigation** — `setIndex` cleared `upNext` unconditionally, so a plain
+  next/previous, a drag, or a resume reconcile deleted the list. Now opt-in via
+  `clearUpNext`/`clearRadio`, set only by an explicit queue-row jump.
+- **Inconsistency sweep result**: the end-of-track decision existed 5× and had drifted —
+  cast/upnp seeked to 0 without resuming (repeat-one silently stopped), web had NO stop branch,
+  the end-of-queue predicate was duplicated with/without the radio+upNext guards, scrobble
+  ordering differed. Consolidated into `endOfTrackAction()` + `scrobbleTrack()` +
+  `stopAtQueueEnd()` in `playerCore`; mechanics stay per backend. Also: `convertState` existed
+  3× — `playerLocal` had no `State.Loading`/`Connecting` branch (reported Stopped, no spinner)
+  and `playerCast` used `playerState`'s `State.Stopped` ('stopped') as a GoogleCast lookup key,
+  which is not a key → `undefined` → dropped by the reducer (no error icon on Chromecast).
+  `setPosition` clamping differs 4×; `downloadNextSong` arity differs (2 native vs 3 web);
+  `restoreState` plays before seeking on 3 of 4 backends; `playerUpnp.disconnect(device)` shadowed
+  the module-level `device`.
+- **repeatQueue default → false** (user). Playback stops at the end of a queue unless repeat is
+  on; a failed radio top-up stops instead of silently wrapping. This exposed a dead play button
+  (`isSongLoad` stayed true → `resumeSong()` on an ENDED track) → new `song.queueEnded` flag
+  makes play restart the queue. Also fixed a missing `else` in `PlayButton.onPress` that ran
+  `resumeSong()` right after `playSong()`.
+- **App swipe-away stops playback — kept as-is** (user decision), but now an explicit commented
+  choice rather than an accident. Background playback while merely backgrounded is unaffected.
+  Dropped `alwaysPauseOnInterruption: true`: it made the service's `RemoteDuck` handler dead code
+  (the OS had already paused, so `state === State.Playing` never held) and left playback paused
+  forever after any notification. `progressUpdateEventInterval: -1` → `1` (-1 had disabled the
+  Android notification's progress bar/scrubber; `useProgress` polls on its own).
+- **`initPlayer` could leave the app playerless for a whole session**: it returned early on
+  `android_cannot_setup_player_in_background` BEFORE dispatching `init`, and `SongProvider`
+  already `remove()`d its AppState listener → `song.isInit` false forever → no resume reconcile,
+  no retry, no player options. Now returns before `init` only for a real failure and the provider
+  retries on every foreground (it also inits immediately when the app is already active, which
+  the old change-event-only path could miss entirely).
+- **Reducer consistency** — `addToQueue`/`addToUpNext` never ran `convertTrack`, so the queue
+  mixed raw-API and converted shapes and every reducer action re-serialized megabytes to
+  AsyncStorage. `convertTrack` now keeps `isLiveStream` (the downloader was trying to cache live
+  radio streams forever; the seek bar showed a finite duration for them) + `albumArtists`/
+  `discNumber`. `setRating` now also writes `starred` so queue-row hearts update.
+- **Hooks** — `updateGlobalSettings()` called 7 `useEffect`s from a plain async function during
+  render; worked only because the call order happened to be stable. Moved into
+  `SettingsProvider` as real effects. (`eslint-plugin-react-hooks` is still not installed.)
+- **Lists/Lyric** — index `keyExtractor`s replaced with occurrence-aware keys in both queue views,
+  `Lyric`, `Favorited`, `Playlist` (index keys made rows carry the previous occupant's download
+  icon after a rotation/search/sort; plain ids would collide on a duplicated track). `Lyric`
+  re-fetched on every unrelated dispatch and could paint the previous track's lyrics.
+- **Misc** — unguarded `global.song.queue` in the service's `PlaybackActiveTrackChanged` threw on a
+  cold headless start and took the scrobble with it; `TimeBar` deps omitted the track;
+  `ImageError` stored a nullish `source` and threw on the next run; `saveQueue` built a multi-KB URL
+  for big queues; `RemoteProvider` ran `playSong(config, dispatch, null, 0)` (TypeError) when
+  connecting with no queue and read a stale React snapshot instead of `global.song`.
+- `npm run eslint` clean; `assembleRelease` OK (Metro bundle resolves all imports).
+- **On-device verify still owed**: queue-row tap no longer restarts the track; radio top-up
+  appends; cover/title correct after a screen-off resume during up-next playback; Up next survives
+  next/prev; a queue stops at the end and play restarts it; repeat-one works on cast/upnp.
+- Deferred on purpose: `Player.updateTime()` still runs all three backends' hooks (2
+  `useProgress(500)` pollers + an always-on UPnP progress listener) — switching the hook set by
+  device type would change the hook count per component and break React's rules. `useCachedFirst`
+  still has no in-flight `uid` guard (unlike `useCachedAndApi`).
+
 ## 2026-08-28 — Fix: next/prev loops on same song (icons + Bluetooth, not swipe)
 - Symptom: pressing next/prev (full-screen transport / notification / Bluetooth) sometimes plays
   the same song from the start 3-5× before advancing; swipe never does.

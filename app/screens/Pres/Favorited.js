@@ -46,7 +46,7 @@ const Favorited = () => {
 			/>
 			<LegendList
 				data={favorited}
-				keyExtractor={(item, index) => index}
+				keyExtractor={(item, index) => item?.id ?? index}
 				style={mainStyles.mainContainer(theme)}
 				contentContainerStyle={mainStyles.contentMainContainer(insets, false)}
 				waitForInitialLayout={false}

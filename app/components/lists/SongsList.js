@@ -11,7 +11,7 @@ import PlaylistSwipeRow from '~/components/item/PlaylistSwipeRow'
 import size from '~/styles/size'
 import OptionsSongsList from '~/components/options/OptionsSongsList'
 
-const SongsList = ({ songs, isIndex = false, listToPlay = null, isMargin = true, indexPlaying = null, idPlaylist = null, onUpdate = () => { }, onPress = () => true }) => {
+const SongsList = ({ songs, isIndex = false, listToPlay = null, isMargin = true, indexPlaying = null, idPlaylist = null, onUpdate = () => { }, onPress = () => { } }) => {
 	const theme = useTheme()
 	const config = useConfig()
 	const song = useSong()

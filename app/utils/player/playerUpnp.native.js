@@ -1,6 +1,7 @@
 import React from 'react'
 
 import { getApi } from '~/utils/api'
+import { endOfTrackAction, scrobbleTrack, stopAtQueueEnd } from '~/utils/playerCore'
 import { urlCover, urlStream } from '~/utils/url'
 import UPNP from '~/utils/remote/upnp'
 import UpnpEvent, { Events } from '~/utils/remote/upnpEvents'
@@ -19,14 +20,19 @@ const useEvent = (song, songDispatch, nextSong) => {
 		}))
 
 		events.push(UpnpEvent.addListener(Events.TRACK_ENDED, async () => {
-			if (!global.song?.queue?.length) return
-			getApi(global.config, 'scrobble', { id: global.song.songInfo.id, submission: true })
-				.catch(() => { })
-			if (global.song.actionEndOfSong === 'repeat') {
-				UPNP.seek(device, 0)
-			} else if (!global.repeatQueue && !global.song.radioMode && global.song.index === global.song.queue.length - 1 && !global.song.upNext?.length) {
-				UPNP.stop(device)
-			} else nextSong(global.config, global.song, songDispatch)
+			const song = global.song
+			const action = endOfTrackAction(song)
+			if (action === 'none') return
+			scrobbleTrack(global.config, song, true)
+			if (action === 'repeat') {
+				// seek alone leaves the renderer stopped — repeat-one has to resume too
+				// (this branch used to only seek, so the track silently stopped)
+				await UPNP.seek(device, 0)
+				return UPNP.resume(device)
+			}
+			if (action === 'stop') return stopAtQueueEnd(songDispatch, () => UPNP.stop(device))
+			if (action === 'reset') return UPNP.stop(device)
+			nextSong(global.config, song, songDispatch)
 		}))
 
 		return () => events.forEach(unsub => unsub())
@@ -49,7 +55,7 @@ const stopSong = async () => {
 	await UPNP.stop(device)
 }
 
-const downloadSong = async (_urlStream, _id) => { }
+const downloadSong = async (_song, _source = null) => { }
 
 const downloadNextSong = async (_queue, _currentIndex) => { }
 
@@ -142,9 +148,10 @@ const connect = async (newDevice) => {
 	UPNP.connect(device)
 }
 
-const disconnect = async (device) => {
-	await UPNP.stop(device)
-	UPNP.disconnect(device)
+const disconnect = async (disconnectedDevice) => {
+	await UPNP.stop(disconnectedDevice)
+	UPNP.disconnect(disconnectedDevice)
+	if (device === disconnectedDevice) device = null
 }
 
 export default {

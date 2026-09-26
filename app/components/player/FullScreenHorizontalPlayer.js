@@ -122,7 +122,7 @@ const FullScreenHorizontalPlayer = ({ setFullScreen }) => {
 	const theme = useTheme()
 	const volume = Player.updateVolume()
 	const { height } = useWindowDimensions()
-	const { scroll, upNextScroll, queueOffset, queueViewport, upNextOffset, upNextViewport, queueBoxY, queueBoxH, upNextBoxY, upNextBoxH, rowHeight, isCurrentInQueue, queueItems, queueRealIndex, lists, handleMove } = useQueueDnD(song, songDispatch, { bottomAligned: true })
+	const { scroll, upNextScroll, queueOffset, queueViewport, upNextOffset, upNextViewport, queueBoxY, queueBoxH, upNextBoxY, upNextBoxH, rowHeight, isCurrentInQueue, queueItems, queueKeys, upNextKeys, queueRealIndex, lists, handleMove } = useQueueDnD(song, songDispatch, { bottomAligned: true })
 
 	const [stars] = useCachedFirst([], 'getStarred2', null, (json, setData) => {
 		setData(json?.starred2?.song || [])
@@ -229,7 +229,7 @@ const FullScreenHorizontalPlayer = ({ setFullScreen }) => {
 											<FlatList
 												ref={upNextScroll}
 												data={song.upNext}
-												keyExtractor={(item, index) => 'up' + item.id + index}
+												keyExtractor={(_, index) => upNextKeys[index] ?? index}
 												showsVerticalScrollIndicator={false}
 												getItemLayout={(_, index) => ({ length: rowHeight, offset: rowHeight * index, index })}
 												onScroll={(e) => { upNextOffset.current = e.nativeEvent.contentOffset.y }}
@@ -268,7 +268,7 @@ const FullScreenHorizontalPlayer = ({ setFullScreen }) => {
 										scrollEventThrottle={16}
 										onScrollToIndexFailed={() => { }}
 										data={queueItems}
-										keyExtractor={(_, index) => index}
+										keyExtractor={(_, index) => queueKeys[index] ?? index}
 										renderItem={({ item, index }) => {
 											const realIndex = queueRealIndex(index)
 											return (
@@ -276,7 +276,7 @@ const FullScreenHorizontalPlayer = ({ setFullScreen }) => {
 													<QueueRow
 														item={item}
 														isCurrent={false}
-														onPress={() => Player.setIndex(config, songDispatch, song.queue, realIndex)}
+														onPress={() => Player.setIndex(config, songDispatch, song.queue, realIndex, { clearUpNext: true, clearRadio: true }).catch(() => { })}
 														onLongPress={() => setIndexOptions(realIndex)}
 														onContextMenu={(ev) => {
 															ev.preventDefault()

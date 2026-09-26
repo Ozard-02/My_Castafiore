@@ -9,12 +9,15 @@ import * as core from './playerCore'
 export {
 	addToQueue,
 	addToUpNext,
+	endOfTrackAction,
 	moveInQueue,
 	moveTrack,
 	moveUpNext,
 	removeFromQueue,
 	removeFromUpNext,
+	scrobbleTrack,
 	setRepeat,
+	stopAtQueueEnd,
 	secondToTime,
 } from './playerCore'
 
@@ -28,8 +31,20 @@ const getPlayer = (forceType = null) => {
 	return null
 }
 
+// getPlayer() is null for an unknown type; every routed call goes through this so a bad
+// device type fails soft instead of throwing a TypeError inside a player event handler.
+const withPlayer = (fn, fallback) => async (...args) => {
+	const player = getPlayer()
+	if (!player) {
+		logger.error('Player', `No player for type '${type}'`)
+		return fallback
+	}
+	return fn(player, ...args)
+}
+
 export const { playSong, nextSong, previousSong, setIndex } = core.createSongControls({
-	loadSong: (config, queue, index) => getPlayer().loadSong(config, queue, index),
+	loadSong: withPlayer((player, config, queue, index) => player.loadSong(config, queue, index)),
+	stopSong: withPlayer((player) => player.stopSong()),
 })
 
 export const initService = LocalPlayer.initService
@@ -46,29 +61,12 @@ export const useEvent = (song, songDispatch) => {
 	UpnpPlayer.useEvent(song, songDispatch, nextSong)
 }
 
-export const reload = async () => {
-	return getPlayer().reload()
-}
-
-export const pauseSong = async () => {
-	return getPlayer().pauseSong()
-}
-
-export const resumeSong = async () => {
-	return getPlayer().resumeSong()
-}
-
-export const stopSong = async () => {
-	return getPlayer().stopSong()
-}
-
-export const downloadSong = async (song, source = null) => {
-	return getPlayer().downloadSong(song, source)
-}
-
-export const downloadNextSong = async (queue, currentIndex) => {
-	return getPlayer().downloadNextSong(queue, currentIndex)
-}
+export const reload = async () => withPlayer((player) => player.reload())()
+export const pauseSong = async () => withPlayer((player) => player.pauseSong())()
+export const resumeSong = async () => withPlayer((player) => player.resumeSong())()
+export const stopSong = async () => withPlayer((player) => player.stopSong())()
+export const downloadSong = async (song, source = null) => withPlayer((player) => player.downloadSong(song, source))()
+export const downloadNextSong = async (queue, currentIndex) => withPlayer((player) => player.downloadNextSong(queue, currentIndex))()
 
 export const restoreState = async (state) => {
 	if (!state) return
@@ -82,32 +80,18 @@ export const restoreState = async (state) => {
 	}
 }
 
-export const setPosition = async (position) => {
-	return getPlayer().setPosition(position)
-}
-
-export const setVolume = async (volume) => {
-	return getPlayer().setVolume(volume)
-}
-
-export const reconcileState = async (songDispatch) => {
-	return getPlayer().reconcileState?.(songDispatch)
-}
-
-export const getVolume = () => {
-	return getPlayer().getVolume()
-}
-
-export const loadSong = async (config, queue, index) => {
-	return getPlayer().loadSong(config, queue, index)
-}
-
-export const tuktuktuk = async (songDispatch) => {
-	return getPlayer().tuktuktuk(songDispatch)
-}
+export const setPosition = async (position) => withPlayer((player) => player.setPosition(position))()
+export const setVolume = async (volume) => withPlayer((player) => player.setVolume(volume))()
+export const reconcileState = async (songDispatch) => withPlayer((player) => player.reconcileState?.(songDispatch))()
+export const getVolume = () => getPlayer()?.getVolume()
+export const loadSong = async (config, queue, index) => withPlayer((player) => player.loadSong(config, queue, index))()
+export const tuktuktuk = async (songDispatch) => withPlayer((player) => player.tuktuktuk(songDispatch))()
 
 export const updateVolume = () => { }
 export const updateTime = () => {
+	// all three backends are called unconditionally on purpose: each one runs hooks
+	// (useProgress / useStreamPosition / useState+listener), so skipping one by device type
+	// would change the hook count per component and break React's rules of hooks.
 	const localTime = LocalPlayer.updateTime()
 	const upnpTime = UpnpPlayer.updateTime()
 	const chromecastTime = CastPlayer.updateTime()
@@ -121,20 +105,15 @@ export const isVolumeSupported = () => {
 	return false
 }
 
-export const resetAudio = (songDispatch) => {
-	return getPlayer().resetAudio(songDispatch)
-}
-
-export const switchServer = async (config) => {
-	return getPlayer().switchServer(config)
-}
+export const resetAudio = (songDispatch) => withPlayer((player) => player.resetAudio(songDispatch))()
+export const switchServer = async (config) => withPlayer((player) => player.switchServer(config))()
 
 export const connect = async (device, newType) => {
-	await getPlayer(newType).connect(device)
+	await getPlayer(newType)?.connect(device)
 }
 
 export const disconnect = async (device) => {
-	return getPlayer().disconnect(device)
+	return getPlayer()?.disconnect(device)
 }
 
 export const switchPlayer = async (newType) => {
@@ -142,7 +121,7 @@ export const switchPlayer = async (newType) => {
 }
 
 export const saveState = async () => {
-	return getPlayer().saveState()
+	return withPlayer((player) => player.saveState(), { position: 0, isPlaying: false })()
 		.catch((error) => {
 			logger.error('Player', 'Error saving state:', error)
 			return {
@@ -178,6 +157,9 @@ export default {
 	connect,
 	disconnect,
 	switchPlayer,
+	downloadSong,
+	downloadNextSong,
+	loadSong,
 	State,
 	...core,
 }

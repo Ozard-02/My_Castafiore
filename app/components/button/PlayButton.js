@@ -40,15 +40,20 @@ const PlayButton = ({ style = {}, size, color }) => {
 	}, [song.state])
 
 	const onPress = () => {
-		if (!song.isSongLoad) {
-			Player.playSong(config, songDispatch, song.queue, song.index)
-		} else if (song.state === Player.State.Error) {
-			Player.reload()
-		} if (song.state === Player.State.Playing) {
-			Player.pauseSong()
-		} else {
-			Player.resumeSong()
+		// the queue ran out and stopped: play means "start it over", not resume (resuming an
+		// already-ENDED track does nothing, which left this button dead at the end of a queue)
+		if (song.queueEnded && song.queue?.length) {
+			Player.playSong(config, songDispatch, song.queue, 0).catch(() => { })
+			return
 		}
+		if (!song.isSongLoad) {
+			// was `else if` + a stray `if`: playSong ran and then resumeSong ran too
+			Player.playSong(config, songDispatch, song.queue, song.index).catch(() => { })
+			return
+		}
+		if (song.state === Player.State.Error) return Player.reload()
+		if (song.state === Player.State.Playing) Player.pauseSong()
+		else Player.resumeSong()
 	}
 
 	if (icon === 'loading') {

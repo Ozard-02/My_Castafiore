@@ -2,6 +2,7 @@ import React from 'react'
 import GoogleCast, { useStreamPosition, useRemoteMediaClient } from 'react-native-google-cast'
 
 import { getApi } from '~/utils/api'
+import { endOfTrackAction, scrobbleTrack, stopAtQueueEnd } from '~/utils/playerCore'
 import { urlCover, urlStream } from '~/utils/url'
 import { useRemote } from '~/contexts/remote/use'
 import { useSong } from '~/contexts/song/use'
@@ -10,12 +11,20 @@ import State from '~/utils/playerState'
 
 const initPlayer = async (_songDispatch) => { }
 
-const convertState = {
-	'buffering': State.Loading,
+// GoogleCast playerState string -> MyState. The fallback used to be `State.Stopped` from
+// ~/utils/playerState, i.e. the string 'stopped', which is NOT a key of this table — so an
+// unknown/ended/error receiver state resolved to undefined and the reducer's
+// `!action.state` guard silently dropped it (no error icon ever on Chromecast).
+const CAST_STATE = {
 	'idle': State.None,
 	'loading': State.Loading,
-	'paused': State.Paused,
+	'buffering': State.Loading,
 	'playing': State.Playing,
+	'paused': State.Paused,
+	'ended': State.Stopped,
+	'stopped': State.Stopped,
+	'error': State.Error,
+	'unknown': State.Stopped,
 }
 
 const useEvent = (_song, songDispatch, nextSong) => {
@@ -43,18 +52,23 @@ const useEvent = (_song, songDispatch, nextSong) => {
 
 		events.push(client.onMediaStatusUpdated((mediaStatus) => {
 			if (!mediaStatus) return
-			songDispatch({ type: 'setState', state: convertState[mediaStatus?.playerState || State.Stopped] })
+			songDispatch({ type: 'setState', state: CAST_STATE[mediaStatus?.playerState] ?? State.Stopped })
 		}))
 
-		events.push(client.onMediaPlaybackEnded((_mediaStatus) => {
-			if (!global.song?.queue?.length) return
-			getApi(global.config, 'scrobble', { id: global.song.songInfo.id, submission: true })
-				.catch(() => { })
-			if (global.song.actionEndOfSong === 'repeat') {
-				client.seek(0)
-			} else if (!global.repeatQueue && !global.song.radioMode && global.song.index === global.song.queue.length - 1 && !global.song.upNext?.length) {
-				client.stop()
-			} else nextSong(global.config, global.song, songDispatch)
+		events.push(client.onMediaPlaybackEnded(async (_mediaStatus) => {
+			const song = global.song
+			const action = endOfTrackAction(song)
+			if (action === 'none') return
+			scrobbleTrack(global.config, song, true)
+			if (action === 'repeat') {
+				// seek alone leaves the receiver idle — repeat-one has to resume too
+				// (this branch used to only seek, so the track silently stopped)
+				await client.seek(0)
+				return client.play()
+			}
+			if (action === 'stop') return stopAtQueueEnd(songDispatch, () => client.stop())
+			if (action === 'reset') return client.stop()
+			nextSong(global.config, song, songDispatch)
 		}))
 
 		return () => events.forEach((event) => event.remove())
@@ -86,7 +100,7 @@ const stopSong = async () => {
 	await client.stop()
 }
 
-const downloadSong = async (_urlStream, _id) => {
+const downloadSong = async (_song, _source = null) => {
 }
 
 const downloadNextSong = async (_queue, _currentIndex) => {

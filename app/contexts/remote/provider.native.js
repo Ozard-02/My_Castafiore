@@ -30,8 +30,10 @@ const transfer = async (fromDevice, toDevice, config, song, songDispatch) => {
 	} catch (error) {
 		logger.error('RemoteProvider', 'Error restoring state on new player:', error)
 		await Player.switchPlayer('local')
-		await Player.playSong(config, songDispatch, song.queue, song.index)
-		await Player.restoreState(savedState)
+		if (song?.queue?.length) {
+			await Player.playSong(config, songDispatch, song.queue, song.index).catch(() => { })
+			await Player.restoreState(savedState)
+		}
 		throw error
 	}
 }
@@ -72,29 +74,35 @@ export const RemoteProvider = ({ children }) => {
 		prevSelectedDeviceRef.current = currentDevice
 		if (prevDevice?.id === currentDevice?.id) return
 
-		const hasSong = song?.queue && song?.index !== undefined && song?.songInfo
-		if (hasSong || config?.url) {
-			setStatus(STATUS.Transferring)
-			if (prevDevice?.type === currentDevice?.type) {
-				transferSameType(prevDevice, currentDevice, config, song, songDispatch)
-					.then(() => setStatus(STATUS.Connected))
-					.catch((error) => {
-						logger.error('RemoteProvider', 'Error transferring playback (same type):', error)
-						prevSelectedDeviceRef.current = null
-						setStatus(STATUS.Connected)
-						Player.switchPlayer('local')
-						Player.playSong(config, songDispatch, song.queue, song.index)
-						setSelectedDevice(null)
-					})
-			} else {
-				transfer(prevDevice, currentDevice, config, song, songDispatch)
-					.then(() => setStatus(STATUS.Connected))
-					.catch(() => {
-						prevSelectedDeviceRef.current = null
-						setStatus(STATUS.Connected)
-						setSelectedDevice(null)
-					})
-			}
+		// Only transfer when there is actually something to transfer. The old guard was
+		// `hasSong || config?.url`, so connecting a device with no queue yet still ran
+		// playSong(config, dispatch, null, 0) -> queue[index] on null -> TypeError, and the
+		// catch path replayed the same null-queue call.
+		// Read the live song state, not this effect's React snapshot: a background advance
+		// only mutates global.song, so the snapshot could be several tracks behind.
+		const live = global.song ?? song
+		const hasSong = !!(live?.queue?.length && live?.songInfo)
+		if (!hasSong) return
+		setStatus(STATUS.Transferring)
+		if (prevDevice?.type === currentDevice?.type) {
+			transferSameType(prevDevice, currentDevice, config, live, songDispatch)
+				.then(() => setStatus(STATUS.Connected))
+				.catch((error) => {
+					logger.error('RemoteProvider', 'Error transferring playback (same type):', error)
+					prevSelectedDeviceRef.current = null
+					setStatus(STATUS.Connected)
+					Player.switchPlayer('local')
+					Player.playSong(config, songDispatch, live.queue, live.index).catch(() => { })
+					setSelectedDevice(null)
+				})
+		} else {
+			transfer(prevDevice, currentDevice, config, live, songDispatch)
+				.then(() => setStatus(STATUS.Connected))
+				.catch(() => {
+					prevSelectedDeviceRef.current = null
+					setStatus(STATUS.Connected)
+					setSelectedDevice(null)
+				})
 		}
 	}, [selectedDevice])
 
