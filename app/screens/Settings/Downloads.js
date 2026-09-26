@@ -117,49 +117,55 @@ const Downloads = () => {
 		const progress = isDownloading ? Math.round((item.progress || 0) * 100) : 0
 
 		return (
-			<View style={[styles.activeCard, { backgroundColor: theme.secondaryBack }]}>
-				<View style={styles.row}>
-					<ImageError style={styles.thumb} source={{ uri: coverForCurrentServer(item.meta, config) }} iconError="music" />
-					<View style={styles.rowContent}>
-						<Text style={[styles.rowTitle, { color: theme.primaryText }]} numberOfLines={1}>{item.meta.title}</Text>
-						<Text style={[styles.rowSubtitle, { color: theme.secondaryText }]} numberOfLines={1}>
-							{item.meta.artist}{item.source ? ` · ${item.source.name}` : ''}
-						</Text>
-						{isDownloading && (
-							<View style={[styles.progressTrack, { backgroundColor: theme.primaryBack }]}>
-								<View style={[styles.progressFill, { backgroundColor: theme.primaryTouch, width: `${progress}%` }]} />
-							</View>
-						)}
-						{isDownloading && (
-							<Text style={[styles.progressText, { color: theme.secondaryText }]}>
-								{formatBytes(item.writtenBytes)} / {formatBytes(item.totalBytes || item.writtenBytes)} · {progress}%
+			// wrapped in the same container as the header/footer sections: without it these
+			// cards are direct children of the LegendList, so they missed both the 20px
+			// horizontal inset and the 800px maxWidth that every other section gets — they
+			// rendered full-bleed and stretched the whole window on a tablet/desktop
+			<View style={settingStyles.contentMainContainer}>
+				<View style={[styles.activeCard, { backgroundColor: theme.secondaryBack }]}>
+					<View style={styles.row}>
+						<ImageError style={styles.thumb} source={{ uri: coverForCurrentServer(item.meta, config) }} iconError="music" />
+						<View style={styles.rowContent}>
+							<Text style={[styles.rowTitle, { color: theme.primaryText }]} numberOfLines={1}>{item.meta.title}</Text>
+							<Text style={[styles.rowSubtitle, { color: theme.secondaryText }]} numberOfLines={1}>
+								{item.meta.artist}{item.source ? ` · ${item.source.name}` : ''}
 							</Text>
-						)}
-						{isPaused && <Text style={[styles.statusText, { color: theme.secondaryText }]}>{t('settings.downloads.Paused')}</Text>}
-						{isError && <Text style={[styles.statusText, { color: '#e33' }]} numberOfLines={1}>{item.error || t('settings.downloads.Failed')}</Text>}
-						{item.status === 'queued' && <Text style={[styles.statusText, { color: theme.secondaryText }]}>{t('settings.downloads.Queued')}</Text>}
-					</View>
-					<View style={styles.rowActions}>
-						{isDownloading && <IconButton icon="pause" size={size.icon.small} color={theme.primaryText} style={styles.actionButton} onPress={() => pauseDownload(item.songId)} />}
-						{isPaused && <IconButton icon="play" size={size.icon.small} color={theme.primaryText} style={styles.actionButton} onPress={() => resumeDownload(item.songId)} />}
-						{isError && <IconButton icon="refresh" size={size.icon.small} color={theme.primaryText} style={styles.actionButton} onPress={() => retryDownload(item.songId)} />}
-						<IconButton
-							icon="times"
-							size={size.icon.small}
-							color={theme.secondaryText}
-							style={styles.actionButton}
-							onPress={() => {
-								if (isDownloading) {
-									confirmAlert(t('settings.downloads.Cancel download'), t('settings.downloads.Cancel download alert', { name: item.meta.title }), async () => cancelDownload(item.songId))
-								} else {
-									cancelDownload(item.songId)
-								}
-							}}
-						/>
+							{isDownloading && (
+								<View style={[styles.progressTrack, { backgroundColor: theme.primaryBack }]}>
+									<View style={[styles.progressFill, { backgroundColor: theme.primaryTouch, width: `${progress}%` }]} />
+								</View>
+							)}
+							{isDownloading && (
+								<Text style={[styles.progressText, { color: theme.secondaryText }]}>
+									{formatBytes(item.writtenBytes)} / {formatBytes(item.totalBytes || item.writtenBytes)} · {progress}%
+								</Text>
+							)}
+							{isPaused && <Text style={[styles.statusText, { color: theme.secondaryText }]}>{t('settings.downloads.Paused')}</Text>}
+							{isError && <Text style={[styles.statusText, { color: '#e33' }]} numberOfLines={1}>{item.error || t('settings.downloads.Failed')}</Text>}
+							{item.status === 'queued' && <Text style={[styles.statusText, { color: theme.secondaryText }]}>{t('settings.downloads.Queued')}</Text>}
+						</View>
+						<View style={styles.rowActions}>
+							{isDownloading && <IconButton icon="pause" size={size.icon.small} color={theme.primaryText} style={styles.actionButton} onPress={() => pauseDownload(item.songId)} />}
+							{isPaused && <IconButton icon="play" size={size.icon.small} color={theme.primaryText} style={styles.actionButton} onPress={() => resumeDownload(item.songId)} />}
+							{isError && <IconButton icon="refresh" size={size.icon.small} color={theme.primaryText} style={styles.actionButton} onPress={() => retryDownload(item.songId)} />}
+							<IconButton
+								icon="times"
+								size={size.icon.small}
+								color={theme.secondaryText}
+								style={styles.actionButton}
+								onPress={() => {
+									if (isDownloading) {
+										confirmAlert(t('settings.downloads.Cancel download'), t('settings.downloads.Cancel download alert', { name: item.meta.title }), async () => cancelDownload(item.songId))
+									} else {
+										cancelDownload(item.songId)
+									}
+								}}
+							/>
+						</View>
 					</View>
 				</View>
 			</View>
-		)
+	)
 	}
 
 	const header = (
