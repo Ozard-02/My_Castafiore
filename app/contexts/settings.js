@@ -120,8 +120,9 @@ export const defaultSettings = {
 	playSeedFirst: false,
 	// Repeat the whole queue when it runs out. Off by default: a queue that silently
 	// wrapped forever was indistinguishable from "the playlist loops" (endless-radio
-	// sessions set song.radioMode and extend instead, and keep going either way).
+	// sessions set song.radioMode and keep sampling instead).
 	repeatQueue: false,
+	settingsVersion: 2,
 	// View settings
 	gridView: false,
 	// Playlist settings
@@ -257,9 +258,14 @@ export const homeSections = [
 	},
 ]
 
+// Bumped whenever a stored default needs correcting on existing installs. Stored settings
+// win over defaults (`{...defaultSettings, ...data}`), so changing a default alone only ever
+// affects fresh installs.
+const SETTINGS_VERSION = 2
+
 const getSettings = async () => {
 	const rawSettings = await AsyncStorage.getItem('settings')
-	if (rawSettings === null) return defaultSettings
+	if (rawSettings === null) return { ...defaultSettings, settingsVersion: SETTINGS_VERSION }
 	try {
 		const data = JSON.parse(rawSettings)
 		if (data.homeOrderV2 && data?.homeOrderV2?.length !== defaultSettings.homeOrderV2.length) {
@@ -269,12 +275,22 @@ const getSettings = async () => {
 				}
 			})
 		}
+		// v2: repeatQueue used to default to true, and saveSettings persists the whole merged
+		// object — so every existing install has `repeatQueue: true` written out explicitly
+		// and cannot be told apart from a user who deliberately enabled it. Force it once: a
+		// queue that silently wrapped (and turned a failed radio top-up into "the same 50
+		// tracks, in order, forever") is what the new default exists to prevent. Anyone who
+		// wants repeat back flips it in Settings → Player or the player options.
+		if (!data.settingsVersion || data.settingsVersion < 2) {
+			data.repeatQueue = defaultSettings.repeatQueue
+			data.settingsVersion = SETTINGS_VERSION
+		}
 		return {
 			...defaultSettings,
 			...data,
 			homeOrder: undefined,
 		}
 	} catch {
-		return defaultSettings
+		return { ...defaultSettings, settingsVersion: SETTINGS_VERSION }
 	}
 }

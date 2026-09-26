@@ -61,8 +61,8 @@ const Artist = ({ navigation, route: { params } }) => {
 			})
 			allSongs.current = (await Promise.all(songsPending)).flat()
 		}
+		// artist shuffle plays the artist's tracks and stops — it is not a radio session
 		await playSong(config, songDispatch, shuffle(allSongs.current), 0)
-		songDispatch({ type: 'setRadioMode', value: true })
 	}
 
 	return (

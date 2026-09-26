@@ -62,8 +62,8 @@ const Genre = ({ route: { params: { name, albumCount = 0, songCount = 0 } } }) =
 			.then(async (json) => {
 				const songs = json.randomSongs?.song
 				if (!songs) return
+				// genre shuffle plays the genre sample and stops — it is not a radio session
 				await playSong(config, songDispatch, songs, 0)
-				songDispatch({ type: 'setRadioMode', value: true })
 			})
 			.catch(() => { })
 	}

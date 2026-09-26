@@ -1,6 +1,6 @@
 import { getApi, getApiNetworkFirst } from '~/utils/api'
 import { filterExcluded, refreshExcludedSongIds } from '~/utils/exclusions'
-import { saveQueue } from '~/utils/tools'
+import { saveQueue, shuffle } from '~/utils/tools'
 import logger from '~/utils/logger'
 
 // Song navigation + queue mutations shared by every player backend.
@@ -15,7 +15,10 @@ export const endOfTrackAction = (song) => {
 	if (!song?.queue?.length) return 'none'
 	if (song.songInfo?.id === 'tuktuktuk') return 'reset'
 	if (song.actionEndOfSong === 'repeat') return 'repeat'
-	if (!global.repeatQueue && !song.radioMode && song.index >= song.queue.length - 1 && !song.upNext?.length) return 'stop'
+	// a radio session never wraps, whatever repeatQueue says — wrapping is what replayed the
+	// same batch in the same order. It advances through nextSong, which tops the stream up.
+	if (song.radioMode) return 'next'
+	if (!global.repeatQueue && song.index >= song.queue.length - 1 && !song.upNext?.length) return 'stop'
 	return 'next'
 }
 
@@ -34,34 +37,79 @@ export const stopAtQueueEnd = (songDispatch, stop) => {
 	return stop()
 }
 
-// ponytail: uniform top-up — library-wide randoms regardless of where the shuffle
-// started. Context-aware refills (genre/artist) would need serializable fetchers.
-const extendRadio = async (config, song, songDispatch) => {
-	try {
-		// ponytail: refresh exclusions per top-up — the memory set stays stale for
-		// radio started from Genre/Artist (only Home random refreshes on press).
-		await refreshExcludedSongIds(config)
-		const known = new Set(song.queue.map(track => track.id))
-		let fresh = []
-		for (const size of [50, 200]) {
-			const json = await getApiNetworkFirst(config, 'getRandomSongs', `size=${size}`)
-			// getRandomSongs can return the same id twice in one page, and nothing else
-			// filters it — those duplicates played back-to-back and read as "looping".
-			fresh = (json.randomSongs?.song || []).filter(track => !known.has(track.id))
-			if (fresh.length) break
+// Radio is a continuous stream, not a series of 50-track batches.
+//
+// It used to fetch 50 tracks and only top up once the last one ENDED, so the fetch happened
+// in the gap between batches — an audible dead pause that made the selection sound chunked —
+// and a failed top-up fell through to (index+1) % length, replaying the same 50 in the same
+// order forever. Now the queue is topped up while tracks are still playing, and a radio
+// session never wraps.
+const RADIO_LOW_WATER = 10   // start refilling once fewer than this many tracks are unplayed
+const RADIO_BATCH = 20       // refill cadence; never perceived as a unit
+const RADIO_BATCH_MAX = 100  // fallback page size when a small library returns little
+const RADIO_MAX_QUEUE = 200  // past this the session restarts instead of growing forever
+
+let radioPending = null
+
+const fetchRandoms = async (config, size) => {
+	const json = await getApiNetworkFirst(config, 'getRandomSongs', `size=${size}`)
+	return json.randomSongs?.song || []
+}
+
+// Returns the next tracks to sample. `#<user>-exclusive` playlists are filtered out of EVERY
+// path here — the unseen pool and the repeat fallback alike — so an excluded track can never
+// reach a shuffle session. Repeats are fine for a sampler; hearing the same 50 in the same
+// order is not.
+const radioPool = async (config, song, size) => {
+	// the memory set is stale for sessions not started from Home (only the Home button
+	// refreshes it on press), so refresh per top-up
+	await refreshExcludedSongIds(config)
+	const known = new Set(song.queue.map(track => track.id))
+	const page = await fetchRandoms(config, size)
+	const allowed = await filterExcluded(config, page)
+
+	const unseen = []
+	allowed.forEach(track => {
+		if (known.has(track.id)) return
+		// getRandomSongs can repeat an id inside one page; those played back-to-back
+		known.add(track.id)
+		unseen.push(track)
+	})
+	if (unseen.length) return unseen
+
+	// Nothing new left (small library, or mostly excluded). Sample again from the whole
+	// allowed set, reshuffled — a continuous sampler repeats, it doesn't replay a batch.
+	return shuffle(allowed).slice(0, RADIO_BATCH_MAX)
+}
+
+// Shared by the low-water kick-off and the end-of-queue safety net: if a refill is already in
+// flight both await the same promise, so the stream never stops just because a fetch started
+// a few seconds earlier.
+const refillRadio = (config, song, songDispatch) => {
+	if (radioPending) return radioPending
+	radioPending = (async () => {
+		try {
+			const added = await radioPool(config, song, RADIO_BATCH)
+			if (!added.length) return false
+			if (song.queue.length + added.length > RADIO_MAX_QUEUE) {
+				// Restart the session on a fresh pool instead of growing without bound. Much
+				// cheaper than trimming played tracks off the head, which would mean
+				// re-deriving song.index, the queue rotation and every drag-and-drop index.
+				logger.info('Song', `radio restarting (queue was ${song.queue.length})`)
+				songDispatch({ type: 'setQueue', queue: added, index: 0, keepUpNext: true })
+				songDispatch({ type: 'setRadioMode', value: true })
+			} else {
+				added.forEach(track => songDispatch({ type: 'addToQueue', track }))
+			}
+			return true
+		} catch (error) {
+			logger.error('radio', 'refill failed:', error?.message)
+			return false
+		} finally {
+			radioPending = null
 		}
-		const songs = await filterExcluded(config, fresh)
-		const added = []
-		songs.forEach(track => {
-			if (known.has(track.id)) return
-			known.add(track.id)
-			added.push(track)
-		})
-		added.forEach(track => songDispatch({ type: 'addToQueue', track }))
-		return added.length > 0
-	} catch {
-		return false
-	}
+	})()
+	return radioPending
 }
 
 export const createSongControls = ({ loadSong, stopSong = async () => { } }) => {
@@ -105,6 +153,12 @@ export const createSongControls = ({ loadSong, stopSong = async () => { } }) => 
 	const nextSong = async (config, song, songDispatch) => {
 		logger.info('Song', `nextSong from idx=${song.index}/${song.queue?.length} upNext=${song.upNext?.length} action=${song.actionEndOfSong} radio=${!!song.radioMode}`)
 		await clearRepeatOne(song, songDispatch)
+		// Top the stream up while tracks are still playing, not in the gap after the last
+		// one — that gap is what made the selection sound like discrete batches. Not awaited:
+		// the current track is still playing, and refillRadio de-dupes concurrent calls.
+		if (song.radioMode && song.queue?.length - 1 - song.index < RADIO_LOW_WATER) {
+			refillRadio(config, song, songDispatch)
+		}
 		if (song.upNext?.length) {
 			const track = song.upNext[0]
 			songDispatch({ type: 'nextUpNext' })
@@ -113,15 +167,18 @@ export const createSongControls = ({ loadSong, stopSong = async () => { } }) => 
 		}
 		if (song.queue?.length) {
 			if (song.index >= song.queue.length - 1) {
-				// radio session: top the queue up instead of stopping/wrapping — even
-				// with repeatQueue ON, radio must keep pulling new songs; read global.song —
-				// the closure copy is stale once addToQueue dispatches land
-				if (song.radioMode && await extendRadio(config, song, songDispatch)) {
-					logger.info('Song', 'nextSong radio topped up')
-					return setIndex(config, songDispatch, global.song.queue, global.song.index + 1)
+				if (song.radioMode) {
+					// Await the in-flight refill (a low-water kick-off may already be running).
+					// If there is genuinely nothing to add, STOP. Falling through to
+					// (index+1) % length is what replayed the same 50 tracks in the same order
+					// whenever a top-up came back empty.
+					if (await refillRadio(config, song, songDispatch)) {
+						logger.info('Song', 'nextSong radio topped up')
+						return setIndex(config, songDispatch, global.song.queue, global.song.index + 1)
+					}
+					logger.info('Song', 'nextSong -> radio pool exhausted, stop')
+					return stopAtQueueEnd(songDispatch, stopSong)
 				}
-				// A failed top-up must NOT silently wrap. With repeatQueue off that replayed
-				// the same N songs forever, which is what "the playlist loops" looked like.
 				if (!global.repeatQueue) {
 					logger.info('Song', 'nextSong -> end of queue, stop')
 					return stopAtQueueEnd(songDispatch, stopSong)

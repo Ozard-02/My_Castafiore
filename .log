@@ -1,5 +1,54 @@
 # Castafiore - Session Log
 
+## 2026-09-26 — Radio as a continuous sampler + download/cache identity across 2 servers
+Two follow-ups to the playback-correctness pass. TODO #32, #33.
+
+### Radio: "plays the same 50 in loop, I want continuous sampling"
+- Root cause: the top-up only ran once the last track ENDED, so the fetch landed in the gap
+  between batches — an audible dead pause is what made it sound chunked. And a failed top-up fell
+  through to `(index+1) % length`. Compounded by `repeatQueue` being stored as `true` on existing
+  installs, so the wrap was ALWAYS taken. That last part is the direct answer to "same 50 in loop":
+  getSettings does `{...defaultSettings, ...data}`, so my earlier default change never reached the
+  device. Fixed with a versioned migration (v2) that forces repeatQueue off once.
+- `playerCore`: RADIO_LOW_WATER=10 low-water top-up (never in the gap), batch 20 / fallback page
+  100, shared `radioPending` promise so the kick-off and the end-of-queue net await one fetch.
+- A radio session NEVER wraps: endOfTrackAction returns 'next' for radioMode, and an exhausted pool
+  reshuffles the whole allowed set (repeats are fine for a sampler; replaying one batch is not).
+- RADIO_MAX_QUEUE=200 then restart the session on a fresh pool via `setQueue` + `keepUpNext`.
+  Chosen over trimming played tracks off the head, which would mean re-deriving song.index, the
+  queue rotation and every drag-and-drop index — the user asked for the easier option.
+- `#<user>-exclusive` filtered in BOTH sampling paths (unseen pool and reshuffle fallback).
+- Visibility: Radio badge next to shuffle (tap ends it) + "End radio" in player options.
+  radioMode was invisible, which is exactly why an endless session read as a bug.
+- RandomButton (Album/Playlist/Favorited), Artist, Genre no longer set radioMode — they play their
+  collection and stop. Shuffling a 12-track album used to silently become endless library randoms.
+- Verified: 7-assertion node harness (migration forces stale stored true off; exhausted pool
+  reshuffles instead of returning empty; exclusions absolute in the repeat path; in-page
+  duplicate ids deduped). eslint clean, release APK builds + installs, no crash.
+
+### Download/cache mismatch between the two server addresses
+User confirmed the two servers are the SAME library behind two addresses, and NetworkAutoSwitch
+flips between them automatically. Found three distinct mechanisms:
+1. `maxBitRate` was never part of the cache identity (filename `${id}.${format}`, URL carried the
+   bitrate) → a 128k transcode answered every 320k request forever. New `songCacheKey` adds the
+   suffix, but ONLY for `format !== 'raw'`: urlStream returns a plain `stream?id=X` for raw, so
+   keying on bitrate there would re-download the library byte-for-byte on every slider move. Raw is
+   the default, so the common case is byte-identical to before — no migration, no re-download.
+2. No provenance at all. buildMeta now records `server`; never used to invalidate (same library,
+   re-fetching on a switch would burn the data plan) but it makes a mismatch visible, and it lets
+   meta.cover be re-pointed at the active server — it was a baked absolute URL, so after a switch
+   it pointed at the LAN host and 404'd off the house wifi.
+3. songUrl baked global.config at enqueue, so queued items kept the old address after a switch.
+   initDownloads (already re-run on every config change) re-points queued/paused items; in-flight
+   ones keep their URL because the bytes are still valid and cancelling wastes a partial download.
+- Also: partUri derived in runDownload not enqueue (no stranded .part on a mid-queue bitrate
+  change); initCacheSong prunes non-songCacheKey files; dead `global.config.folderCache` removed.
+- Verified: 15-assertion node harness over the verbatim rules — the important one being that
+  raw+bitrate-change yields an UNCHANGED key while mp3 128 vs 320 differ, and a 128 file does not
+  answer a 320 query (isSongCached is an exact array lookup).
+- **Left alone, flagged to the user:** NetworkAutoSwitch still flips mid-song and the current track
+  is deliberately NOT interrupted (cached or already streaming). Offered to change it.
+
 ## 2026-09-26 — FIX: playback correctness pass (background / looping / wrong cover)
 - Report: "problems with the app running in the background, songs looping, not correct update of
   the cover, and sometimes playlist looping". Treated the three symptoms as hints and audited the

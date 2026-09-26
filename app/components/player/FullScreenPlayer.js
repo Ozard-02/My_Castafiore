@@ -11,6 +11,7 @@ import { useCachedFirst } from '~/utils/api'
 import { urlCover } from '~/utils/url'
 import FavoritedButton from '~/components/button/FavoritedButton'
 import IconButton from '~/components/button/IconButton'
+import Icon from 'react-native-vector-icons/FontAwesome'
 import ImageError from '~/components/ImageError'
 import Lyric from '~/components/player/Lyric'
 import mainStyles from '~/styles/main'
@@ -201,6 +202,7 @@ const TimeBar = () => {
 }
 
 const FullScreenPlayer = ({ setFullScreen }) => {
+	const { t } = useTranslation()
 	const songDispatch = useSongDispatch()
 	const config = useConfig()
 	const theme = useTheme()
@@ -294,13 +296,24 @@ const FullScreenPlayer = ({ setFullScreen }) => {
 					</View>
 					<TimeBar />
 					<View style={{ flexDirection: 'row', width: '100%', marginVertical: compact ? 6 : 20, alignItems: 'center', justifyContent: 'space-between' }}>
-						<IconButton
-							icon="random"
-							size={compact ? 18 : 20}
-							color={song.actionEndOfSong == 'random' ? theme.primaryTouch : theme.secondaryText}
-							style={{ padding: 10 }}
-							onPress={() => Player.setRepeat(songDispatch, song.actionEndOfSong === 'random' ? 'next' : 'random')}
-						/>
+						<View style={{ flexDirection: 'row', alignItems: 'center' }}>
+							<IconButton
+								icon="random"
+								size={compact ? 18 : 20}
+								color={song.actionEndOfSong == 'random' ? theme.primaryTouch : theme.secondaryText}
+								style={{ padding: 10 }}
+								onPress={() => Player.setRepeat(songDispatch, song.actionEndOfSong === 'random' ? 'next' : 'random')}
+							/>
+							{/* a radio session has no natural end, so say so — and offer a way out */}
+							{song.radioMode && (
+								<Pressable
+									onPress={() => songDispatch({ type: 'setRadioMode', value: false })}
+									style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: size.radius.circle, backgroundColor: 'rgba(255,255,255,0.10)' }}>
+									<Icon name="random" size={11} color={theme.primaryTouch} />
+									<Text style={{ color: theme.primaryTouch, fontSize: size.text.small, fontWeight: '700' }}>{t('Radio')}</Text>
+								</Pressable>
+							)}
+						</View>
 						<IconButton
 							icon="step-backward"
 							size={compact ? 22 : size.icon.large}

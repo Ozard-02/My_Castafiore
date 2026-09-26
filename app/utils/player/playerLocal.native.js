@@ -145,7 +145,7 @@ const convertToTrack = async (track, config) => {
 		...track,
 		id: track.id,
 		url: (await isSongCached(null, track.id, global.streamFormat, global.maxBitRate)) ?
-			getPathSong(track.id, global.streamFormat) :
+			getPathSong(track.id, global.streamFormat, global.maxBitRate) :
 			urlStream(config, track.id, global.streamFormat, global.maxBitRate),
 		artwork: urlCover(config, track),
 		artist: track.artist,
@@ -258,7 +258,7 @@ const switchServer = async (config) => {
 	// Already playing from the local cache file (server-independent) → leave the player untouched.
 	if (await isSongCached(null, track.id, global.streamFormat, global.maxBitRate)) {
 		const active = await TrackPlayer.getActiveTrack()
-		if (active && active.url === getPathSong(track.id, global.streamFormat)) return
+		if (active && active.url === getPathSong(track.id, global.streamFormat, global.maxBitRate)) return
 	}
 
 	const state = await saveState()

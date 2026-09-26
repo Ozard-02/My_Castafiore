@@ -20,8 +20,10 @@ const RandomButton = ({ songList, size = 23 }) => {
 
 	const shuffleSong = async () => {
 		if (songList?.length) {
+			// deliberately NOT a radio session: a shuffle button on an album/playlist should
+			// play that collection and stop. It used to set radioMode, so the collection
+			// silently continued into endless library-wide randoms once it ran out.
 			await playSong(config, songDispatch, shuffle(songList), 0)
-			songDispatch({ type: 'setRadioMode', value: true })
 		}
 	}
 

@@ -7,9 +7,10 @@ import Icon from 'react-native-vector-icons/FontAwesome'
 import { useIsFocused } from '@react-navigation/native'
 
 import { useTheme } from '~/contexts/theme'
-import { useDownloads, getDownloadSpeed, formatSpeed, formatBytes, pauseDownload, resumeDownload, cancelDownload, retryDownload, removeSong, removeSource, clearAllDownloads, getDownloadedSongs } from '~/utils/downloadManager'
+import { useDownloads, getDownloadSpeed, formatSpeed, formatBytes, pauseDownload, resumeDownload, cancelDownload, retryDownload, removeSong, removeSource, clearAllDownloads, getDownloadedSongs, coverForCurrentServer } from '~/utils/downloadManager'
 import { clearCache, getStatCache } from '~/utils/cache'
 import { useSettings, useSetSettings } from '~/contexts/settings'
+import { useConfig } from '~/contexts/config'
 import { confirmAlert } from '~/utils/alert'
 import Header from '~/components/Header'
 import IconButton from '~/components/button/IconButton'
@@ -26,6 +27,7 @@ import size from '~/styles/size'
 const STATUS_ORDER = { downloading: 0, queued: 1, paused: 2, error: 3 }
 
 const Downloads = () => {
+	const config = useConfig()
 	const { t } = useTranslation()
 	const insets = useSafeAreaInsets()
 	const theme = useTheme()
@@ -117,7 +119,7 @@ const Downloads = () => {
 		return (
 			<View style={[styles.activeCard, { backgroundColor: theme.secondaryBack }]}>
 				<View style={styles.row}>
-					<ImageError style={styles.thumb} source={{ uri: item.meta.cover }} iconError="music" />
+					<ImageError style={styles.thumb} source={{ uri: coverForCurrentServer(item.meta, config) }} iconError="music" />
 					<View style={styles.rowContent}>
 						<Text style={[styles.rowTitle, { color: theme.primaryText }]} numberOfLines={1}>{item.meta.title}</Text>
 						<Text style={[styles.rowSubtitle, { color: theme.secondaryText }]} numberOfLines={1}>
@@ -261,7 +263,7 @@ const Downloads = () => {
 					<View style={settingStyles.optionsContainer(theme)}>
 						{individualSongs.map((song) => (
 							<View key={song.songId} style={[styles.row, { backgroundColor: theme.secondaryBack }]}>
-								<ImageError style={styles.thumb} source={{ uri: song.meta.cover }} iconError="music" />
+								<ImageError style={styles.thumb} source={{ uri: coverForCurrentServer(song.meta, config) }} iconError="music" />
 								<View style={styles.rowContent}>
 									<Text style={[styles.rowTitle, { color: theme.primaryText }]} numberOfLines={1}>{song.meta.title}</Text>
 									<Text style={[styles.rowSubtitle, { color: theme.secondaryText }]} numberOfLines={1}>{song.meta.artist} · {formatBytes(song.size)}</Text>

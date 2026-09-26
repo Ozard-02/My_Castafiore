@@ -133,7 +133,9 @@ export const songReducer = (state, action) => {
 				songInfo: newQueue[action.index],
 				index: action.index,
 				queue: newQueue,
-				upNext: [],
+				// keepUpNext: a radio session restarting on a fresh pool must not silently
+				// discard tracks the user queued for next
+				upNext: action.keepUpNext ? (state.upNext || []) : [],
 				originalQueue: null,
 				radioMode: false,
 				queueEnded: false,

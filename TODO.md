@@ -517,6 +517,72 @@
       guard; no `eslint-plugin-react-hooks` install (would flag ~20 pre-existing call sites).
     - `npm run eslint` clean; release APK builds (Metro bundle resolves).
 
+32. **Radio as a continuous sampler (not 50-track batches)** ✅ done 2026-09-26, needs on-device verify
+    Report: "it plays the same 50 songs in loop, I do not want a 50 songs selection plus at the end
+    a new 50 songs selection, more a continuous sampling".
+    - Root cause: the top-up only ran once the last track ENDED, so the fetch happened in the gap
+      between batches (audible dead pause = the "chunked" feel), and a failed top-up fell through to
+      `(index+1) % length`, replaying the same 50 in the same order. Compounded by `repeatQueue`
+      being stored as `true` on existing installs (see #31: changing a default never reaches a
+      stored value), so the wrap was always taken.
+    - `playerCore`: `RADIO_LOW_WATER=10` — the queue is topped up while tracks are still playing,
+      never in the gap. Batch 20 (fallback page 100) is a refill cadence, not a unit. A shared
+      `radioPending` promise means the low-water kick-off and the end-of-queue safety net await the
+      same fetch, so the stream never stops just because a refill started seconds earlier.
+    - **A radio session never wraps**, whatever `repeatQueue` says: `endOfTrackAction` returns
+      'next' for `radioMode`, and an exhausted pool stops rather than replaying a batch.
+    - Exhausted pool (small library / mostly excluded) → sample again from the whole allowed set,
+      **reshuffled**. Repeats are fine for a sampler; replaying one batch in order is not.
+    - `#<user>-exclusive` playlists are filtered out of every sampling path — the unseen pool AND
+      the repeat fallback. No excluded track can reach a shuffle session.
+    - Growth cap without index maths: past `RADIO_MAX_QUEUE=200` the session restarts on a fresh
+      pool via `setQueue` (`keepUpNext: true` so a pending Up-next survives). Much cheaper than
+      trimming played tracks off the head, which would mean re-deriving `song.index`, the queue
+      rotation and every drag-and-drop index.
+    - Visibility: a **Radio** badge next to the shuffle button (tap to end the session) and an
+      "End radio" entry in the player options. `radioMode` was previously invisible, which is why
+      an endless session read as a bug.
+    - Collection shuffles no longer start a radio: `RandomButton` (Album/Playlist/Favorited),
+      `Artist.js` and `Genre.js` just play their collection and stop. They used to set `radioMode`,
+      so shuffling a 12-track album silently continued into endless library-wide randoms.
+    - Queue cap → new `song.queueEnded` flag is what makes the play button restart the queue.
+
+33. **Download/cache identity across the two server addresses** ✅ done 2026-09-26, needs on-device verify
+    Both configured servers are the same library behind two addresses (LAN + public), and
+    `NetworkAutoSwitch` flips between them automatically on a network change.
+    - Mismatch 1 — **bitrate was not part of the cache identity**. Filenames were `${id}.${format}`
+      while the URL carried `maxBitRate`, so a 128k transcode kept answering a 320k request forever.
+      New `songCacheKey(id, format, bitRate)` adds the bitrate suffix — **but only when
+      `format !== 'raw'`**, because `urlStream` returns a plain `stream?id=X` for 'raw' and the
+      bitrate changes nothing about the file. Keying on it for raw would re-download the whole
+      library byte-for-byte on every slider move. 'raw' is the default, so the common case keeps
+      today's exact filenames: no migration, no re-download.
+    - Mismatch 2 — **no provenance**. `buildMeta` now records `server: global.config.url`, and
+      `finishSuccess` stores it on the index entry, so a cross-server file is visible instead of
+      silent. Deliberately does NOT invalidate: same library means interchangeable bytes, and
+      re-fetching on every WiFi/cellular change would burn the data plan.
+    - Mismatch 3 — **the mid-flight switch**. `songUrl` baked `global.config` at enqueue, so queued
+      items kept pointing at the old address. `initDownloads` (already re-run on every config
+      change) now re-points `queued`/`paused` items. In-flight items keep their URL — the bytes are
+      still valid and cancelling would discard a partial download for nothing.
+    - `meta.cover` is a full URL baked at enqueue, so after a switch it pointed at the LAN host and
+      404'd off the house wifi. `coverForCurrentServer(meta, config)` re-points the host at render
+      (no re-download); also exported from the web stub so the screen builds there.
+    - `partUri` is now derived in `runDownload` instead of at enqueue, so a format/bitrate change
+      mid-queue can't leave an orphan `.part` plus a `moveAsync` to a stale name.
+    - `initCacheSong` prunes files that don't match the `songCacheKey` shape (old `.part` leftovers
+      and pre-bitrate names). Removed the dead `global.config.folderCache` (`config.js` assigned it,
+      nothing read it).
+    - `maxBitRate` threaded through all 8 `getPathSong` call sites; every `isSongCached` caller was
+      already passing it — the parameter existed and was ignored.
+    - Verified with a 15-assertion node harness over the verbatim `songCacheKey` /
+      `coverForCurrentServer` / orphan rules (the release APK isn't debuggable, so the cache can't be
+      read from the CLI): raw+bitrate is unchanged, mp3 128 vs 320 differ, a 128 file does not
+      answer a 320 query, `.part` is pruned, cover host swaps and legacy entries don't crash.
+    - **Not done, flagged:** `NetworkAutoSwitch` still flips servers mid-song, and the current track
+      is deliberately left playing to the end (it is cached or already streaming) rather than being
+      interrupted and reloaded. Ask the user if they want it to cut over.
+
 ## Build & Release (local APK)
 
 Release APK output:

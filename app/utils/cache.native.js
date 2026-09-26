@@ -13,18 +13,40 @@ export const setJsonCache = async (_cacheName, key, json) => {
 	await AsyncStorage.setItem(key, JSON.stringify(json))
 }
 
-// Song Cache
-export const isSongCached = async (_config, songId, streamFormat, _maxBitrate) => {
-	return global.listCacheSong?.includes(`${songId}.${streamFormat}`) ? true : false
+// Identity of a cached song file.
+//
+// The bitrate belongs here because the bytes depend on it — but ONLY for an explicit stream
+// format. `urlStream` returns a plain `stream?id=X` for 'raw', letting the server pick, so the
+// bitrate setting changes nothing about the file. Keying on it anyway would re-download the
+// entire library, byte for byte, every time the slider moved. 'raw' is the default, so the
+// common case keeps today's exact filenames and needs no migration.
+//
+// The server is deliberately NOT part of the key: the two configured servers are the same
+// library behind two addresses, so the bytes are interchangeable and re-fetching on every
+// WiFi/cellular change would be a data-usage disaster.
+export const songCacheKey = (songId, streamFormat, maxBitRate = 0) => {
+	if (streamFormat !== 'raw' && maxBitRate > 0) return `${songId}.${streamFormat}-${maxBitRate}`
+	return `${songId}.${streamFormat}`
 }
 
-export const getSongCachedInfo = async (_config, songId, streamFormat, _maxBitrate) => {
-	const pathSong = getPathSong(songId, streamFormat)
+// A cached file is one we could have written: `<id>.<format>` or `<id>.<format>-<bitrate>`,
+// ignoring the in-progress `.part` siblings. Anything else is an orphan from an older layout
+// and can be pruned.
+const isCacheKey = (file) => /^[A-Za-z0-9._-]+\.[a-z0-9]+(-\d+)?$/i.test(file) && !file.endsWith('.part')
+
+// Song Cache
+export const isSongCached = async (_config, songId, streamFormat, maxBitRate = 0) => {
+	return global.listCacheSong?.includes(songCacheKey(songId, streamFormat, maxBitRate)) ? true : false
+}
+
+export const getSongCachedInfo = async (_config, songId, streamFormat, maxBitRate = 0) => {
+	const key = songCacheKey(songId, streamFormat, maxBitRate)
+	const pathSong = getPathSong(songId, streamFormat, maxBitRate)
 
 	return await FileSystem.getInfoAsync(pathSong)
 		.then(info => {
 			return [
-				{ title: 'File', value: `${songId}.${streamFormat}` },
+				{ title: 'File', value: key },
 				{ title: 'Is cached', value: info.exists ? 'Yes' : 'No' },
 				{ title: 'Size', value: `${(info.size / (1024 * 1024)).toFixed(2)} MB` },
 				{ title: 'Modified', value: new Date(info.modificationTime).toLocaleString() },
@@ -33,11 +55,12 @@ export const getSongCachedInfo = async (_config, songId, streamFormat, _maxBitra
 		.catch(() => null)
 }
 
-export const deleteSongCache = async (_config, songId, streamFormat, _maxBitrate) => {
-	const pathSong = getPathSong(songId, streamFormat)
+export const deleteSongCache = async (_config, songId, streamFormat, maxBitRate = 0) => {
+	const key = songCacheKey(songId, streamFormat, maxBitRate)
+	const pathSong = getPathSong(songId, streamFormat, maxBitRate)
 	return await FileSystem.deleteAsync(pathSong)
 		.then(() => {
-			global.listCacheSong = global.listCacheSong.filter(file => file !== `${songId}.${streamFormat}`)
+			global.listCacheSong = global.listCacheSong.filter(file => file !== key)
 		})
 		.catch(() => { })
 }
@@ -47,8 +70,8 @@ export const getListCacheSong = async () => {
 		.catch(() => [])
 }
 
-export const getPathSong = (songId, streamFormat) => {
-	return `${getPathDir()}${songId}.${streamFormat}`
+export const getPathSong = (songId, streamFormat, maxBitRate = 0) => {
+	return `${getPathDir()}${songCacheKey(songId, streamFormat, maxBitRate)}`
 }
 
 
@@ -78,6 +101,16 @@ export const initCacheSong = async () => {
 			await FileSystem.moveAsync({ from: `${oldSongs}${file}`, to: `${sharedDir}${file}` })
 				.catch((error) => logger.error('initCacheSong', error))
 		}
+	}
+
+	// Drop leftovers we can no longer attribute: .part files from an interrupted download
+	// and names from the pre-bitrate layout. Anything not matching the songCacheKey shape is
+	// dead weight — the bitrate suffix is only reachable through songCacheKey.
+	const files = await getListCacheSong()
+	for (const file of files) {
+		if (isCacheKey(file)) continue
+		await FileSystem.deleteAsync(`${sharedDir}${file}`, { idempotent: true })
+			.catch((error) => logger.error('initCacheSong', `prune ${file}:`, error))
 	}
 
 	global.listCacheSong = await getListCacheSong() || []

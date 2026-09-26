@@ -25,8 +25,7 @@ export const ConfigProvider = ({ children }) => {
 
 	React.useEffect(() => {
 		if (!config.url) return
-		const folderCache = config.url.replace(/[^a-zA-Z0-9]/g, '_')
-		global.config = { ...config, folderCache }
+		global.config = { ...config }
 		initCacheSong()
 		initDownloads()
 		global.songsDownloading = []

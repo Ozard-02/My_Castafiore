@@ -3,7 +3,7 @@ import * as FileSystem from 'expo-file-system'
 import { useSyncExternalStore } from 'react'
 
 import { urlStream, urlCover } from '~/utils/url'
-import { getPathSong } from '~/utils/cache'
+import { getPathSong, songCacheKey } from '~/utils/cache'
 import logger from '~/utils/logger'
 
 const WINDOW_MS = 10_000
@@ -136,6 +136,27 @@ const migrateDownloadKeys = async () => {
 	await AsyncStorage.multiRemove(legacy)
 }
 
+// songUrl bakes global.config at enqueue time, so a WiFi/cellular switch left queued items
+// pointing at the old address. Re-point anything not already downloading. In-flight items
+// keep their URL: the two servers are the same library, so those bytes are still valid, and
+// cancelling them would throw away a partial download for nothing.
+const repointQueued = () => {
+	const server = global.config?.url
+	if (!server) return
+	let changed = false
+	const queue = state.queue.map((item) => {
+		if (item.status === 'downloading') return item
+		const url = songUrl({ id: item.songId })
+		if (url === item.url) return item
+		changed = true
+		return { ...item, url, meta: { ...item.meta, server } }
+	})
+	if (changed) {
+		logger.info('downloadManager', `re-pointed queued downloads to ${server}`)
+		setState({ ...state, queue })
+	}
+}
+
 export const initDownloads = async () => {
 	await migrateDownloadKeys()
 	const keys = getKeys()
@@ -152,6 +173,7 @@ export const initDownloads = async () => {
 		state = { queue, index, collections }
 		queueById = new Map(queue.map((q) => [q.songId, q]))
 		notify()
+		repointQueued()
 	} catch (error) {
 		logger.error('downloadManager', 'Error loading downloads', error)
 	}
@@ -174,7 +196,20 @@ const buildMeta = (song) => ({
 	artist: song.artist || '',
 	album: song.album || '',
 	cover: urlCover(global.config, song),
+	// provenance: which address the bytes came from. Both addresses are the same library, so
+	// this never invalidates the cache — it exists so a mismatch is visible instead of silent,
+	// and so meta.cover can be re-pointed at the active server (see coverForCurrentServer).
+	server: global.config?.url || null,
 })
+
+// meta.cover is a full URL baked at enqueue time. After an automatic WiFi/cellular server
+// switch it points at the LAN address, which is unreachable off the house wifi — the cover
+// silently falls back to the placeholder icon. Re-point the host instead of re-downloading.
+export const coverForCurrentServer = (meta, config) => {
+	if (!meta?.cover || !meta?.server || !config?.url) return meta?.cover
+	if (meta.server === config.url) return meta.cover
+	return meta.cover.startsWith(meta.server) ? `${config.url}${meta.cover.slice(meta.server.length)}` : meta.cover
+}
 
 // ---------------------------------------------------------------------------
 // Queue engine
@@ -203,7 +238,7 @@ const moveToQueue = (song, source, silent = false) => {
 	return {
 		songId: song.id,
 		url: songUrl(song),
-		partUri: `${getPathSong(song.id, global.streamFormat)}.part`,
+		partUri: `${getPathSong(song.id, global.streamFormat, global.maxBitRate)}.part`,
 		meta: buildMeta(song),
 		source,
 		silent,
@@ -269,13 +304,17 @@ const validate = (res) => {
 }
 
 const runDownload = async (item) => {
+	// Derived here, not at enqueue: the stream format / bitrate can change while the item sat
+	// in the queue, and a baked partUri left an orphan .part plus a moveAsync to a stale name.
+	const partUri = `${getPathSong(item.songId, global.streamFormat, global.maxBitRate)}.part`
 	const resumable = FileSystem.createDownloadResumable(
 		item.url,
-		item.partUri,
+		partUri,
 		{},
 		onProgress(item.songId),
 		item.resumeData || undefined,
 	)
+	item.partUri = partUri
 	item.resumable = resumable
 	speedIds.add(item.songId)
 	lastBytes.set(item.songId, item.writtenBytes || 0)
@@ -297,7 +336,7 @@ const runDownload = async (item) => {
 			await finishError(item.songId, 'Download failed (empty file)')
 			return
 		}
-		await FileSystem.moveAsync({ from: item.partUri, to: getPathSong(item.songId, global.streamFormat) })
+		await FileSystem.moveAsync({ from: item.partUri, to: getPathSong(item.songId, global.streamFormat, global.maxBitRate) })
 		finishSuccess(item.songId, realSize)
 	} catch (error) {
 		if (error?.code !== 'ERR_CANCELED') logger.error('downloadManager', error)
@@ -326,7 +365,7 @@ const finishSuccess = async (songId, size) => {
 		},
 	})
 	if (global.listCacheSong && !global.listCacheSong.includes(`${songId}.${global.streamFormat}`)) {
-		global.listCacheSong.push(`${songId}.${global.streamFormat}`)
+		global.listCacheSong.push(songCacheKey(songId, global.streamFormat, global.maxBitRate))
 	}
 	await saveDownloads()
 	activeDownloads = Math.max(0, activeDownloads - 1)
@@ -424,7 +463,7 @@ export const resumeCollection = async (source) => {
 // ---------------------------------------------------------------------------
 export const removeSong = async (songId) => {
 	if (state.queue.some((q) => q.songId === songId)) await cancelDownload(songId)
-	await FileSystem.deleteAsync(getPathSong(songId, global.streamFormat)).catch(() => { })
+	await FileSystem.deleteAsync(getPathSong(songId, global.streamFormat, global.maxBitRate)).catch(() => { })
 	const rest = { ...state.index }
 	delete rest[songId]
 	setState({ ...state, index: rest })
@@ -442,7 +481,7 @@ export const removeSource = async (source) => {
 		if (sources.length > 0) {
 			index[songId] = { ...entry, sources }
 		} else {
-			await FileSystem.deleteAsync(getPathSong(songId, global.streamFormat)).catch(() => { })
+			await FileSystem.deleteAsync(getPathSong(songId, global.streamFormat, global.maxBitRate)).catch(() => { })
 			if (global.listCacheSong) {
 				global.listCacheSong = global.listCacheSong.filter((file) => file !== `${songId}.${global.streamFormat}`)
 			}
@@ -460,7 +499,7 @@ export const clearAllDownloads = async () => {
 		if (item.partUri) await FileSystem.deleteAsync(item.partUri).catch(() => { })
 	}
 	for (const songId of Object.keys(state.index)) {
-		await FileSystem.deleteAsync(getPathSong(songId, global.streamFormat)).catch(() => { })
+		await FileSystem.deleteAsync(getPathSong(songId, global.streamFormat, global.maxBitRate)).catch(() => { })
 	}
 	speedIds.clear()
 	lastBytes.clear()

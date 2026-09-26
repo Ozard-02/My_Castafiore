@@ -7,7 +7,7 @@ import { getApi, addSongToPlaylist } from '~/utils/api'
 import { urlCover } from '~/utils/url'
 import { useConfig } from '~/contexts/config'
 import { useSettings, useSetSettings } from '~/contexts/settings'
-import { useSongDispatch } from '~/contexts/song'
+import { useSong, useSongDispatch } from '~/contexts/song'
 import OptionsPopup from '~/components/popup/OptionsPopup'
 import Player from '~/utils/player'
 import size from '~/styles/size'
@@ -19,6 +19,7 @@ const OptionsPlayer = ({ song, isOpen, setIsOpen, closePlayer }) => {
 	const navigation = useNavigation()
 	const config = useConfig()
 	const songDispatch = useSongDispatch()
+	const songRadioMode = useSong().radioMode
 	const refOption = React.useRef()
 
 	const goToArtist = () => {
@@ -124,6 +125,16 @@ const OptionsPlayer = ({ song, isOpen, setIsOpen, closePlayer }) => {
 						setSettings({ ...settings, repeatQueue: !settings.repeatQueue })
 						refOption.current.close()
 					}
+				},
+				{
+					name: t('End radio'),
+					icon: 'times-circle',
+					onPress: () => {
+						// a radio session has no natural end, so give it an explicit one
+						songDispatch({ type: 'setRadioMode', value: false })
+						refOption.current.close()
+					},
+					hidden: !songRadioMode
 				},
 				{
 					name: t('Clear queue'),
