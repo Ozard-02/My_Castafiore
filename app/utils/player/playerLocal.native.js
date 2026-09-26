@@ -5,6 +5,7 @@ import { urlCover, urlStream } from '~/utils/url'
 import { isSongCached, getPathSong } from '~/utils/cache'
 import { enqueueSong } from '~/utils/downloadManager'
 import MyState from '~/utils/playerState'
+import logger from '~/utils/logger'
 
 let isConnected = true
 
@@ -139,8 +140,30 @@ const convertToTrack = async (track, config) => {
 }
 
 const loadSong = async (config, queue, index) => {
-	await TrackPlayer.load(await convertToTrack(queue[index], config))
+	const track = await convertToTrack(queue[index], config)
+	logger.info('Song', `loadSong ${index} (${track.id}) url=${track.url?.slice(0, 60)}`)
+	await TrackPlayer.load(track)
 	await TrackPlayer.play()
+}
+
+// Re-sync React song state with global.song + the native player. Auto-advance and
+// lock-screen skips run in the headless service via fakeSongDispatch, which only
+// mutates global.song — the event-driven catch-up in useEvent is unreliable while
+// backgrounded, so on resume the UI can lag the actual playback until a manual skip.
+const reconcileState = async (songDispatch) => {
+	if (!songDispatch || !global.song?.queue?.length) return
+	try {
+		const active = await TrackPlayer.getActiveTrack()
+		if (!active) return
+		if (global.song.songInfo?.id === active.id) {
+			songDispatch({ type: 'syncGlobal', song: global.song })
+			return
+		}
+		const index = global.song.queue.findIndex(track => track.id === active.id)
+		if (index !== -1) songDispatch({ type: 'setIndex', index })
+	} catch {
+		// player not set up yet — nothing to reconcile against
+	}
 }
 
 const setPosition = async (position) => {
@@ -253,6 +276,7 @@ export default {
 	resetAudio,
 	switchServer,
 	saveState,
+	reconcileState,
 	downloadNextSong,
 	downloadSong,
 	connect,

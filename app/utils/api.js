@@ -5,6 +5,10 @@ import { getJsonCache, setJsonCache } from "~/utils/cache"
 import { useUpdateApi, useSetUpdateApi, isUpdatable } from "~/contexts/updateApi"
 import logger from "~/utils/logger"
 
+// Monotonic version per cache key: bumped on explicit refreshes so an in-flight
+// getCachedAndApi fetch that resolves late can't overwrite fresher cached data.
+const cacheVersions = {}
+
 export const getUrl = (config, path, query = '') => {
 	let encodedQuery = ''
 	if (typeof query === 'string') {
@@ -85,8 +89,9 @@ export const getCachedAndApi = async (config, path, query = '', setData = () => 
 		return
 	}
 
-	let json = null
 	const key = getUrl(config, path, query)
+	const version = cacheVersions[key] || 0
+	let json = null
 	json = await getJsonCache('api', key)
 	if (json) setData(json, 'cache')
 	json = await getApi(config, path, query, true)
@@ -94,16 +99,32 @@ export const getCachedAndApi = async (config, path, query = '', setData = () => 
 			setData(json, 'api')
 			return json
 		})
-		.catch(() => { return null })
-	await setJsonCache('api', key, json)
+		.catch((error) => {
+			logger.error('getCachedAndApi', `GET ${path}:`, error)
+			return null
+		})
+	if (version !== (cacheVersions[key] || 0)) return
+	try {
+		await setJsonCache('api', key, json)
+	} catch (error) {
+		logger.error('getCachedAndApi', 'Error writing cache:', error)
+	}
 }
 
 export const refreshApi = (config, path, query = '') => {
 	return new Promise((resolve, reject) => {
 		getApi(config, path, query)
 			.then((json) => {
-				setJsonCache('api', getUrl(config, path, query), json)
-					.then(() => resolve(json))
+				const key = getUrl(config, path, query)
+				setJsonCache('api', key, json)
+					.then(() => {
+						cacheVersions[key] = (cacheVersions[key] || 0) + 1
+						resolve(json)
+					})
+					.catch((error) => {
+						logger.error('refreshApi', 'Error writing cache:', error)
+						resolve(json)
+					})
 			})
 			.catch((error) => {
 				logger.error('refreshApi', `/rest/${path}: `, error)
@@ -207,9 +228,8 @@ export const getApiCacheFirst = (config, path, query = '') => {
 				else getApi(config, path, query)
 					.then((json) => {
 						setJsonCache('api', key, json)
-							.then(() => {
-								resolve(json)
-							})
+							.then(() => resolve(json))
+							.catch(() => resolve(json))
 					})
 					.catch((error) => reject(error))
 			})
@@ -217,9 +237,8 @@ export const getApiCacheFirst = (config, path, query = '') => {
 				getApi(config, path, query)
 					.then((json) => {
 						setJsonCache('api', key, json)
-							.then(() => {
-								resolve(json)
-							})
+							.then(() => resolve(json))
+							.catch(() => resolve(json))
 					})
 					.catch((error) => reject(error))
 			})

@@ -27,10 +27,10 @@ const FavoritedButton = ({ id, isFavorited = false, rating: initialRating = unde
 		getApi(config, favorited ? 'unstar' : 'star', { id, albumId: id, artistId: id })
 			.then(() => {
 				setFavorited(!favorited)
+				// fire-and-forget: publish even if the refresh fails, so subscribers at
+				// least re-read the (possibly stale) cache instead of never being told
 				refreshApi(config, 'getStarred2', null)
-					.then(() => {
-						setUpdateApi({ path: 'getStarred2', query: null, uid: 1 })
-					})
+					.finally(() => setUpdateApi({ path: 'getStarred2', query: null, uid: 1 }))
 			})
 			.catch((e) => logger.error('FavoritedButton', e.message))
 	}

@@ -90,6 +90,10 @@ export const setVolume = async (volume) => {
 	return getPlayer().setVolume(volume)
 }
 
+export const reconcileState = async (songDispatch) => {
+	return getPlayer().reconcileState?.(songDispatch)
+}
+
 export const getVolume = () => {
 	return getPlayer().getVolume()
 }
@@ -170,6 +174,7 @@ export default {
 	switchServer,
 	restoreState,
 	saveState,
+	reconcileState,
 	connect,
 	disconnect,
 	switchPlayer,

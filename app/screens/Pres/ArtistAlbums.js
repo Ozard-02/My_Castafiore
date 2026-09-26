@@ -19,7 +19,7 @@ const AristAlbums = ({ navigation, route: { params: { albums } } }) => {
 	const renderItem = React.useCallback(({ item, index }) => (
 		<ExplorerItem
 			item={item}
-			title={item.name || item.album || item.title}
+			title={item.title || item.name}
 			subTitle={`${item.year || ''}`}
 			onPress={() => navigation.navigate('Album', item)}
 			onLongPress={() => setIndexOptions(index)}

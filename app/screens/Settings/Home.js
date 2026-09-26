@@ -29,7 +29,7 @@ const HomeSettings = () => {
 	React.useEffect(() => {
 		if (sizeOfList === '') return
 		const number = parseInt(sizeOfList)
-		if (number != settings.sizeOfList) setSettings({ ...settings, sizeOfList: number })
+		if (!Number.isNaN(number) && number != settings.sizeOfList) setSettings({ ...settings, sizeOfList: number })
 	}, [sizeOfList])
 
 	React.useEffect(() => {

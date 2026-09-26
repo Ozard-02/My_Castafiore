@@ -1,6 +1,7 @@
 import { getApiNetworkFirst } from '~/utils/api'
-import { filterExcluded } from '~/utils/exclusions'
+import { filterExcluded, refreshExcludedSongIds } from '~/utils/exclusions'
 import { saveQueue } from '~/utils/tools'
+import logger from '~/utils/logger'
 
 // Song navigation + queue mutations shared by every player backend.
 // createSongControls takes the only platform-specific piece: loadSong.
@@ -9,9 +10,16 @@ import { saveQueue } from '~/utils/tools'
 // started. Context-aware refills (genre/artist) would need serializable fetchers.
 const extendRadio = async (config, song, songDispatch) => {
 	try {
-		const json = await getApiNetworkFirst(config, 'getRandomSongs', 'size=50')
+		// ponytail: refresh exclusions per top-up — the memory set stays stale for
+		// radio started from Genre/Artist (only Home random refreshes on press).
+		await refreshExcludedSongIds(config)
 		const known = new Set(song.queue.map(track => track.id))
-		const fresh = (json.randomSongs?.song || []).filter(track => !known.has(track.id))
+		let fresh = []
+		for (const size of [50, 200]) {
+			const json = await getApiNetworkFirst(config, 'getRandomSongs', `size=${size}`)
+			fresh = (json.randomSongs?.song || []).filter(track => !known.has(track.id))
+			if (fresh.length) break
+		}
 		const songs = await filterExcluded(config, fresh)
 		songs.forEach(track => songDispatch({ type: 'addToQueue', track }))
 		return songs.length > 0
@@ -30,6 +38,7 @@ export const createSongControls = ({ loadSong }) => {
 	const setIndex = async (config, songDispatch, queue, index) => {
 		if (!queue || index < 0 || index >= queue.length) return
 		const key = queue[index]?.id
+		logger.info('Song', `setIndex ${index} (${key})${loadingKey === key ? ' DEDUPE-skips-load' : ''}`)
 		if (loadingKey === key) {
 			songDispatch({ type: 'setIndex', index })
 			return
@@ -51,19 +60,20 @@ export const createSongControls = ({ loadSong }) => {
 	}
 
 	const nextSong = async (config, song, songDispatch) => {
+		logger.info('Song', `nextSong from idx=${song.index}/${song.queue?.length} upNext=${song.upNext?.length} action=${song.actionEndOfSong} radio=${!!song.radioMode}`)
 		if (song.upNext?.length) {
 			const track = song.upNext[0]
 			songDispatch({ type: 'nextUpNext' })
 			await loadSong(config, [track], 0)
 			return
 		}
-		if (song.queue) {
+		if (song.queue?.length) {
 			if (song.index === song.queue.length - 1) {
 				// radio session: top the queue up instead of stopping/wrapping — even
 				// with repeatQueue ON, radio must keep pulling new songs; read global.song —
 				// the closure copy is stale once addToQueue dispatches land
-				if (song.radioMode) {
-					if (!(await extendRadio(config, song, songDispatch))) return
+				if (song.radioMode && await extendRadio(config, song, songDispatch)) {
+					logger.info('Song', 'nextSong radio topped up')
 					return setIndex(config, songDispatch, global.song.queue, global.song.index + 1)
 				}
 				if (!global.repeatQueue) return
@@ -74,7 +84,7 @@ export const createSongControls = ({ loadSong }) => {
 	}
 
 	const previousSong = async (config, song, songDispatch) => {
-		if (song.queue) {
+		if (song.queue?.length) {
 			if (!global.repeatQueue && song.index === 0) return
 			await setIndex(config, songDispatch, song.queue, (song.queue.length + song.index - 1) % song.queue.length)
 			if (song.actionEndOfSong === 'repeat') await setRepeat(songDispatch, 'next')

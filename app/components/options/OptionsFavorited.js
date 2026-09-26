@@ -27,11 +27,19 @@ const OptionsFavorited = ({ favorited, isOpen, onClose }) => {
 						refOption.current.close()
 						enqueueCollection({
 							type: 'favorited',
-							id: config.favorite,
+							id: config.url,
 							name: t('Favorites'),
 							cover: null,
 							songs: favorited || [],
 						})
+					}
+				},
+				{
+					name: t('Info'),
+					icon: 'info',
+					onPress: () => {
+						refOption.current.showInfo(favorited)
+						refOption.current.close()
 					}
 				},
 			]}

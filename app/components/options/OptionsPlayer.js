@@ -1,5 +1,5 @@
 import React from 'react'
-import { Linking } from 'react-native'
+import { Linking, Platform, Share } from 'react-native'
 import { useNavigation } from '@react-navigation/native'
 import { useTranslation } from 'react-i18next'
 
@@ -132,6 +132,21 @@ const OptionsPlayer = ({ song, isOpen, setIsOpen, closePlayer }) => {
 						Player.resetAudio(songDispatch)
 						refOption.current.close()
 						closePlayer()
+					}
+				},
+				{
+					name: t('Share'),
+					icon: 'share',
+					onPress: () => {
+						getApi(config, 'createShare', { id: song.id })
+							.then((json) => {
+								if (json.shares.share.length > 0) {
+									if (Platform.OS === 'web') navigator.clipboard.writeText(json.shares.share[0].url)
+									else Share.share({ message: json.shares.share[0].url })
+								}
+							})
+							.catch(() => { })
+						refOption.current.close()
 					}
 				},
 				{

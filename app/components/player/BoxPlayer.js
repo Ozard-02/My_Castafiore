@@ -102,9 +102,9 @@ const BoxPlayer = ({ setFullScreen }) => {
 			<Animated.View
 			style={{
 				position: 'absolute',
-				bottom: (insets.bottom || 10) + (compactBar ? 54 : 66),
-				left: insets.left + 12,
-				right: insets.right + 12,
+				bottom: (insets.bottom ? insets.bottom : 10) + (compactBar ? 45 : 59),
+				left: insets.left,
+				right: insets.right,
 
 				transform: [{ translateY }],
 				display: isDismissed || isKeyboardOpen ? 'none' : undefined,

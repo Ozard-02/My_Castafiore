@@ -30,7 +30,7 @@ const OptionsMultiArtists = ({ artists, albumArtists = [], close, visible, setFu
 				{
 					name: t('Go to artist'),
 				},
-				...(albumArtists?.filter((artist) => artists.findIndex((a) => a.id === artist.id)).map(artistOpt) || []),
+				...(albumArtists?.filter((artist) => artists.findIndex((a) => a.id === artist.id) !== -1).map(artistOpt) || []),
 				...(artists?.map(artistOpt) || [])
 			]}
 		/>

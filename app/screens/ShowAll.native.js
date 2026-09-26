@@ -12,6 +12,7 @@ import size from '~/styles/size'
 import Header from '~/components/Header'
 import mainStyles from '~/styles/main'
 import ExplorerItem from '~/components/item/ExplorerItem'
+import { useStarredIds } from '~/utils/starred'
 
 const ShowAll = ({ navigation, route: { params: { section } } }) => {
 	const { t } = useTranslation()
@@ -19,11 +20,12 @@ const ShowAll = ({ navigation, route: { params: { section } } }) => {
 	const config = useConfig()
 	const theme = useTheme()
 	const songDispatch = useSongDispatch()
+	const starredIds = useStarredIds()
 	const [list, setList] = React.useState([])
 	
 	React.useEffect(() => {
 		getList()
-	}, [section.type, section.query])
+	}, [section.path, section.query])
 
 	const getList = async () => {
 		let nquery = section.query || ''
@@ -44,12 +46,12 @@ const ShowAll = ({ navigation, route: { params: { section } } }) => {
 		<ExplorerItem
 			item={item}
 			onPress={() => onPress(item, index)}
-			title={item.name || item.album || item.title}
+			title={item.title || item.name}
 			subTitle={item.artist || `${item.albumCount} ${t('albums')}`}
 			borderRadius={section.type === 'artist' || section.type === 'artist_all' ? size.radius.circle : 2}
-			isFavorited={item.starred}
+			isFavorited={section.type === 'song' ? starredIds.has(item.id) : item.starred}
 		/>
-	), [onPress])
+	), [onPress, starredIds, section.type, t])
 
 	return (
 		<LegendList

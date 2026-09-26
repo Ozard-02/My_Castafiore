@@ -180,13 +180,6 @@ const SongExplorer = ({ layout = 'list', showHeader = true, title = null }) => {
 }
 
 const styles = StyleSheet.create({
-	titleSelector: (theme) => ({
-		color: theme.primaryText,
-		fontSize: size.text.medium,
-		fontWeight: 'bold',
-		marginHorizontal: 20,
-		marginBottom: 10,
-	}),
 	loadingContainer: {
 		paddingVertical: 20,
 		alignItems: 'center',

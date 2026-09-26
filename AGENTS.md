@@ -1,5 +1,6 @@
 # before starting coding
 
+- Always check if previous work is committed, so we can in care revertr to that commit.
 - Always create a TODO.md to set up what to do and keep it updated.
 - Always use a STRUCTURE.md to summarize how the code is divided and which part does what.
 - .log files are your friends, use them from one session to another.

@@ -25,7 +25,7 @@ const ArtistExplorer = ({ layout = 'list', showHeader = true, title = null }) =>
 	const refScroll = React.useRef(null)
 
 	const [artists] = useCachedAndApi([], 'getArtists', null, (json, setData) => {
-		setAlpha(json?.artists?.index?.map(item => item.name[0].toUpperCase()))
+		setAlpha(json?.artists?.index?.map(item => item.name?.[0]?.toUpperCase() || ''))
 		setData(json?.artists?.index?.map(item => ([
 			item.name,
 			...item.artist,

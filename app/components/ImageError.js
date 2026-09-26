@@ -5,10 +5,6 @@ import Icon from 'react-native-vector-icons/FontAwesome'
 import size from '~/styles/size'
 import { useTheme } from '~/contexts/theme'
 
-const ImageMemo = React.memo(Image, (prevProps, nextProps) => {
-	return prevProps.source?.uri === nextProps.source?.uri
-})
-
 const ImageError = ({ source, style = {}, children = null, iconError = null, blurRadius = undefined }) => {
 	const [isImage, setIsImage] = React.useState(false)
 	const [lastSource, setLastSource] = React.useState({ uri: null })
@@ -25,7 +21,7 @@ const ImageError = ({ source, style = {}, children = null, iconError = null, blu
 		}
 	}, [source, source?.uri])
 
-	if (isImage) return <ImageMemo source={lastSource} onError={() => setIsImage(false)} style={style} blurRadius={blurRadius} />
+	if (isImage) return <Image source={lastSource} onError={() => setIsImage(false)} style={style} blurRadius={blurRadius} />
 	if (children) return children
 	if (iconError) return (
 		<View style={[{ justifyContent: 'center', alignItems: 'center' }, style]}>

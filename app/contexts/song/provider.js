@@ -29,6 +29,21 @@ export const SongProvider = ({ children }) => {
 		}
 	}, [])
 
+	// Background auto-advance + lock-screen skips run in the headless service and only
+	// mutate global.song; re-sync React state against the native player when resuming,
+	// so the UI doesn't lag the actual playback until a manual skip.
+	React.useEffect(() => {
+		if (!song.isInit) return
+		const subscription = AppState.addEventListener('change', (appState) => {
+			if (appState === 'active') {
+				Player.reconcileState?.(dispatch)
+			}
+		})
+		return () => {
+			subscription.remove()
+		}
+	}, [song.isInit, dispatch])
+
 	return (
 		<SongDispatchContext.Provider value={dispatch}>
 			<SongContext.Provider value={song}>
@@ -49,7 +64,7 @@ const convertTrack = (track) => {
 		album: track.album,
 		albumId: track.albumId,
 		duration: track.duration,
-		covertArt: track.covertArt,
+		coverArt: track.coverArt,
 		track: track.track,
 		starred: track.starred,
 		userRating: track.userRating ?? track.rating ?? 0,
@@ -77,6 +92,12 @@ const newSong = (state, action, isCache = false) => {
 }
 
 export const songReducer = (state, action) => {
+	// Canonical base: background advances (headless service via fakeSongDispatch,
+	// lock-screen skips) mutate global.song but never React's snapshot. Computing from
+	// the stale snapshot lets an ordinary React dispatch (PlaybackState -> setState)
+	// merge off the old index and revert global.song to a previous song — the "same song
+	// restarts on skip" bug. Always transition from global.song.
+	state = global.song ?? state
 	switch (action.type) {
 		case 'init':
 			return newSong(state, {

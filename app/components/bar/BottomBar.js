@@ -22,13 +22,13 @@ const TabItem = ({ route, index, state, descriptors, navigation, compact }) => {
 			onLongPress={onLongPress}
 			style={({ pressed }) => ([mainStyles.opacity({ pressed }), {
 				flex: 1,
-				paddingBottom: compact ? 2 : 3,
-				paddingTop: compact ? 6 : 11,
+				paddingBottom: compact ? 2 : 2,
+				paddingTop: compact ? 5 : 9,
 			}])}
 			disabled={disabled}
 		>
-			<Icon name={options.icon} size={compact ? 17 : size.icon.tiny} color={color} style={{ alignSelf: 'center', marginBottom: 2, height: compact ? 20 : 24 }} />
-			<Text numberOfLines={1} style={{ color: color, textAlign: 'center', height: compact ? 15 : 19, fontSize: compact ? 11 : 14 }}>
+			<Icon name={options.icon} size={compact ? 17 : size.icon.tiny} color={color} style={{ alignSelf: 'center', marginBottom: 2, height: compact ? 19 : 23 }} />
+			<Text numberOfLines={1} style={{ color: color, textAlign: 'center', height: compact ? 15 : 18, fontSize: compact ? 11 : 14 }}>
 				{t(`tabs.${options.title}`)}
 			</Text>
 		</Pressable>
@@ -47,21 +47,13 @@ const BottomBar = ({ state, descriptors, navigation }) => {
 	if (!config.url) return null
 	return (
 		<View style={{
-			position: 'absolute',
-			bottom: insets.bottom + 6,
-			left: 12 + insets.left,
-			right: 12 + insets.right,
 			flexDirection: 'row',
-			backgroundColor: theme.secondaryBack + 'E0',
-			paddingHorizontal: 10,
-			paddingTop: compact ? 6 : 10,
-			paddingBottom: compact ? 2 : 4,
-			borderRadius: size.radius.circle,
-			borderWidth: 0.5,
-			borderColor: 'rgba(255,255,255,0.10)',
+			backgroundColor: theme.secondaryBack,
+			paddingTop: compact ? 5 : 7,
+			paddingLeft: insets.left,
+			paddingRight: insets.right,
+			paddingBottom: insets.bottom ? insets.bottom : 10,
 			display: keyboardIsOpen ? 'none' : undefined,
-			alignSelf: 'center',
-			maxWidth: 440,
 		}}
 		>
 			{state.routes.map((route, index) => (

@@ -63,14 +63,14 @@ const Downloads = () => {
 	React.useEffect(() => {
 		if (cacheNextSong === '') return
 		const number = parseInt(cacheNextSong)
-		if (number === settings.cacheNextSong) return
+		if (Number.isNaN(number) || number === settings.cacheNextSong) return
 		setSettings({ ...settings, cacheNextSong: number })
 	}, [cacheNextSong])
 
 	React.useEffect(() => {
 		if (parallelDownloads === '') return
 		const number = parseInt(parallelDownloads)
-		if (number === settings.parallelDownloads) return
+		if (Number.isNaN(number) || number === settings.parallelDownloads) return
 		setSettings({ ...settings, parallelDownloads: number })
 	}, [parallelDownloads])
 

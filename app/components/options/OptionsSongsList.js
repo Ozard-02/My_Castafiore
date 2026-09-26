@@ -27,7 +27,7 @@ const OptionsSongsList = ({ songs, indexOptions, setIndexOptions, onUpdate = () 
 
 	React.useEffect(() => {
 		if (indexOptions < 0) return
-		isSongCached(config, songs[indexOptions]?.id, settings.streamFormat, settings.maxBitrate)
+		isSongCached(config, songs[indexOptions]?.id, settings.streamFormat, settings.maxBitRate)
 			.then((cached) => {
 				setIsCached(cached ? true : false)
 			})
@@ -78,7 +78,6 @@ const OptionsSongsList = ({ songs, indexOptions, setIndexOptions, onUpdate = () 
 				{
 					name: t('Go to artist'),
 				},
-				// ...(songs[indexOptions].albumArtists?.filter((artist) => songs[indexOptions].artists.findIndex((a) => a.id === artist.id)).map(artistOpt) || []),
 				...songs[indexOptions].artists.map(artistOpt)
 			])
 		} else {
@@ -168,7 +167,7 @@ const OptionsSongsList = ({ songs, indexOptions, setIndexOptions, onUpdate = () 
 		let indexPlay = 0
 
 		for (let index = 0; index < songs.length; index++) {
-			const cached = await isSongCached(config, songs[index].id, settings.streamFormat, settings.maxBitrate)
+			const cached = await isSongCached(config, songs[index].id, settings.streamFormat, settings.maxBitRate)
 			if (index === indexOptions) indexPlay = cachedList.length
 			if (cached) cachedList.push(songs[index])
 		}
@@ -176,7 +175,7 @@ const OptionsSongsList = ({ songs, indexOptions, setIndexOptions, onUpdate = () 
 		refOption.current.close()
 	}
 
-	if (indexOptions < 0) return null
+	if (indexOptions < 0 || !songs[indexOptions]) return null
 	return (
 		<OptionsPopup
 			ref={refOption}
