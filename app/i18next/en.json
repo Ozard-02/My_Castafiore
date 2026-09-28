@@ -268,7 +268,6 @@
     "No playlists found": "No playlists found",
     "Remove from playlist alert": "This will remove the selected songs from: {{names}}. Continue?",
     "Playlist updated": "Playlist updated",
-    "Playlist updated partial": "Only {{done}} of {{total}} playlists could be updated.",
-    "Read only playlist": "Synced from a file — read only"
+    "Playlist updated partial": "Only {{done}} of {{total}} playlists could be updated."
   }
 }

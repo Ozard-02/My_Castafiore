@@ -99,13 +99,7 @@ const PlaylistSelectPopup = ({ visible, close, songIds, onDone = () => { } }) =>
 			const isFull = [...wanted].every((id) => ids.has(id))
 			const readonly = playlist.readonly === true
 			if (isFull && !readonly) full.add(playlist.id)
-			return {
-				...playlist,
-				songCount: (entries[index] || []).length,
-				isFull,
-				readonly,
-				autoImport: /auto-imported/i.test(playlist.comment || '') ? playlist.comment : null,
-			}
+			return { ...playlist, songCount: (entries[index] || []).length, isFull, readonly }
 		})
 		setPlaylists(rows)
 		setInitial(new Set(full))
@@ -219,7 +213,7 @@ const PlaylistSelectPopup = ({ visible, close, songIds, onDone = () => { } }) =>
 										<View style={{ flex: 1 }}>
 											<Text style={mainStyles.mediumText(theme.primaryText)} numberOfLines={1}>{playlist.name}</Text>
 											<Text style={mainStyles.smallText(theme.secondaryText)} numberOfLines={1}>
-												{playlist.autoImport || `${playlist.songCount} ${t('songs')}`}
+												{playlist.songCount} {t('songs')}
 											</Text>
 										</View>
 										{playlist.readonly
