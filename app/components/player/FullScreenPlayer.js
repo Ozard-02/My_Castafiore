@@ -188,7 +188,7 @@ const TimeBar = () => {
 				onStart={(progress) => Player.pauseSong() && setFakeTime(progress)}
 				onChange={(progress) => setFakeTime(progress)}
 				onComplete={(progress) => Player.setPosition(progress * duration) && Player.resumeSong() && setTimeout(() => setFakeTime(-1), 500)}
-				stylePress={{ width: '100%', height: 24, paddingVertical: 10, marginTop: 9 }}
+				stylePress={{ width: '100%', height: 24, paddingVertical: 10, marginTop: 17 }}
 				styleBar={{ width: '100%', height: '100%', borderRadius: size.radius.circle, overflow: 'hidden' }}
 				isBitogno={song.songInfo?.isLiveStream ? false : true}
 			/>
@@ -258,10 +258,10 @@ const FullScreenPlayer = ({ setFullScreen }) => {
 					    used justifyContent: 'space-between', which smeared the leftover into
 					    four equal gaps — so tightening the controls below just pushed the cluster
 					    further from the cover instead of freeing space. Cover size is unchanged. */}
-					<View style={styles.coverSlot}>
+					<View style={[styles.coverSlot, isPreview === preview.QUEUE && styles.coverSlotTop]}>
 						<CoverItem isPreview={isPreview} song={song} setFullScreen={setFullScreen} stars={stars} />
 					</View>
-					<View style={{ flexDirection: 'row', marginTop: 13, width: '100%', alignItems: 'center', justifyContent: 'space-between' }}>
+					<View style={{ flexDirection: 'row', marginTop: 26, width: '100%', alignItems: 'center', justifyContent: 'space-between' }}>
 						<View style={{ flex: 1 }}>
 							<Pressable
 								style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}
@@ -301,7 +301,7 @@ const FullScreenPlayer = ({ setFullScreen }) => {
 						/>
 					</View>
 					<TimeBar />
-					<View style={{ flexDirection: 'row', width: '100%', marginVertical: compact ? 11 : 18, alignItems: 'center', justifyContent: 'space-between' }}>
+					<View style={{ flexDirection: 'row', width: '100%', marginVertical: compact ? 21 : 27, alignItems: 'center', justifyContent: 'space-between' }}>
 						<View style={{ flexDirection: 'row', alignItems: 'center' }}>
 							<IconButton
 								icon="random"
@@ -353,7 +353,7 @@ const FullScreenPlayer = ({ setFullScreen }) => {
 							onPress={() => Player.setRepeat(songDispatch, song.actionEndOfSong === 'repeat' ? 'next' : 'repeat')}
 						/>
 					</View>
-					<View style={{ flexDirection: 'row', width: '100%', marginTop: 11, justifyContent: 'space-between' }}>
+					<View style={{ flexDirection: 'row', width: '100%', marginTop: 21, justifyContent: 'space-between' }}>
 						<IconButton
 							icon="comment-o"
 							size={17}
@@ -396,14 +396,21 @@ const styles = StyleSheet.create({
 		alignItems: 'center',
 		flexDirection: 'column',
 		flex: 1,
-		paddingBottom: 18,
+		paddingBottom: 30,
 	},
-	// takes every pixel the controls do not need, so the bottom cluster can stay compact
+	// takes every pixel the controls do not need, so the bottom cluster can stay compact.
+	// Centred: flex-end jammed the cover against the title and pushed it 233px down the
+	// screen. Growing the cluster below instead shrinks this slot, which pulls the
+	// cover back up AND closes the gap to the title (the gap is (slot - cover) / 2).
 	coverSlot: {
 		flex: 1,
 		width: '100%',
 		alignItems: 'center',
 		justifyContent: 'center',
+	},
+	// the queue is a scrollable list: fill from the top, or it ends up pushed to the bottom
+	coverSlotTop: {
+		justifyContent: 'flex-start',
 	},
 })
 
