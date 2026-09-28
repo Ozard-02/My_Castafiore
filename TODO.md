@@ -639,6 +639,28 @@
       play button. Raising the threshold would also enlarge the play button and grow the
       cluster, so it is a separate decision.
 
+36. **Player gestures: drop the bottom button row** ⏸ punted 2026-09-28, not started
+    Plan + design decisions: `plans/player-gestures-cast.md`. User request: remove the lyrics,
+    queue and cast buttons from the player and drive them by gesture; move cast to Home.
+    - **Lyrics on cover tap.** The cover is wrapped in `SlideControl`, whose PanResponder
+      claims every touch and already uses a tap for *double-tap-to-play/pause* (300ms window).
+      So a single tap is currently swallowed. The arbitration has to be decided; recommended
+      simplification is single tap = lyrics and dropping the double-tap (play/pause already
+      exists on the transport row and the mini player). Tapping again must restore the cover.
+    - **Queue on swipe-up-from-bottom**, animated (slide + cover scale/fade) rather than
+      snapped. Must not fight `MiniPlayer`'s existing vertical swipe-up-to-expand, needs a
+      dismissal gesture, and `preview` is currently a single 3-value enum that two independent
+      gestures would write.
+    - **Cast to Home** top-right, between the ListenBrainz bell and the refresh control. The
+      refresh `RotateIconButton` is inside a ternary (replaced by a scan-status `N°` text while
+      scanning), so the cast button has to be a sibling or it will jump around. `ConnectButton`
+      is platform-split but exports the same component from both, so it drops into the shared
+      `Home.js` safely. Open question: Home only, or every tab?
+    - **Side effect worth using:** deleting the row returns ~66px (~2.6% of screen height) to
+      the control cluster, undoing part of the growth in #35. The spacing values tuned there
+      should be re-measured, not assumed.
+    - Not started; no code changed.
+
 ## Build & Release (local APK)
 
 Release APK output:
