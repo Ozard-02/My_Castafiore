@@ -3,12 +3,13 @@ import { Linking, Platform, Share } from 'react-native'
 import { useNavigation } from '@react-navigation/native'
 import { useTranslation } from 'react-i18next'
 
-import { getApi, addSongToPlaylist } from '~/utils/api'
+import { getApi } from '~/utils/api'
 import { urlCover } from '~/utils/url'
 import { useConfig } from '~/contexts/config'
 import { useSettings, useSetSettings } from '~/contexts/settings'
 import { useSong, useSongDispatch } from '~/contexts/song'
 import OptionsPopup from '~/components/popup/OptionsPopup'
+import PlaylistSelectPopup from '~/components/popup/PlaylistSelectPopup'
 import Player from '~/utils/player'
 import size from '~/styles/size'
 
@@ -21,6 +22,7 @@ const OptionsPlayer = ({ song, isOpen, setIsOpen, closePlayer }) => {
 	const songDispatch = useSongDispatch()
 	const songRadioMode = useSong().radioMode
 	const refOption = React.useRef()
+	const [playlistVisible, setPlaylistVisible] = React.useState(false)
 
 	const goToArtist = () => {
 		if (song.artists?.length > 1) {
@@ -52,36 +54,18 @@ const OptionsPlayer = ({ song, isOpen, setIsOpen, closePlayer }) => {
 		closePlayer()
 	}
 
-	const openAddToPlaylist = () => {
-		getApi(config, 'getPlaylists')
-			.then((json) => {
-				if (!json.playlists?.playlist) return
-
-				refOption.current.setVirtualOptions([
-					{
-						name: t('Add to playlist'),
-					},
-					...json.playlists.playlist.map((playlist) => ({
-						name: playlist.name,
-						image: urlCover(config, playlist, 100),
-						onPress: () => addToPlaylist(playlist)
-					}))
-				]
-				)
-			})
-			.catch(() => { })
+	const openPlaylistSelect = () => {
+		if (!song?.id) return
+		// close this sheet first so the playlist sheet is the only thing on screen; Done
+		// then returns the user to the page they opened the player from
+		refOption.current.clearVirtualOptions()
+		refOption.current.close()
+		setPlaylistVisible(true)
 	}
 
-	const addToPlaylist = (playlist) => {
-		addSongToPlaylist(config, playlist, song.id)
-			.then(() => {
-				refOption.current.close()
-			})
-			.catch(() => { })
-	}
-
-	if (!song || !isOpen) return null
 	return (
+		<>
+		{song && isOpen && (
 		<OptionsPopup
 			ref={refOption}
 			visible={isOpen}
@@ -106,7 +90,7 @@ const OptionsPlayer = ({ song, isOpen, setIsOpen, closePlayer }) => {
 				{
 					name: t('Add to playlist'),
 					icon: 'plus',
-					onPress: openAddToPlaylist,
+					onPress: openPlaylistSelect,
 					hidden: song.isLiveStream
 				},
 				{
@@ -170,6 +154,13 @@ const OptionsPlayer = ({ song, isOpen, setIsOpen, closePlayer }) => {
 					},
 				}
 			]} />
+		)}
+		<PlaylistSelectPopup
+			visible={playlistVisible}
+			songIds={song?.id ? [song.id] : []}
+			close={() => setPlaylistVisible(false)}
+		/>
+		</>
 	)
 }
 

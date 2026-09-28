@@ -263,6 +263,12 @@
     "None": "None",
     "Lyrics": "Lyrics",
     "Hide lyrics": "Hide lyrics",
-    "End radio": "End radio"
+    "End radio": "End radio",
+    "Done": "Done",
+    "No playlists found": "No playlists found",
+    "Remove from playlist alert": "This will remove the selected songs from: {{names}}. Continue?",
+    "Playlist updated": "Playlist updated",
+    "Playlist updated partial": "Only {{done}} of {{total}} playlists could be updated.",
+    "Read only playlist": "Synced from a file — read only"
   }
 }

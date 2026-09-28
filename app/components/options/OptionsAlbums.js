@@ -4,11 +4,12 @@ import { useNavigation } from '@react-navigation/native'
 import { useTranslation } from 'react-i18next'
 
 import { getApi } from '~/utils/api'
-import { getApiNetworkFirst, getApiCacheFirst, addSongsToPlaylist } from '~/utils/api'
+import { getApiNetworkFirst, getApiCacheFirst } from '~/utils/api'
 import { useConfig } from '~/contexts/config'
 import { urlCover } from '~/utils/url'
 import { enqueueCollection } from '~/utils/downloadManager'
 import OptionsPopup from '~/components/popup/OptionsPopup'
+import PlaylistSelectPopup from '~/components/popup/PlaylistSelectPopup'
 import { playSong, addToQueue, addToUpNext } from '~/utils/player'
 import { useSong, useSongDispatch } from '~/contexts/song'
 
@@ -18,6 +19,8 @@ const OptionsAlbums = ({ albums, indexOptions, setIndexOptions }) => {
 	const navigation = useNavigation()
 	const config = useConfig()
 	const refOption = React.useRef()
+	const [playlistVisible, setPlaylistVisible] = React.useState(false)
+	const [playlistIds, setPlaylistIds] = React.useState([])
 	const songDispatch = useSongDispatch()
 
 	const playSimilarSongs = () => {
@@ -29,32 +32,15 @@ const OptionsAlbums = ({ albums, indexOptions, setIndexOptions }) => {
 		refOption.current.close()
 	}
 
-	const openAddToPlaylist = () => {
-		getApi(config, 'getPlaylists')
-			.then((json) => {
-				if (!json.playlists?.playlist) return
-				getApiCacheFirst(config, 'getAlbum', { id: albums[indexOptions].id })
-					.then((albumJson) => {
-						if (!albumJson.album?.song?.length) return
-						refOption.current.setVirtualOptions([
-							{
-								name: t('Add to playlist'),
-							},
-							...json.playlists.playlist.map((playlist) => ({
-								name: playlist.name,
-								image: urlCover(config, playlist, 100),
-								onPress: () => {
-									addSongsToPlaylist(config, playlist, albumJson.album.song.map((s) => s.id))
-										.catch(() => { })
-									refOption.current.close()
-								}
-							}))
-						]
-						)
-					})
-					.catch(() => { })
-			})
-			.catch(() => { })
+	// the long-pressed album, resolved to song ids once, then handed to the sheet
+	const openPlaylistSelect = async () => {
+		const ids = await getApiCacheFirst(config, 'getAlbum', { id: albums[indexOptions].id })
+			.then((json) => (json?.album?.song || []).map((track) => track.id).filter(Boolean))
+			.catch(() => [])
+		if (!ids.length) return
+		refOption.current.close()
+		setPlaylistIds(ids)
+		setPlaylistVisible(true)
 	}
 
 	const downloadAlbum = () => {
@@ -75,6 +61,7 @@ const OptionsAlbums = ({ albums, indexOptions, setIndexOptions }) => {
 	}
 
 	return (
+		<>
 		<OptionsPopup
 			ref={refOption}
 			visible={indexOptions >= 0}
@@ -121,7 +108,7 @@ const OptionsAlbums = ({ albums, indexOptions, setIndexOptions }) => {
 				{
 					name: t('Add to playlist'),
 					icon: 'plus',
-					onPress: openAddToPlaylist
+					onPress: openPlaylistSelect
 				},
 				{
 					name: t('Go to artist'),
@@ -161,6 +148,12 @@ const OptionsAlbums = ({ albums, indexOptions, setIndexOptions }) => {
 				}
 			]}
 		/>
+		<PlaylistSelectPopup
+			visible={playlistVisible}
+			songIds={playlistIds}
+			close={() => setPlaylistVisible(false)}
+		/>
+		</>
 	)
 }
 

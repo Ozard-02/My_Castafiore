@@ -4,12 +4,12 @@ import { useNavigation } from '@react-navigation/native'
 import { useTranslation } from 'react-i18next'
 
 import { useConfig } from '~/contexts/config'
-import { getApi, addSongToPlaylist } from '~/utils/api'
 import { useSong, useSongDispatch } from '~/contexts/song'
 import { urlCover } from '~/utils/url'
 import { removeFromQueue, moveInQueue } from '~/utils/player'
 import size from '~/styles/size'
 import OptionsPopup from '~/components/popup/OptionsPopup'
+import PlaylistSelectPopup from '~/components/popup/PlaylistSelectPopup'
 
 const OptionsQueue = ({ queue, indexOptions, setIndexOptions, closePlayer }) => {
 	const { t } = useTranslation()
@@ -18,6 +18,7 @@ const OptionsQueue = ({ queue, indexOptions, setIndexOptions, closePlayer }) => 
 	const songDispatch = useSongDispatch()
 	const config = useConfig()
 	const refOption = React.useRef()
+	const [playlistVisible, setPlaylistVisible] = React.useState(false)
 
 	const goToArtist = () => {
 		if (queue[indexOptions].artists?.length > 1) {
@@ -49,32 +50,9 @@ const OptionsQueue = ({ queue, indexOptions, setIndexOptions, closePlayer }) => 
 		closePlayer()
 	}
 
-	const openAddToPlaylist = () => {
-		getApi(config, 'getPlaylists')
-			.then((json) => {
-				if (!json.playlists?.playlist) return
-
-				refOption.current.setVirtualOptions([
-					{
-						name: t('Add to playlist'),
-					},
-					...json.playlists.playlist.map((playlist) => ({
-						name: playlist.name,
-						image: urlCover(config, playlist, 100),
-						onPress: () => addToPlaylist(playlist)
-					}))
-				]
-				)
-			})
-			.catch(() => { })
-	}
-
-	const addToPlaylist = (playlist) => {
-		addSongToPlaylist(config, playlist, queue[indexOptions].id)
-			.then(() => {
-				refOption.current.close()
-			})
-			.catch(() => { })
+	const openPlaylistSelect = () => {
+		refOption.current.close()
+		setPlaylistVisible(true)
 	}
 
 	const removeFromQueueOpt = () => {
@@ -83,6 +61,7 @@ const OptionsQueue = ({ queue, indexOptions, setIndexOptions, closePlayer }) => 
 	}
 
 	return (
+		<>
 		<OptionsPopup
 			ref={refOption}
 			visible={indexOptions >= 0}
@@ -107,7 +86,7 @@ const OptionsQueue = ({ queue, indexOptions, setIndexOptions, closePlayer }) => 
 				{
 					name: t('Add to playlist'),
 					icon: 'plus',
-					onPress: openAddToPlaylist,
+					onPress: openPlaylistSelect,
 					hidden: indexOptions >= 0 && queue[indexOptions].isLiveStream
 				},
 				{
@@ -162,6 +141,12 @@ const OptionsQueue = ({ queue, indexOptions, setIndexOptions, closePlayer }) => 
 					hidden: song.index === indexOptions
 				}
 			]} />
+		<PlaylistSelectPopup
+			visible={playlistVisible}
+			songIds={indexOptions >= 0 && queue[indexOptions]?.id ? [queue[indexOptions].id] : []}
+			close={() => setPlaylistVisible(false)}
+		/>
+		</>
 	)
 }
 

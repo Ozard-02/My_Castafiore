@@ -83,6 +83,41 @@ export const addSongsToPlaylist = async (config, playlist, songIds) => {
 	return added
 }
 
+// Apply an explicit add/remove set to one playlist. Subsonic's updatePlaylist removes by
+// 0-based INDEX (songIndexToRemove), not by song id, and every removal shifts the entries after
+// it down by one — so removals MUST go highest-index-first. Ascending order silently deletes
+// the wrong songs. Adds append, so they are applied first and never invalidate an index.
+export const updatePlaylistEntries = async (config, playlist, { addIds = [], removeIds = [] } = {}) => {
+	// re-read rather than trust a caller's earlier GET: another client editing the playlist
+	// would leave these indices stale, and a wrong index deletes the wrong song
+	const entry = await getApi(config, 'getPlaylist', { id: playlist.id })
+		.then((json) => json?.playlist?.entry || [])
+		.catch(() => null)
+	if (!entry) return { added: 0, removed: 0, ok: false }
+
+	const existing = new Set(entry.map((song) => song.id))
+	const toAdd = [...new Set(addIds)].filter((id) => !existing.has(id))
+	const removing = new Set(removeIds)
+	const toRemove = entry
+		.map((song, index) => ({ id: song.id, index }))
+		.filter(({ id }) => removing.has(id))
+		.map(({ index }) => index)
+		.sort((a, b) => b - a)
+
+	let added = 0
+	for (const id of toAdd) {
+		await getApi(config, 'updatePlaylist', { playlistId: playlist.id, songIdToAdd: id })
+		added++
+	}
+	let removed = 0
+	for (const index of toRemove) {
+		await getApi(config, 'updatePlaylist', { playlistId: playlist.id, songIndexToRemove: index })
+		removed++
+	}
+	logger.info('updatePlaylistEntries', `${playlist.name}: +${added} -${removed}`)
+	return { added, removed, ok: true }
+}
+
 export const getCachedAndApi = async (config, path, query = '', setData = () => { }) => {
 	if (!config?.url || !config?.query) {
 		logger.error('getCachedAndApi', 'config.url or config.query is not defined')

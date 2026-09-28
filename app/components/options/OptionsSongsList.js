@@ -4,7 +4,7 @@ import { useNavigation } from '@react-navigation/native'
 import { useTranslation } from 'react-i18next'
 
 import { useConfig } from '~/contexts/config'
-import { getApi, getApiNetworkFirst, addSongToPlaylist } from '~/utils/api'
+import { getApi, getApiNetworkFirst } from '~/utils/api'
 import { urlStream } from '~/utils/url'
 import { isSongCached } from '~/utils/cache'
 import { playSong, addToQueue, addToUpNext } from '~/utils/player'
@@ -13,6 +13,7 @@ import { useSong, useSongDispatch } from '~/contexts/song'
 import { urlCover } from '~/utils/url'
 import { enqueueSong } from '~/utils/downloadManager'
 import OptionsPopup from '~/components/popup/OptionsPopup'
+import PlaylistSelectPopup from '~/components/popup/PlaylistSelectPopup'
 import size from '~/styles/size'
 
 const OptionsSongsList = ({ songs, indexOptions, setIndexOptions, onUpdate = () => { }, idPlaylist = null }) => {
@@ -23,6 +24,7 @@ const OptionsSongsList = ({ songs, indexOptions, setIndexOptions, onUpdate = () 
 	const config = useConfig()
 	const settings = useSettings()
 	const refOption = React.useRef()
+	const [playlistVisible, setPlaylistVisible] = React.useState(false)
 	const [isCached, setIsCached] = React.useState(false)
 
 	React.useEffect(() => {
@@ -91,33 +93,9 @@ const OptionsSongsList = ({ songs, indexOptions, setIndexOptions, onUpdate = () 
 		refOption.current.close()
 	}
 
-	const openAddToPlaylist = () => {
-		getApi(config, 'getPlaylists')
-			.then((json) => {
-				if (!json.playlists?.playlist) return
-
-				refOption.current.setVirtualOptions([
-					{
-						name: t('Add to playlist'),
-					},
-					...json.playlists.playlist.map((playlist) => ({
-						name: playlist.name,
-						image: urlCover(config, playlist, 100),
-						onPress: () => addToPlaylist(playlist)
-					}))
-				]
-				)
-			})
-			.catch(() => { })
-	}
-
-	const addToPlaylist = (playlist) => {
-		addSongToPlaylist(config, playlist, songs[indexOptions].id)
-			.then(() => {
-				refOption.current.close()
-				onUpdate()
-			})
-			.catch(() => { })
+	const openPlaylistSelect = () => {
+		refOption.current.close()
+		setPlaylistVisible(true)
 	}
 
 	const removeFromPlaylist = () => {
@@ -177,6 +155,7 @@ const OptionsSongsList = ({ songs, indexOptions, setIndexOptions, onUpdate = () 
 
 	if (indexOptions < 0 || !songs[indexOptions]) return null
 	return (
+		<>
 		<OptionsPopup
 			ref={refOption}
 			visible={indexOptions >= 0}
@@ -220,7 +199,7 @@ const OptionsSongsList = ({ songs, indexOptions, setIndexOptions, onUpdate = () 
 				{
 					name: t('Add to playlist'),
 					icon: 'plus',
-					onPress: openAddToPlaylist
+					onPress: openPlaylistSelect
 				},
 				{
 					name: t('Remove from playlist'),
@@ -247,6 +226,13 @@ const OptionsSongsList = ({ songs, indexOptions, setIndexOptions, onUpdate = () 
 					}
 				},
 			]} />
+		<PlaylistSelectPopup
+			visible={playlistVisible}
+			songIds={indexOptions >= 0 && songs[indexOptions]?.id ? [songs[indexOptions].id] : []}
+			close={() => setPlaylistVisible(false)}
+			onDone={onUpdate}
+		/>
+		</>
 	)
 }
 

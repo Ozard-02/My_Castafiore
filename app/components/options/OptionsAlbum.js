@@ -4,18 +4,21 @@ import { useNavigation } from '@react-navigation/native'
 import { useTranslation } from 'react-i18next'
 
 import { useConfig } from '~/contexts/config'
-import { getApi, getApiNetworkFirst, addSongsToPlaylist } from '~/utils/api'
+import { getApi, getApiNetworkFirst } from '~/utils/api'
 import { urlCover } from '~/utils/url'
 import { playSong, addToQueue, addToUpNext } from '~/utils/player'
 import { useSong, useSongDispatch } from '~/contexts/song'
 import { enqueueCollection } from '~/utils/downloadManager'
 import OptionsPopup from '~/components/popup/OptionsPopup'
+import PlaylistSelectPopup from '~/components/popup/PlaylistSelectPopup'
 
 const OptionsAlbum = ({ album, isOpen, onClose }) => {
 	const { t } = useTranslation()
 	const config = useConfig()
 	const navigation = useNavigation()
 	const refOption = React.useRef()
+	const [playlistVisible, setPlaylistVisible] = React.useState(false)
+	const [playlistIds, setPlaylistIds] = React.useState([])
 	const songDispatch = useSongDispatch()
 	const song = useSong()
 
@@ -28,32 +31,20 @@ const OptionsAlbum = ({ album, isOpen, onClose }) => {
 		refOption.current.close()
 	}
 
-	const openAddToPlaylist = () => {
-		getApi(config, 'getPlaylists')
-			.then((json) => {
-				if (!json.playlists?.playlist) return
-
-				refOption.current.setVirtualOptions([
-					{
-						name: t('Add to playlist'),
-					},
-					...json.playlists.playlist.map((playlist) => ({
-						name: playlist.name,
-						image: urlCover(config, playlist, 100),
-						onPress: () => {
-							addSongsToPlaylist(config, playlist, (album.song || []).map((s) => s.id))
-								.catch(() => { })
-							refOption.current.close()
-						}
-					}))
-				]
-				)
-			})
-			.catch(() => { })
+	// the whole album, resolved to song ids once; the sheet handles membership from there
+	const openPlaylistSelect = () => {
+		const ids = (album?.song || []).map((track) => track.id).filter(Boolean)
+		if (!ids.length) return
+		refOption.current.close()
+		setPlaylistIds(ids)
+		setPlaylistVisible(true)
 	}
 
-	if (!album) return null
+	if (!album) return (
+		<PlaylistSelectPopup visible={playlistVisible} songIds={playlistIds} close={() => setPlaylistVisible(false)} />
+	)
 	return (
+		<>
 		<OptionsPopup
 			ref={refOption}
 			visible={isOpen}
@@ -91,7 +82,7 @@ const OptionsAlbum = ({ album, isOpen, onClose }) => {
 				{
 					name: t('Add to playlist'),
 					icon: 'plus',
-					onPress: openAddToPlaylist
+					onPress: openPlaylistSelect
 				},
 				{
 					name: t('Download'),
@@ -158,6 +149,12 @@ const OptionsAlbum = ({ album, isOpen, onClose }) => {
 				}
 			]}
 		/>
+		<PlaylistSelectPopup
+			visible={playlistVisible}
+			songIds={playlistIds}
+			close={() => setPlaylistVisible(false)}
+		/>
+		</>
 	)
 }
 
