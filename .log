@@ -1,5 +1,64 @@
 # Castafiore - Session Log
 
+## 2026-09-28 — Multi-select playlist sheet, read-only playlists, player layout
+Three user-reported items, plus one that turned out to be a server policy.
+
+### "Add to playlist" is now a membership editor
+- Per-playlist circle (empty / filled+check). Playlists already containing the song(s) start
+  filled, and **deselecting removes them** — the user's own redefinition, and a genuinely more
+  useful model than the old fire-and-forget list. A partially-containing playlist shows an
+  empty circle (user decision) and is left alone unless tapped.
+- Done button pinned bottom, always enabled (nothing changed -> just closes, no API traffic).
+  Applies all selections in one pass, closes the sheet, returns to the originating page.
+  Removals confirmed; partial failure reported as a count; no rollback (user decision).
+- All five entry points rewired to the one component.
+- **The trap:** Subsonic `updatePlaylist` removes by 0-based INDEX, so removals must go
+  highest-first — ascending deletes the wrong songs, silently. `updatePlaylistEntries`
+  re-fetches for fresh indices, adds first, removes descending. Proved with a simulation.
+- Then the sheet was reverted to the plain song-count subtitle on request (the "Auto-imported
+  from ..." line was noise); the lock/dim behaviour stayed.
+
+### Why playlist writes were failing: server-side, not our bug
+- Symptom: `updatePlaylist` -> `{"code":50,"message":"User is not authorized..."}`.
+- Proved it was not our request: a nonexistent playlist id returns **code 70** on Navidrome, so
+  existence is checked before authorization and 50 is a deliberate permission decision.
+- Root cause: Navidrome flags playlists synced from a `.m3u`/`.nsp` with **`readonly: true`** in
+  `getPlaylists` and refuses writes **regardless of owner** — the file on disk is the source of
+  truth. The user pushed back with "even if im the correct user", which was right: ownership
+  was not the gate. My first explanation (wrong owner) was incomplete.
+- Castafiore was **discarding that field**, so the only way to learn a playlist was read-only
+  was to attempt a write and swallow the error — which is exactly what the old single-select
+  did with `.catch(() => { })`. That is why this had been invisible until the new code logged
+  it. Read-only rows are now dimmed with a lock and never written.
+- Workaround for the user: edit the file on disk, or switch off the playlist's "Auto-Import"
+  toggle in Navidrome to make it writable.
+
+### Full-screen player: control cluster too tall
+- `playerContainer` used `justifyContent: 'space-between'` across five children, so leftover
+  height became four equal gaps. Tightening the controls therefore pushed the cluster *further
+  from the cover* — the bottom region shrank by only 0.75x the amount removed. Moved the cover
+  into a `coverSlot` (`flex: 1`) so the split is directly controllable; cover size untouched.
+- Three measured passes on device (row analysis of 1080x2520 screenshots): centred/tight
+  (cluster 452px, 17.9%) -> flex-end (fixed the gap but shoved the cover 233px down, worse) ->
+  centred/roomier (cluster 562px, 22.3%, cover back up). Shipped the third.
+- Queue view regressed to the bottom in the first pass (the slot centred its content); gave it
+  a top-aligned `coverSlotTop` variant.
+- Structural finding: the cover is width-capped at `width - 50` (361dp on 411x960dp), so it
+  only fills ~37% of the height and the leftover void is unavoidable at a fixed cover size.
+  Also noted: `compact = width < 420 || height < 700` is true on this tall phone purely on
+  width, so it gets compact spacing and the smaller play button. Left alone — changing the
+  threshold also resizes the play button.
+
+### Also fixed
+- `Settings/Downloads`: the active-download rows were direct children of the LegendList, so
+  they missed both the 20px inset and the `maxWidth: 800` cap every other section has — they
+  rendered full-bleed and stretched the window on tablet/desktop. Wrapped in the same
+  `contentMainContainer`.
+
+Verification: eslint clean; assembleRelease OK; installed on R5CY71GYKWF; no crash; layout and
+queue view confirmed by screenshot. Tablet (R52Y80837NY) has been off USB since 2026-09-26
+and is still on fbc0beb.
+
 ## 2026-09-26 — Radio as a continuous sampler + download/cache identity across 2 servers
 Two follow-ups to the playback-correctness pass. TODO #32, #33.
 

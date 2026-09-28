@@ -583,6 +583,62 @@
       is deliberately left playing to the end (it is cached or already streaming) rather than being
       interrupted and reloaded. Ask the user if they want it to cut over.
 
+34. **Multi-select "Add to playlist" sheet** ✅ done 2026-09-28, needs on-device verify
+    Replaces the flat single-select playlist list with a real membership editor. Plan:
+    `plans/playlist-membership-select.md`.
+    - Per-playlist circle: empty = not selected, filled + check = selected. Playlists that
+      already contain the song(s) start filled, and **deselecting one REMOVES them** — the
+      model is bidirectional, not just "add".
+    - A partially-containing playlist shows an **empty circle** (user decision) and is left
+      untouched unless tapped, which then adds only the missing songs. So a playlist holding
+      9 of an album's 27 songs is never damaged by inaction.
+    - **Done** button pinned at the bottom, always enabled — with nothing changed it just
+      closes with no API traffic. Applies every selection in one pass, closes the sheet and
+      returns to the page it was opened from. Removals get a `confirmAlert` naming the
+      playlists; adds do not. Partial failure is reported as a count, with **no rollback**
+      (a rollback would be a second destructive pass nobody asked for).
+    - All five entry points rewired: `OptionsPlayer`, `OptionsSongsList`, `OptionsQueue`,
+      `OptionsAlbum`, `OptionsAlbums`.
+    - `updatePlaylistEntries` (new, `app/utils/api.js`): Subsonic removes by **0-based index**,
+      and every removal shifts the entries after it down by one, so removals MUST go
+      highest-index-first — ascending silently deletes the wrong songs. The helper re-fetches
+      immediately before applying (another client editing the playlist would leave the indices
+      stale), adds first (appending can't shift an index), then removes descending. Verified
+      with a 7-assertion simulation, including one that proves the descending sort is
+      load-bearing (ascending genuinely corrupts the playlist).
+    - **Read-only playlists**: Navidrome flags playlists synced from a `.m3u`/`.nsp` with
+      `readonly: true` in `getPlaylists` and refuses API writes (Subsonic error 50)
+      *regardless of owner* — the file on disk is the source of truth. Castafiore was
+      discarding the field, so the only way to discover it was to attempt a write and swallow
+      the error, which the old single-select did (`.catch(() => { })`). Those rows are now
+      dimmed with a lock and never queued for a write. Plain Subsonic servers omit the field,
+      so they keep current behaviour.
+
+35. **Full-screen player: compact control cluster** ✅ done 2026-09-28
+    The track/seek/controls block was taking ~50% of the screen, leaving the cover cramped.
+    - `CoverItem` moved into a `coverSlot` (`flex: 1`, centred) and `playerContainer` lost
+      `justifyContent: 'space-between'`. That was the real fix: `space-between` smeared the
+      leftover height into four equal gaps between the five children, so tightening the
+      controls just pushed the cluster *further from the cover* — the bottom region only shrank
+      by 0.75x the amount removed. With a flex slot the split is directly controllable.
+      The cover's size formula is untouched, so it does not change size.
+    - Three on-device passes, measured by row analysis of a 1080x2520 screenshot:
+      centred/tight → cover top 1336, gap 733, cluster 452px (17.9%);
+      flex-end → cover top 1569, gap 445, cluster 507px (20.1%) — fixed the gap but shoved the
+      cover 233px down, which was worse;
+      centred/roomier → cover top 1254, gap 705, cluster 562px (22.3%). Shipped.
+    - The queue view keeps a top-aligned slot variant (`coverSlotTop`) so the list fills from
+      the top instead of floating in the middle.
+    - Known constraint: the cover is width-capped at `width - 50` (361dp on a 411x960dp screen),
+      so it only occupies ~37% of the height. At a fixed cover size the leftover void is
+      unavoidable — only a bigger control cluster can consume it.
+    - Untouched: `FullScreenHorizontalPlayer` (landscape/desktop puts the cover left, a
+      different split entirely).
+    - Noted, not changed: `compact = width < 420 || height < 700` is true on a 411x960dp
+      device purely because of the width, so a tall phone gets compact spacing and the smaller
+      play button. Raising the threshold would also enlarge the play button and grow the
+      cluster, so it is a separate decision.
+
 ## Build & Release (local APK)
 
 Release APK output:
