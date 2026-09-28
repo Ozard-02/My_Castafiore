@@ -1,5 +1,5 @@
 import React from 'react'
-import { Text, View, Modal, FlatList, StyleSheet, useWindowDimensions, Pressable, Platform } from 'react-native'
+import { Text, View, Modal, StyleSheet, useWindowDimensions, Pressable, Platform, Animated, PanResponder } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useNavigation } from '@react-navigation/native'
 import { useTranslation } from 'react-i18next'
@@ -17,17 +17,12 @@ import Lyric from '~/components/player/Lyric'
 import mainStyles from '~/styles/main'
 import OptionsMultiArtists from '~/components/options/OptionsMultiArtists'
 import OptionsPlayer from '~/components/options/OptionsPlayer'
-import OptionsQueue from '~/components/options/OptionsQueue'
-import OptionsUpNext from '~/components/options/OptionsUpNext'
+import QueueSheet from '~/components/player/QueueSheet'
 import PlayButton from '~/components/button/PlayButton'
 import Player from '~/utils/player'
 import size from '~/styles/size'
 import SlideBar from '~/components/button/SlideBar'
 import SlideControl from '~/components/button/SlideControl'
-import SongItem from '~/components/item/SongItem'
-import ConnectButton from '~/components/button/ConnectButton'
-import QueueDragRow, { QueueDragProvider } from '~/components/player/QueueDrag'
-import useQueueDnD from '~/utils/useQueueDnD'
 
 const preview = {
 	COVER: 0,
@@ -35,15 +30,10 @@ const preview = {
 	LYRICS: 2
 }
 
-const CoverItem = ({ isPreview, song, setFullScreen, stars }) => {
-	const { t } = useTranslation()
+const CoverItem = ({ isPreview, song, onToggleLyrics }) => {
 	const config = useConfig()
 	const theme = useTheme()
-	const songDispatch = useSongDispatch()
-	const [indexOptions, setIndexOptions] = React.useState(-1)
-	const [upNextOptions, setUpNextOptions] = React.useState(-1)
 	const { width, height } = useWindowDimensions()
-	const { scroll, upNextScroll, queueOffset, queueViewport, upNextOffset, upNextViewport, queueBoxY, queueBoxH, upNextBoxY, upNextBoxH, rowHeight, isCurrentInQueue, queueItems, queueKeys, upNextKeys, queueRealIndex, lists, handleMove } = useQueueDnD(song, songDispatch, { scrollAnimated: true })
 
 	const albumImage = React.useMemo(() => {
 		const size = Math.min(width - 50, 450, Math.max(110, height - 420))
@@ -60,101 +50,12 @@ const CoverItem = ({ isPreview, song, setFullScreen, stars }) => {
 	}, [width, height])
 
 	if (isPreview === preview.COVER) return (
-		<SlideControl style={albumImage}>
+		<SlideControl style={albumImage} onTap={onToggleLyrics}>
 			<ImageError
 				source={{ uri: urlCover(config, song?.songInfo) }}
 				style={[albumImage, { backgroundColor: theme.secondaryBack }]}
 			/>
 		</SlideControl>
-	)
-	if (isPreview === preview.QUEUE) return (
-		<>
-			<View style={{ width: '100%', flex: 1, maxHeight: '70%' }}>
-				<QueueDragProvider lists={lists} rowHeight={rowHeight} onMove={handleMove}>
-					<Text style={{ color: theme.secondaryText, fontSize: size.text.small, textTransform: 'uppercase', marginBottom: 5 }}>{t('Now playing')}</Text>
-					{song.songInfo && (
-						<View style={{ marginBottom: 10 }}>
-							<SongItem
-								song={{ ...song.songInfo, starred: stars.some(s => s.id === song.songInfo.id) }}
-								queue={song.queue}
-								index={song.index}
-								setIndexOptions={() => { }}
-								onPress={() => { }}
-								playsOnPress={false}
-								isPlaying
-							/>
-						</View>
-					)}
-					{song.upNext?.length > 0 && (
-						<>
-							<Text style={{ color: theme.secondaryText, fontSize: size.text.small, textTransform: 'uppercase', marginBottom: 5 }}>{t('Up next')}</Text>
-							<View onLayout={(e) => { upNextBoxY.current = e.nativeEvent.layout.y; upNextBoxH.current = e.nativeEvent.layout.height }} style={{ maxHeight: Math.min(song.upNext.length, 3) * rowHeight }}>
-								<FlatList
-									ref={upNextScroll}
-									data={song.upNext}
-									keyExtractor={(_, index) => upNextKeys[index] ?? index}
-									showsVerticalScrollIndicator={false}
-									getItemLayout={(_, index) => ({ length: rowHeight, offset: rowHeight * index, index })}
-									onScroll={(e) => { upNextOffset.current = e.nativeEvent.contentOffset.y }}
-									scrollEventThrottle={16}
-									onLayout={(e) => { upNextViewport.current = e.nativeEvent.layout.height }}
-									renderItem={({ item, index }) => (
-										<QueueDragRow list="up" index={index}>
-											<SongItem
-												song={{ ...item, starred: stars.some(s => s.id === item.id) }}
-												queue={song.upNext}
-												index={index}
-												setIndexOptions={setUpNextOptions}
-												onPress={() => { }}
-											playsOnPress={false}
-												isPlaying={false}
-											/>
-										</QueueDragRow>
-									)}
-								/>
-							</View>
-						</>
-					)}
-					<Text style={{ color: theme.secondaryText, fontSize: size.text.small, textTransform: 'uppercase', marginVertical: 5 }}>{t('Queue')}</Text>
-					<View onLayout={(e) => { queueBoxY.current = e.nativeEvent.layout.y; queueBoxH.current = e.nativeEvent.layout.height }} style={{ flex: 1 }}>
-						<FlatList
-							ref={scroll}
-							style={{ flex: 1 }}
-							contentContainerStyle={{ width: '100%' }}
-							data={queueItems}
-							keyExtractor={(_, index) => queueKeys[index] ?? index}
-							showsVerticalScrollIndicator={false}
-							onLayout={(e) => { queueViewport.current = e.nativeEvent.layout.height; if (isCurrentInQueue && queueItems.length > 0) scroll.current?.scrollToIndex({ index: 0, animated: false, viewOffset: 0, viewPosition: 0 }) }}
-							getItemLayout={(_, index) => ({ length: rowHeight, offset: rowHeight * index, index })}
-							onScroll={(e) => { queueOffset.current = e.nativeEvent.contentOffset.y }}
-							scrollEventThrottle={16}
-							onScrollToIndexFailed={() => { }}
-							renderItem={({ item, index }) => {
-								const realIndex = queueRealIndex(index)
-								return (
-									<QueueDragRow list="queue" index={index}>
-										<SongItem
-											song={{ ...item, starred: stars.some(s => s.id === item.id) }}
-											queue={song.queue}
-											index={realIndex}
-											setIndexOptions={setIndexOptions}
-											onPress={(_track, queue, index) => {
-												// explicit user jump: drop up next + radio, like starting a new queue
-												Player.setIndex(config, songDispatch, queue, index, { clearUpNext: true, clearRadio: true }).catch(() => { })
-											}}
-											playsOnPress={false}
-											isPlaying={false}
-										/>
-									</QueueDragRow>
-								)
-							}}
-						/>
-					</View>
-				</QueueDragProvider>
-			</View>
-			<OptionsQueue queue={song.queue} indexOptions={indexOptions} setIndexOptions={setIndexOptions} closePlayer={() => setFullScreen(false)} />
-			<OptionsUpNext upNext={song.upNext} indexOptions={upNextOptions} setIndexOptions={setUpNextOptions} />
-		</>
 	)
 	if (isPreview === preview.LYRICS) return (
 		<Lyric song={song} style={albumImage} />
@@ -214,6 +115,110 @@ const FullScreenPlayer = ({ setFullScreen }) => {
 	const [isPreview, setIsPreview] = React.useState(preview.COVER)
 	const [isOptArtists, setIsOptArtists] = React.useState(false)
 	const [isOpt, setIsOpt] = React.useState(false)
+	// queue is an overlay now, not a third `preview` value: it slides over the whole window
+	const [isQueueOpen, setIsQueueOpen] = React.useState(false)
+	const closeFull = React.useCallback(() => setFullScreen(false), [setFullScreen])
+	// Android collapses a prop-less <View> out of the native view hierarchy. A touch that
+	// lands on such a view never enters the JS responder system, so it produces no MOVE
+	// events and the swipe-up could only ever start on a button or the title — every other
+	// pixel was dead. Declaring this hook (which always declines) keeps the view present and
+	// hit-testable without it ever consuming a touch.
+	const neverTake = React.useCallback(() => false, [])
+	const queueY = React.useRef(new Animated.Value(height)).current
+	const queueOpenRef = React.useRef(false)
+	queueOpenRef.current = isQueueOpen
+	const isPreviewRef = React.useRef(isPreview)
+	isPreviewRef.current = isPreview
+	// Bottom edge of the cover/lyrics pane, in the coordinate space the gesture reports in (the
+	// window: the responder is attached to the modal's root view, not to playerContainer).
+	// Only used to keep an upward drag on the LYRICS pane from opening the queue.
+	const paneTop = React.useRef(0)
+	const onPaneLayout = React.useCallback((e) => {
+		paneTop.current = e.nativeEvent.layout.y + e.nativeEvent.layout.height
+	}, [])
+
+	// 1:1 finger tracking. Closed: the sheet sits one window-height below the viewport and
+	// rises by exactly the drag distance. Open: the header drags it back down the same way.
+	const settleQueue = React.useCallback((toValue) => {
+		Animated.spring(queueY, {
+			toValue,
+			useNativeDriver: Platform.OS !== 'web',
+			bounciness: 4,
+			speed: 14,
+		}).start(() => { if (toValue >= height) setIsQueueOpen(false) })
+	}, [queueY, height])
+
+	// Shared by the strip and the window-level responder so the two feel identical.
+	const settleStrip = React.useCallback((g) => {
+		// 12% of the window instead of 28%: the sheet tracks the finger 1:1, so a short flick
+		// is visibly intentional. A gentle upward fling counts too.
+		const travelled = height - Math.max(0, height + g.dy)
+		if (travelled > height * 0.12 || g.vy < -0.3) {
+			setIsQueueOpen(true)
+			settleQueue(0)
+		} else {
+			settleQueue(height)
+		}
+	}, [height, settleQueue])
+
+	// Open: an upward drag anywhere in the window. Close: a downward drag on the sheet header.
+	//
+	// Capture, not onMoveShouldSetPanResponder. A pressable under the finger (the transport
+	// buttons, the title, the bottom padding) wins the responder on touch-START, so the parent
+	// was never asked again and the swipe did nothing at all. Capture gets asked first; taps
+	// still fall through, because it only fires once a real vertical move happens.
+	// The empty band under the transport row. It claims the touch on DOWN rather than waiting
+	// for a move: nothing interactive lies underneath it, and on Android a View carrying no
+	// props is collapsed out of the native hierarchy, so a touch landing on plain empty space
+	// never enters the responder system and no MOVE events are ever delivered — the swipe-up
+	// simply could not start there. Claiming on DOWN is what makes the strip work.
+	const stripPan = React.useRef(PanResponder.create({
+		onStartShouldSetPanResponder: () => true,
+		onMoveShouldSetPanResponder: (_, g) => g.dy < -4 && Math.abs(g.dy) > Math.abs(g.dx) * 1.1,
+		onPanResponderGrant: () => queueY.setValue(height),
+		onPanResponderMove: (_, g) => queueY.setValue(Math.max(0, height + g.dy)),
+		onPanResponderRelease: (_, g) => settleStrip(g),
+	})).current
+
+	const openPan = React.useRef(PanResponder.create({
+		// moveY, not y0: PanResponder only fills in x0/y0 at GRANT time (PanResponder.js:471)
+		// and leaves them 0 until then, so testing g.y0 here was always `0 > <bottom>`. Since
+		// moveY only shrinks while dragging up, "currently below the cover" is equivalent to
+		// "started below the cover", and it cannot swallow the cover's horizontal next/prev nor
+		// the lyrics' own downward scroll. Anything off the cover square — the margin around it
+		// and the empty strip under the controls — opens the queue.
+		onStartShouldSetPanResponderCapture: () => false,
+		// The eligible area is the WHOLE window. Restricting the start zone is what made this
+		// feel broken: the gesture only ever fired from the transport buttons and the title.
+		//
+		// Two things stop that from swallowing real interactions:
+		//  - the axis check. The cover's horizontal next/prev never satisfies |dy| > |dx|, so
+		//    it survives an upward drag that starts on the cover itself.
+		//  - the lyrics exception. The lyrics pane is a scrollable list, and scrolling DOWN
+		//    through it is a vertical drag upward, which would otherwise open the queue.
+		onMoveShouldSetPanResponderCapture: (_, g) => {
+			if (queueOpenRef.current) return false
+			if (isPreviewRef.current === preview.LYRICS && g.moveY <= paneTop.current + 6) return false
+			return g.dy < -4 && Math.abs(g.dy) > Math.abs(g.dx) * 1.1
+		},
+		onPanResponderGrant: () => queueY.setValue(height),
+		onPanResponderMove: (_, g) => queueY.setValue(Math.max(0, height + g.dy)),
+		onPanResponderRelease: (_, g) => settleStrip(g),
+	})).current
+
+	const closePan = React.useRef(PanResponder.create({
+		onMoveShouldSetPanResponderCapture: (_, g) => queueOpenRef.current && g.dy > 4 && Math.abs(g.dy) > Math.abs(g.dx) * 1.1,
+		onPanResponderGrant: () => queueY.setValue(0),
+		onPanResponderMove: (_, g) => queueY.setValue(Math.min(height, Math.max(0, g.dy))),
+		onPanResponderRelease: (_, g) => {
+			if (g.dy > height * 0.1 || g.vy > 0.3) settleQueue(height)
+			else settleQueue(0)
+		},
+	})).current
+
+	const toggleLyrics = React.useCallback(() => {
+		setIsPreview((prev) => prev === preview.LYRICS ? preview.COVER : preview.LYRICS)
+	}, [])
 
 	const [stars] = useCachedFirst([], 'getStarred2', null, (json, setData) => {
 		setData(json?.starred2?.song || [])
@@ -223,15 +228,27 @@ const FullScreenPlayer = ({ setFullScreen }) => {
 		<Modal
 			statusBarTranslucent={true}
 			navigationBarTranslucent={Platform.OS === 'android' && parseInt(Platform.Version, 10) > 34 ? false : true}
-			onRequestClose={() => setFullScreen(false)}
+			onRequestClose={() => {
+				// Back must dismiss the topmost layer, not the whole player. This is not only the
+				// back button: on Android a downward swipe starting near the screen edge IS the
+				// system back gesture, and the platform consumes it before any PanResponder here
+				// can see it. Dispatching by layer order is what makes "swipe down to close the
+				// queue" close the queue from anywhere, including the corners.
+				if (isQueueOpen) settleQueue(height)
+				else if (isPreview === preview.LYRICS) setIsPreview(preview.COVER)
+				else closeFull()
+			}}
 		>
-			<View style={[mainStyles.contentMainContainer(insets), styles.mainContainer(insets, theme)]}>
+			<View
+				style={[mainStyles.contentMainContainer(insets), styles.mainContainer(insets, theme)]}
+				{...openPan.panHandlers}
+			>
 				<View style={{ width: '100%', flexDirection: 'row' }}>
 					<OptionsPlayer
 						song={song.songInfo}
 						isOpen={isOpt}
 						setIsOpen={setIsOpt}
-						closePlayer={() => setFullScreen(false)}
+						closePlayer={() => closeFull()}
 					/>
 					<IconButton
 						style={{
@@ -241,8 +258,22 @@ const FullScreenPlayer = ({ setFullScreen }) => {
 						}}
 						icon="chevron-down"
 						color={theme.primaryText}
-						onPress={() => setFullScreen(false)}
+						onPress={() => closeFull()}
 					/>
+					{/* the cover tap toggles lyrics on, but the lyrics pane is a FlatList whose rows
+					    seek on tap — so the tap target is taken and there is nothing left to tap to
+					    come back. This is the way out, and it only exists while the lyrics show. */}
+					{isPreview === preview.LYRICS && (
+						<IconButton
+							style={{
+								paddingVertical: compact ? 12 : 20,
+								paddingHorizontal: compact ? 15 : 25,
+							}}
+							icon="picture-o"
+							color={theme.primaryTouch}
+							onPress={() => setIsPreview(preview.COVER)}
+						/>
+					)}
 					<IconButton
 						style={{
 							paddingVertical: compact ? 12 : 20,
@@ -253,21 +284,28 @@ const FullScreenPlayer = ({ setFullScreen }) => {
 						onPress={() => setIsOpt(true)}
 					/>
 				</View>
-				<View style={styles.playerContainer}>
+				<View
+					style={styles.playerContainer}
+					onStartShouldSetResponder={neverTake}
+				>
 					{/* the cover takes all the slack and centres in it. Previously playerContainer
 					    used justifyContent: 'space-between', which smeared the leftover into
 					    four equal gaps — so tightening the controls below just pushed the cluster
 					    further from the cover instead of freeing space. Cover size is unchanged. */}
-					<View style={[styles.coverSlot, isPreview === preview.QUEUE && styles.coverSlotTop]}>
-						<CoverItem isPreview={isPreview} song={song} setFullScreen={setFullScreen} stars={stars} />
+					<View
+						style={styles.coverSlot}
+						onLayout={onPaneLayout}
+						onStartShouldSetResponder={neverTake}
+					>
+						<CoverItem isPreview={isPreview} song={song} onToggleLyrics={toggleLyrics} />
 					</View>
-					<View style={{ flexDirection: 'row', marginTop: 26, width: '100%', alignItems: 'center', justifyContent: 'space-between' }}>
+					<View onStartShouldSetResponder={neverTake} style={{ flexDirection: 'row', marginTop: 26, width: '100%', alignItems: 'center', justifyContent: 'space-between' }}>
 						<View style={{ flex: 1 }}>
 							<Pressable
 								style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}
 								onPress={() => {
 									navigation.navigate('Album', { id: song.songInfo.albumId, name: song.songInfo.album, artist: song.songInfo.artist, artistId: song.songInfo.artistId })
-									setFullScreen(false)
+									closeFull()
 								}}
 							>
 								<Text numberOfLines={1} style={{ color: theme.primaryText, fontSize: size.title.small, textAlign: 'left', fontWeight: '700', letterSpacing: -0.5 }}>{song.songInfo.title}</Text>
@@ -279,7 +317,7 @@ const FullScreenPlayer = ({ setFullScreen }) => {
 										setIsOptArtists(true)
 									} else {
 										navigation.navigate('Artist', { id: song.songInfo.artistId, name: song.songInfo.artist })
-										setFullScreen(false)
+										closeFull()
 									}
 								}}
 							>
@@ -301,7 +339,7 @@ const FullScreenPlayer = ({ setFullScreen }) => {
 						/>
 					</View>
 					<TimeBar />
-					<View style={{ flexDirection: 'row', width: '100%', marginVertical: compact ? 21 : 27, alignItems: 'center', justifyContent: 'space-between' }}>
+					<View onStartShouldSetResponder={neverTake} style={{ flexDirection: 'row', width: '100%', marginVertical: compact ? 21 : 27, alignItems: 'center', justifyContent: 'space-between' }}>
 						<View style={{ flexDirection: 'row', alignItems: 'center' }}>
 							<IconButton
 								icon="random"
@@ -310,15 +348,6 @@ const FullScreenPlayer = ({ setFullScreen }) => {
 								style={{ padding: 10 }}
 								onPress={() => Player.setRepeat(songDispatch, song.actionEndOfSong === 'random' ? 'next' : 'random')}
 							/>
-							{/* a radio session has no natural end, so say so — and offer a way out */}
-							{song.radioMode && (
-								<Pressable
-									onPress={() => songDispatch({ type: 'setRadioMode', value: false })}
-									style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: size.radius.circle, backgroundColor: 'rgba(255,255,255,0.10)' }}>
-									<Icon name="random" size={11} color={theme.primaryTouch} />
-									<Text style={{ color: theme.primaryTouch, fontSize: size.text.small, fontWeight: '700' }}>{t('Radio')}</Text>
-								</Pressable>
-							)}
 						</View>
 						<IconButton
 							icon="step-backward"
@@ -353,28 +382,23 @@ const FullScreenPlayer = ({ setFullScreen }) => {
 							onPress={() => Player.setRepeat(songDispatch, song.actionEndOfSong === 'repeat' ? 'next' : 'repeat')}
 						/>
 					</View>
-					<View style={{ flexDirection: 'row', width: '100%', marginTop: 21, justifyContent: 'space-between' }}>
-						<IconButton
-							icon="comment-o"
-							size={17}
-							color={isPreview == preview.LYRICS ? theme.primaryTouch : theme.secondaryText}
-							style={{ paddingVertical: compact ? 4 : 10, paddingEnd: 10 }}
-							onPress={() => setIsPreview(isPreview == preview.LYRICS ? preview.COVER : preview.LYRICS)}
-						/>
-						<ConnectButton
-							size={20}
-							color={theme.secondaryText}
-							style={{ paddingVertical: compact ? 4 : 10, paddingStart: 10 }}
-						/>
-						<IconButton
-							icon="bars"
-							size={17}
-							color={isPreview == preview.QUEUE ? theme.primaryTouch : theme.secondaryText}
-							style={{ paddingVertical: compact ? 4 : 10, paddingStart: 10 }}
-							onPress={() => setIsPreview(isPreview == preview.QUEUE ? preview.COVER : preview.QUEUE)}
-						/>
-					</View>
+					<Animated.View {...stripPan.panHandlers} style={styles.queueDragStrip} />
 				</View>
+				{/* queue: a sheet that slides over the WHOLE window, controls included. translateY
+				    starts one window-height below the viewport and tracks the finger 1:1. */}
+				<Animated.View
+					pointerEvents={isQueueOpen ? 'auto' : 'none'}
+					style={[styles.queueOverlay, { backgroundColor: theme.primaryBack, transform: [{ translateY: queueY }] }]}
+				>
+					<View style={[styles.queueHeader, { paddingTop: insets.top + 10 }]} {...closePan.panHandlers}>
+						<Icon name="angle-double-down" size={20} color={theme.secondaryText} style={{ marginEnd: 10 }} />
+						<Text style={[mainStyles.mediumText(theme.primaryText), { flex: 1 }]}>{t('Queue')}</Text>
+						<IconButton icon="close" size={size.icon.tiny} color={theme.secondaryText} onPress={() => settleQueue(height)} />
+					</View>
+					<View style={{ flex: 1, paddingHorizontal: 20, paddingBottom: insets.bottom > 15 ? insets.bottom : 15 }}>
+						<QueueSheet song={song} stars={stars} setFullScreen={setFullScreen} />
+					</View>
+				</Animated.View>
 			</View>
 		</Modal>
 	)
@@ -396,7 +420,10 @@ const styles = StyleSheet.create({
 		alignItems: 'center',
 		flexDirection: 'column',
 		flex: 1,
-		paddingBottom: 30,
+		// the removed lyrics/cast/queue row occupied marginTop 21 + ~29px of icons. Padding
+		// absorbs exactly that, so the title/seek/transport cluster stays put where the three
+		// measured passes in TODO #35 put it, and the freed height goes to the cover instead.
+		paddingBottom: 82,
 	},
 	// takes every pixel the controls do not need, so the bottom cluster can stay compact.
 	// Centred: flex-end jammed the cover against the title and pushed it 233px down the
@@ -408,9 +435,28 @@ const styles = StyleSheet.create({
 		alignItems: 'center',
 		justifyContent: 'center',
 	},
-	// the queue is a scrollable list: fill from the top, or it ends up pushed to the bottom
-	coverSlotTop: {
-		justifyContent: 'flex-start',
+	// covers the whole window (the controls included), driven by translateY
+	queueOverlay: {
+		position: 'absolute',
+		top: 0,
+		left: 0,
+		right: 0,
+		bottom: 0,
+	},
+	// The empty band under the transport row (playerContainer's paddingBottom). Absolute, so it
+	// overlays only that padding and never the controls.
+	queueDragStrip: {
+		position: 'absolute',
+		left: 0,
+		right: 0,
+		bottom: 0,
+		height: 82,
+	},
+	queueHeader: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		paddingHorizontal: 20,
+		paddingBottom: 12,
 	},
 })
 

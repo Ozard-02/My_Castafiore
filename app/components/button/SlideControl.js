@@ -5,7 +5,10 @@ import { useConfig } from '~/contexts/config'
 import { useSong, useSongDispatch } from '~/contexts/song'
 import Player from '~/utils/player'
 
-const SlideControl = ({ children, style }) => {
+// onTap: when provided, a single tap calls it and the double-tap play/pause is disabled — one
+// gesture per intent, no 300ms arbitration. Omit it (the landscape/desktop player still has
+// explicit transport controls) to keep the old double-tap behaviour.
+const SlideControl = ({ children, style, onTap = null, onLayout }) => {
 	const song = useSong()
 	const songDispatch = useSongDispatch()
 	const config = useConfig()
@@ -32,13 +35,17 @@ const SlideControl = ({ children, style }) => {
 			} else if (position._value > 50) {
 				Player.previousSong(config, song, songDispatch)
 			} else if (position._value === 0) {
-				let now = Date.now()
-				if (now - previousTap.current < 300) {
-					if (song.state === Player.State.Playing) Player.pauseSong()
-					else Player.resumeSong()
-					now = 0
+				if (onTap) {
+					onTap()
+				} else {
+					let now = Date.now()
+					if (now - previousTap.current < 300) {
+						if (song.state === Player.State.Playing) Player.pauseSong()
+						else Player.resumeSong()
+						now = 0
+					}
+					previousTap.current = now
 				}
-				previousTap.current = now
 			}
 			Animated.timing(position, {
 				toValue: 0,
@@ -55,6 +62,7 @@ const SlideControl = ({ children, style }) => {
 				transform: [{ translateX: position }]
 			}]}
 			{...panResponder.panHandlers}
+			onLayout={onLayout}
 		>
 			{children}
 		</Animated.View>

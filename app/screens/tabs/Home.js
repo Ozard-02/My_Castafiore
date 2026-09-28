@@ -14,6 +14,7 @@ import { useTheme } from '~/contexts/theme'
 import RotateIconButton from '~/components/button/RotateIconButton'
 import HorizontalList from '~/components/lists/HorizontalList'
 import IconButton from '~/components/button/IconButton'
+import ConnectButton from '~/components/button/ConnectButton'
 import mainStyles from '~/styles/main'
 import size from '~/styles/size'
 
@@ -95,6 +96,14 @@ const Home = () => {
 								onPress={() => navigation.navigate('FreshReleases')}
 							/> : null
 					}
+					{/* sibling, not part of the ternary below: the refresh button is swapped
+					    for a scan-status count while a scan runs, and anything inside that
+					    branch would jump left and right as scans start and stop */}
+					<ConnectButton
+						size={size.icon.large}
+						color={theme.primaryText}
+						style={{ paddingHorizontal: 10 }}
+					/>
 					{statusRefresh ?
 						<Pressable onPress={forceRefresh} style={mainStyles.opacity}
 						>
