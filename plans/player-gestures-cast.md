@@ -128,3 +128,51 @@ should be re-measured rather than assumed. Same screenshot row-analysis method a
 - Cast reachable from Home top-right, left of refresh, in both the normal and scan-running
   states; the button does not jump when a scan starts.
 - Re-measure the cluster/cover split by screenshot after the row is gone.
+
+---
+
+## Shipped 2026-09-29 — commit `beccb47`
+
+Decisions taken, all confirmed on device (`R5CY71GYKWF`, 411x960dp):
+
+| Question | Answer | Why |
+|---|---|---|
+| Lyrics gesture | single tap on the cover | one gesture per intent, no 300ms arbitration; play/pause already on the transport row and the mini player |
+| Way back from lyrics | `picture-o` in the top bar, shown only while lyrics are up | the lyrics pane is a FlatList whose rows seek on tap, so it cannot also be the tap target — a `Pressable` wrapper loses to the deeper row |
+| Queue animation | 1:1 finger tracking, whole-window overlay | `translateY` starts one window-height below the viewport; no cover scale/fade, since the cover is no longer swapped out |
+| Queue dismissal | header drag-down 1:1, plus X, plus back | the full-screen player is a Modal with no scrim, so there is nothing to tap outside of |
+| Where the swipe starts | anywhere in the window; the empty band under the buttons is a real strip | see the platform findings below |
+| Cast placement | Home only, sibling of the refresh control | as asked; one place beats four copies. Accepted: no cast picker from the Music tab |
+| Deleted row's height | into `playerContainer`'s `paddingBottom` (30 → 82) | keeps the cluster exactly where #35 measured it; the freed space goes to the cover |
+
+### Platform findings (cost the most time — do not rediscover)
+
+1. **`PanResponder` fills `x0`/`y0` only at grant time** (`PanResponder.js:471`); they are
+   initialised to `0` at line 299 and stay `0` through the whole should-set phase. A move-phase
+   handler testing `g.y0` is really testing `0 > something`. Use `g.moveY`.
+2. **`onMoveShouldSetResponder` on an ancestor loses.** The pressable under the finger wins the
+   responder at touch-START, so the parent is never consulted again and the gesture silently does
+   nothing. `onMoveShouldSetResponderCapture` is asked first; taps still fall through because it
+   only fires once a real move happens.
+3. **A prop-less `View` is collapsed out of the native hierarchy on Android.** A touch landing on
+   plain empty space therefore never enters the responder system and delivers **no MOVE events at
+   all** — verified by logging touch coordinates: swipes at y≈600 and y≈898 produced a DOWN and
+   nothing more, while swipes on buttons and the title worked. This is the single reason the
+   gesture felt like it needed "button precision". Fixed with a `neverTake`
+   `onStartShouldSetResponder` on the containers, plus a dedicated drag strip in the empty band
+   under the transport row that claims on DOWN (safe: nothing interactive is beneath it).
+4. **Android's bottom-edge back gesture is consumed by the platform** before any PanResponder
+   sees it. It arrived as `Modal.onRequestClose` (confirmed with a stack trace) and closed the
+   entire player. `onRequestClose` now dismisses by layer order: queue → lyrics → player.
+5. The `SlideControl` conflict anticipated above did not materialise — the queue is a sibling
+   overlay, not a view inside the cover slot, so the two no longer share a responder.
+
+### Not done / deferred
+
+- The deferred plan items this file was originally written for (see the top of the file) remain
+  open.
+- No visual affordance for the drag strip: it is invisible. A grabber bar would help discovery
+  and is a small follow-up.
+- The queue sheet's close drag is header-only. Dragging down on the list body scrolls the list
+  instead; a scroll-aware hand-off (close when the list is at scroll top) is the standard
+  bottom-sheet behaviour and is not implemented.

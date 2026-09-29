@@ -639,27 +639,45 @@
       play button. Raising the threshold would also enlarge the play button and grow the
       cluster, so it is a separate decision.
 
-36. **Player gestures: drop the bottom button row** ⏸ punted 2026-09-28, not started
-    Plan + design decisions: `plans/player-gestures-cast.md`. User request: remove the lyrics,
-    queue and cast buttons from the player and drive them by gesture; move cast to Home.
-    - **Lyrics on cover tap.** The cover is wrapped in `SlideControl`, whose PanResponder
-      claims every touch and already uses a tap for *double-tap-to-play/pause* (300ms window).
-      So a single tap is currently swallowed. The arbitration has to be decided; recommended
-      simplification is single tap = lyrics and dropping the double-tap (play/pause already
-      exists on the transport row and the mini player). Tapping again must restore the cover.
-    - **Queue on swipe-up-from-bottom**, animated (slide + cover scale/fade) rather than
-      snapped. Must not fight `MiniPlayer`'s existing vertical swipe-up-to-expand, needs a
-      dismissal gesture, and `preview` is currently a single 3-value enum that two independent
-      gestures would write.
-    - **Cast to Home** top-right, between the ListenBrainz bell and the refresh control. The
-      refresh `RotateIconButton` is inside a ternary (replaced by a scan-status `N°` text while
-      scanning), so the cast button has to be a sibling or it will jump around. `ConnectButton`
-      is platform-split but exports the same component from both, so it drops into the shared
-      `Home.js` safely. Open question: Home only, or every tab?
-    - **Side effect worth using:** deleting the row returns ~66px (~2.6% of screen height) to
-      the control cluster, undoing part of the growth in #35. The spacing values tuned there
-      should be re-measured, not assumed.
-    - Not started; no code changed.
+36. **Player gestures: drop the bottom button row** ✅ shipped 2026-09-29 (`beccb47`)
+    Plan: `plans/player-gestures-cast.md`. Commit `beccb47`.
+    - **Lyrics on cover tap.** `SlideControl` gained an optional `onTap`; when supplied, a single
+      tap calls it and the double-tap play/pause is skipped (one gesture per intent, no 300ms
+      arbitration). The portrait player passes it, the landscape/desktop player does not and keeps
+      double-tap. *The tap target could not be reused as the way back:* the lyrics pane is a
+      `FlatList` whose rows seek on tap, so they win the tap. A `picture-o` button in the top bar
+      appears only while the lyrics show.
+    - **Queue as a swipe-up overlay**, not a `preview` enum value — `preview` is now just
+      COVER | LYRICS and the queue is a separate `isQueueOpen`. The sheet is absolutely
+      positioned over the whole window, `translateY` starts one window-height below the viewport
+      and tracks the finger 1:1; it opens on an upward swipe and closes by dragging its header
+      down, the X, or back. Contents moved to `QueueSheet.js`.
+    - **Cast to Home**, as a sibling of the refresh control (not inside its ternary, so it cannot
+      jump when a scan starts/stops). Home only, not every tab — that is what was asked for and
+      one place is easier to reason about than four. Consequence accepted: no cast picker from
+      the Music tab.
+    - **Deleted row's height** went into `playerContainer`'s `paddingBottom` (30 → 82) so the
+      title/seek/transport cluster stays exactly where the measured passes in #35 put it, and the
+      freed space goes to the cover. Re-measured and confirmed unchanged on device.
+    - **Radio badge removed** from the transport row. Display-only: "End radio" is still in the
+      `...` menu, so the finite / never-looping session remains one tap away.
+
+    Three platform findings that cost real time, recorded so they are not rediscovered:
+    - `PanResponder` fills in `x0`/`y0` only at **grant** time (PanResponder.js:471); before that
+      they are literally `0`, so a move-phase handler must test `g.moveY`, never `g.y0`. Testing
+      `y0` made the condition `0 > bottom`, i.e. always false, and the gesture looked dead.
+    - `onMoveShouldSetResponder` on an ancestor **loses**: the pressable under the finger wins the
+      responder on touch-START, so the parent is never asked again. Must be
+      `onMoveShouldSetResponderCapture`; taps still fall through because capture only fires on a
+      real move.
+    - A `View` with **no props is collapsed out of the native hierarchy** on Android, so a touch
+      landing on plain empty space never enters the responder system and produces no MOVE events
+      at all. This is why the swipe only ever worked from the buttons and the title. Fixed with a
+      `neverTake` `onStartShouldSetResponder` on the containers, plus a real drag strip in the
+      empty band under the transport row that claims on DOWN (nothing interactive is beneath it).
+    - Android's own **bottom-edge back gesture** is consumed by the platform before any
+      PanResponder sees it; it surfaced as `Modal.onRequestClose` closing the whole player.
+      `onRequestClose` now dismisses by layer order: queue → lyrics → player.
 
 ## Build & Release (local APK)
 

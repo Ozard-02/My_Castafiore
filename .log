@@ -860,3 +860,40 @@ flips between them automatically. Found three distinct mechanisms:
      move together; fake dispatch stays as cold-headless fallback.
 - Instrumentation kept (Settings -> Logs / logcat) pending user's on-device verdict.
 - Installed: connected phone only (tablet R52Y80837NY offline).
+
+## 2026-09-29 — Player: queue swipe-up overlay, cover-tap lyrics, cast to Home (`beccb47`)
+- Shipped TODO #36. Bottom button row deleted; its height moved into playerContainer's
+  paddingBottom (30 -> 82) so the control cluster stayed exactly where #35 measured it.
+  Queue became a whole-window overlay (QueueSheet.js) instead of a third `preview` value.
+- Cast moved to Home as a sibling of the refresh control. Home only, not every tab.
+- Radio badge removed from the transport row (display only; "End radio" stays in the ... menu).
+- Verified on R5CY71GYKWF: no crash, controls unmoved, gesture works from the black band.
+
+### The three platform traps (this is the reusable part)
+1. PanResponder fills x0/y0 only at GRANT time (PanResponder.js:471); they stay 0 through the
+   whole should-set phase. A move-phase handler testing g.y0 is testing `0 > something` — always
+   false. Use g.moveY. Symptom: gesture completely dead, capture handler visibly firing.
+2. onMoveShouldSetResponder on an ancestor LOSES: the pressable under the finger wins the
+   responder at touch-START, so the parent is never asked again. Use the *Capture* variant.
+3. A prop-less View is COLLAPSED out of the native hierarchy on Android, so a touch on plain
+   empty space never enters the responder system and delivers no MOVE events at all. Proven by
+   logging touch coordinates: y~600 and y~898 gave a DOWN and nothing more; buttons and the
+   title worked. This is why the swipe looked like it needed "button precision". Fix: a
+   neverTake onStartShouldSetResponder on the containers, and a real drag strip that claims on
+   DOWN where nothing interactive is underneath.
+4. Android's bottom-edge BACK gesture is consumed by the platform before any PanResponder sees
+   it; it surfaced as Modal.onRequestClose closing the whole player. Confirmed with a stack
+   trace. onRequestClose now dismisses by layer order: queue -> lyrics -> player.
+
+### Process lessons (I slipped on these)
+- Instrument with console.log: it survives the release build (no transform-remove-console in
+  babel.config.js) and logcat captures it under ReactNativeJS. Guessing cost far more cycles
+  than one instrumented build.
+- adb `input swipe` does NOT generate MOVE events the app sees (only DOWN/UP), so gestures
+  cannot be verified from the CLI — the user has to swipe. Taps do work.
+- Do NOT do line-number-based deletion across edits. It silently removed a JSX opening tag
+  (`<TimeBar />` and the transport row's `<View>`) and crashed the player on open. Use
+  context-anchored string replacement, and assert on the JSX structure afterwards.
+- Python read/write normalises CRLF -> LF. SlideControl.js and Home.js are CRLF in git; they
+  showed as whole-file rewrites until the line endings were restored.
+- Commit between build/install iterations. I did ~10 uncommitted build cycles this session.
