@@ -679,6 +679,21 @@
       PanResponder sees it; it surfaced as `Modal.onRequestClose` closing the whole player.
       `onRequestClose` now dismisses by layer order: queue → lyrics → player.
 
+37. **Delete song from server library** 🚧 PARKED (waiting on Navidrome upstream)
+    - User request: "remove a song from the library" — meaning erase the audio file on the
+      Navidrome host, not just hide it locally or drop the local cache
+      (`deleteSongCache` in `app/screens/Info.js` stays as-is).
+    - Blocker: stock Navidrome (server v0.64.2) is read-only by design — Subsonic `rest/*`
+      has no delete-media endpoint and native `DELETE /api/song/:id` is GET-only.
+      Plugin HTTP endpoints (`/ext/{pluginID}/*`, PR navidrome#5045) are still Draft/unmerged,
+      so no released version can receive a delete call from the app.
+    - Decision 2026-10-11: wait for upstream, no sidecar microservice.
+    - When unblocked: small `.ndp` plugin (`HTTPEndpoint`, `auth: subsonic`, `users`
+      allow-list, `library AllowWriteAccess=true`) + `deleteLibrarySong()` in
+      `app/utils/api.js` + "Delete from server" entry in `OptionsSongsList` with
+      `confirmAlert`, then `startScan` + `refreshApi`.
+    - Plan: `plans/delete-song-from-library.md`.
+
 ## Build & Release (local APK)
 
 Release APK output:

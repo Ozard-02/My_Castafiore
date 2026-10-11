@@ -897,3 +897,10 @@ flips between them automatically. Found three distinct mechanisms:
 - Python read/write normalises CRLF -> LF. SlideControl.js and Home.js are CRLF in git; they
   showed as whole-file rewrites until the line endings were restored.
 - Commit between build/install iterations. I did ~10 uncommitted build cycles this session.
+
+## 2026-10-11 — delete-from-library parked (TODO #37)
+- User wants "remove a song from the library" = erase the file on the Navidrome host.
+- Verified stock Navidrome v0.64.2 can't do it: no Subsonic delete-media endpoint, native
+  DELETE /api/song/:id is GET-only, plugin HTTP endpoints (PR #5045) still Draft/unmerged.
+- Decision: wait for upstream, no sidecar. No code changes.
+- Recorded TODO #37 + plans/delete-song-from-library.md. Re-check upstream before starting.
