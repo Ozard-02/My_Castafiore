@@ -11,8 +11,14 @@ import { filterExcluded, refreshExcludedSongIds } from '~/utils/exclusions'
 import { useSettings } from '~/contexts/settings'
 import { useSongDispatch } from '~/contexts/song'
 import { useTheme } from '~/contexts/theme'
+import { useOffline } from '~/utils/offline'
+import { useDownloads } from '~/utils/downloadManager'
+import { offlineSongs, offlineCollections } from '~/utils/offlineContent'
 import RotateIconButton from '~/components/button/RotateIconButton'
 import HorizontalList from '~/components/lists/HorizontalList'
+import HorizontalAlbums from '~/components/lists/HorizontalAlbums'
+import SongsList from '~/components/lists/SongsList'
+import SectionTitle from '~/components/SectionTitle'
 import IconButton from '~/components/button/IconButton'
 import ConnectButton from '~/components/button/ConnectButton'
 import mainStyles from '~/styles/main'
@@ -26,10 +32,23 @@ const Home = () => {
 	const config = useConfig()
 	const settings = useSettings()
 	const theme = useTheme()
+	const offline = useOffline()
+	const downloads = useDownloads()
 	const [statusRefresh, setStatusRefresh] = React.useState()
 	const [refresh, setRefresh] = React.useState(0)
 
+	const offlineList = React.useMemo(() => offlineSongs(downloads), [downloads])
+	const offlineAlbums = React.useMemo(() => offlineCollections(downloads, 'album'), [downloads])
+
 	const clickRandomSong = async () => {
+		// offline there is no server to ask: shuffle the downloaded songs (all playable)
+		// and skip radio mode, which would keep asking the server for more
+		if (offline) {
+			if (!offlineList.length) return
+			const shuffled = [...offlineList].sort(() => Math.random() - 0.5)
+			await playSong(config, songDispatch, shuffled, 0)
+			return
+		}
 		// exclusions cache is otherwise stale until a manual toggle (m3u8 re-syncs, server edits)
 		await refreshExcludedSongIds(config)
 		getApiNetworkFirst(config, 'getRandomSongs', 'size=50')
@@ -85,7 +104,7 @@ const Home = () => {
 					onPress={clickRandomSong}>
 					<Text style={styles.textRandom(theme)}>{t('Random Song')}</Text>
 				</Pressable>
-				<View style={{ flexDirection: 'row' }}>
+				<View style={{ flexDirection: 'row', display: offline ? 'none' : undefined }}>
 					{
 						settings.listenBrainzUser ?
 							<IconButton
@@ -123,8 +142,31 @@ const Home = () => {
 					}
 				</View>
 			</View>
-			{config?.url && settings?.homeOrderV2?.map((value, index) =>
-				<HorizontalList key={index} refresh={refresh}{...value} />
+			{offline ? (
+				offlineAlbums.length || offlineList.length ? (
+					<>
+						{offlineAlbums.length > 0 && (
+							<>
+								<SectionTitle title={t('Downloaded albums')} />
+								<HorizontalAlbums albums={offlineAlbums} />
+							</>
+						)}
+						{offlineList.length > 0 && (
+							<>
+								<SectionTitle title={t('Downloaded songs')} />
+								<SongsList songs={offlineList} />
+							</>
+						)}
+					</>
+				) : (
+					<View style={{ paddingVertical: 30, alignItems: 'center' }}>
+						<Text style={{ color: theme.secondaryText, fontSize: size.text.medium }}>{t('No downloaded content')}</Text>
+					</View>
+				)
+			) : (
+				config?.url && settings?.homeOrderV2?.map((value, index) =>
+					<HorizontalList key={index} refresh={refresh}{...value} />
+				)
 			)}
 		</ScrollView>
 		</View>

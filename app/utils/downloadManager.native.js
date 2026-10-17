@@ -196,6 +196,14 @@ const buildMeta = (song) => ({
 	artist: song.artist || '',
 	album: song.album || '',
 	cover: urlCover(global.config, song),
+	// offline browsing: these let a downloaded song be listed (and played) with its real
+	// metadata when the server is unreachable. Entries downloaded before this fall back
+	// to title/artist/album only.
+	duration: song.duration,
+	albumId: song.albumId,
+	artistId: song.artistId,
+	coverArt: song.coverArt,
+	track: song.track,
 	// provenance: which address the bytes came from. Both addresses are the same library, so
 	// this never invalidates the cache — it exists so a mismatch is visible instead of silent,
 	// and so meta.cover can be re-pointed at the active server (see coverForCurrentServer).

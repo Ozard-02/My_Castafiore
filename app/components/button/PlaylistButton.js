@@ -4,6 +4,7 @@ import { useConfig } from '~/contexts/config'
 import { useSongDispatch } from '~/contexts/song'
 import { useTheme } from '~/contexts/theme'
 import { getApi } from '~/utils/api'
+import { useOffline } from '~/utils/offline'
 import IconButton from '~/components/button/IconButton'
 import RatingPopup from '~/components/popup/RatingPopup'
 import PlaylistSelectPopup from '~/components/popup/PlaylistSelectPopup'
@@ -21,6 +22,7 @@ const PlaylistButton = ({ id, isFavorited = false, rating: initialRating = undef
 	const config = useConfig()
 	const songDispatch = useSongDispatch()
 	const theme = useTheme()
+	const offline = useOffline()
 
 	React.useEffect(() => {
 		setFavorited(isFavorited)
@@ -36,6 +38,10 @@ const PlaylistButton = ({ id, isFavorited = false, rating: initialRating = undef
 			})
 			.catch((e) => logger.error('PlaylistButton', e.message))
 	}
+
+	// offline the sheet can't load membership and star/unstar writes would fail: the
+	// button would only be a dead end, so it disappears from rows and players
+	if (offline) return null
 
 	return (
 		<>

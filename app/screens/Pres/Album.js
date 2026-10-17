@@ -6,6 +6,9 @@ import { useConfig } from '~/contexts/config'
 import { useCachedAndApi } from '~/utils/api'
 import { useTheme } from '~/contexts/theme'
 import { urlCover } from '~/utils/url'
+import { useOffline } from '~/utils/offline'
+import { useDownloads } from '~/utils/downloadManager'
+import { offlineCollectionSongs } from '~/utils/offlineContent'
 import FavoritedButton from '~/components/button/FavoritedButton'
 import mainStyles from '~/styles/main'
 import presStyles from '~/styles/pres'
@@ -25,6 +28,8 @@ const Album = ({ navigation, route: { params } }) => {
 	const [album, setAlbum] = React.useState(null)
 	const [isOptArtists, setIsOptArtists] = React.useState(false)
 	const [isOptAlbum, setIsOptAlbum] = React.useState(false)
+	const offline = useOffline()
+	const downloads = useDownloads()
 
 	const [songs] = useCachedAndApi([], 'getAlbum', { id: params.id }, (json, setData) => {
 		setStarred(json?.album?.starred)
@@ -38,6 +43,13 @@ const Album = ({ navigation, route: { params } }) => {
 			return 0
 		}))
 	}, [params.id])
+
+	// offline, a downloaded album that was never fetched (long-press download, cache
+	// evicted) would open empty: rebuild its songs from the download index instead
+	const list = React.useMemo(() => {
+		if (songs.length || !offline) return songs
+		return offlineCollectionSongs(downloads, 'album', params.id)
+	}, [songs, offline, downloads, params.id])
 
 	return (
 		<ScrollView
@@ -56,14 +68,14 @@ const Album = ({ navigation, route: { params } }) => {
 				}}
 			>
 				<FavoritedButton id={params.id} isFavorited={isStarred} style={[presStyles.button, { paddingEnd: 0 }]} size={size.icon.medium} />
-				<RandomButton songList={songs} size={size.icon.medium} />
+				<RandomButton songList={list} size={size.icon.medium} />
 				<DownloadButton
 					type="album"
 					id={album?.id || params.id}
 					name={album?.name || album?.album || album?.title || params.name || params.album || params.title}
 					artist={album?.artist || params.artist || '-'}
 					cover={urlCover(config, album || params)}
-					songs={songs}
+					songs={list}
 					size={size.icon.medium}
 					style={presStyles.button}
 				/>
@@ -78,7 +90,7 @@ const Album = ({ navigation, route: { params } }) => {
 				close={() => setIsOptArtists(false)}
 				visible={isOptArtists}
 			/>
-			<SongsList songs={songs} isIndex={true} />
+			<SongsList songs={list} isIndex={true} />
 		</ScrollView>
 	)
 }

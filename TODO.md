@@ -694,7 +694,7 @@
       `confirmAlert`, then `startScan` + `refreshApi`.
     - Plan: `plans/delete-song-from-library.md`.
 
-38. **Song heart → "Add to playlist" circle + Favourited as playlist** 🚧 in progress (2026-10-17)
+38. **Song heart → "Add to playlist" circle + Favourited as playlist** ✅ done 2026-10-17 (commit `dc48aaf`, needs on-device verify)
     - User: replace the heart in songs with the empty/full circle used in the playlist
       sheet; tap opens the add-to-playlist menu instead of starring; "Favourited" becomes
       a choosable pseudo-playlist there.
@@ -702,12 +702,32 @@
       filled = starred; keep long-press rating.
     - Plan: `plans/heart-to-playlist.md`. New `PlaylistButton`, `PlaylistSelectPopup`
       gains the Favourited row and a `songs` prop.
+    - Shipped: `PlaylistButton` (circle `circle-o`→`check-circle` in `primaryTouch`, tap opens
+      the sheet, long-press keeps the rating popup); `PlaylistSelectPopup` rewritten around a
+      `songs: [{id, starred}]` prop — Favourited row = all starred → filled, partial → empty
+      and untouched unless tapped (then adds only the missing stars), deselect unstars the
+      listed songs, no confirm dialog; `onDone(ok, total, { starred })` reports the resulting
+      Favourited state so `PlaylistButton` syncs its own fill. All 5 callers updated
+      (`OptionsSongsList/Queue/Player/Album/Albums`); song reducer `setRating` only rewrites
+      the rating when one is passed (the sheet updates `starred` alone).
 
-39. **Offline mode (no connection → downloaded content only)** 🚧 planned (2026-10-17)
+39. **Offline mode (no connection → downloaded content only)** ✅ done 2026-10-17 (needs on-device verify)
     - User: when there is no connection, allow an offline mode showing only downloaded
       albums/tracks/playlists; search stays enabled but within downloaded content.
     - Automatic only (NetInfo, already a dependency); no manual switch.
-    - Plan: `plans/offline-mode.md` (to write at feature start; feature 2, after #38).
+    - Plan: `plans/offline-mode.md`.
+    - Detection: `app/utils/offline.native.js` (`NetInfo.isConnected === false` — a connected
+      but unreachable server is NOT offline, LAN servers stay usable) + `offline.web.js`
+      (`navigator.onLine`), both exposing `useOffline()` / `getIsOffline()`.
+    - Data: `app/utils/offlineContent.js` selectors over the download state (`offlineSongs`,
+      `offlineCollections`, `offlineCollectionSongs`, `isSongDownloaded`); `buildMeta` now
+      stores duration/albumId/artistId/coverArt/track so offline rows have real metadata.
+    - UI: `components/offline/OfflineSongs|OfflineCollections|OfflineSearch` +
+      `components/banner/OfflineBanner` (thin strip in the TabBar). Tracks (songs/albums views,
+      artists hidden, local search), Playlists (downloaded playlists + Favorited filtered to
+      downloaded; refresh/create hidden), Home (downloaded albums + songs, Random shuffles
+      downloads, server buttons hidden), Album/Playlist fall back to download-index songs when
+      the API cache is empty, Favorited filters to downloaded, `PlaylistButton` hides offline.
 
 ## Build & Release (local APK)
 

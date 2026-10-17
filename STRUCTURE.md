@@ -133,7 +133,7 @@ Playback state enum: `Playing`, `Paused`, `Stopped`, `Loading`, `Error`, `None`.
 ### app/utils/downloadManager.js (platform-resolved) — Downloads
 | Platform | Implementation |
 |---|---|
-| `downloadManager.native.js` | Spotify-style download manager. `buildMeta` records `server: global.config.url` as provenance (never used to invalidate — same library); `coverForCurrentServer(meta, config)` re-points a baked cover URL at the active server; `initDownloads` re-points `queued`/`paused` items after an automatic server switch (in-flight items keep their URL); `partUri` is derived in `runDownload`, not at enqueue, so a format/bitrate change mid-queue can't strand a `.part`.  **parallel** queue engine (fills up to `global.parallelDownloads` slots, default 3) built on `DownloadResumable` (pause/resume survives restarts), per-server persistence (`downloadQueue:/downloadIndex:/downloadCollections:` keys in AsyncStorage), rolling 10s speed tracker, collection records (one album/playlist = removable unit). Cache-ahead downloads are flagged `silent` so the banner/progress UI ignores them. O(1) lookups via a `queueById` map rebuilt in `setState`. Exposes `useDownloads()` (useSyncExternalStore), `enqueueSong`, `enqueueCollection`, `pauseDownload`, `resumeDownload`, `retryDownload`, `cancelDownload`, `cancelCollection`, `resumeCollection`, `removeSong`, `removeSource`, `clearAllDownloads`, `getCollectionState`, `getSongState`, `getDownloadedSongs`, `getDownloadSpeed`, `formatSpeed`, `formatBytes`. Initialized in `config.js` alongside `initCacheSong()`. |
+| `downloadManager.native.js` | Spotify-style download manager. `buildMeta` records `server: global.config.url` as provenance (never used to invalidate — same library) and stores `duration`/`albumId`/`artistId`/`coverArt`/`track` so offline rows keep real metadata (entries downloaded before that fall back to title/artist/album); `coverForCurrentServer(meta, config)` re-points a baked cover URL at the active server; `initDownloads` re-points `queued`/`paused` items after an automatic server switch (in-flight items keep their URL); `partUri` is derived in `runDownload`, not at enqueue, so a format/bitrate change mid-queue can't strand a `.part`.  **parallel** queue engine (fills up to `global.parallelDownloads` slots, default 3) built on `DownloadResumable` (pause/resume survives restarts), per-server persistence (`downloadQueue:/downloadIndex:/downloadCollections:` keys in AsyncStorage), rolling 10s speed tracker, collection records (one album/playlist = removable unit). Cache-ahead downloads are flagged `silent` so the banner/progress UI ignores them. O(1) lookups via a `queueById` map rebuilt in `setState`. Exposes `useDownloads()` (useSyncExternalStore), `enqueueSong`, `enqueueCollection`, `pauseDownload`, `resumeDownload`, `retryDownload`, `cancelDownload`, `cancelCollection`, `resumeCollection`, `removeSong`, `removeSource`, `clearAllDownloads`, `getCollectionState`, `getSongState`, `getDownloadedSongs`, `getDownloadSpeed`, `formatSpeed`, `formatBytes`. Initialized in `config.js` alongside `initCacheSong()`. |
 | `downloadManager.web.js` | No-op stub (offline handled by the service worker). Same exports + `useDownloads`. |
 
 ### Other Utils
@@ -147,6 +147,8 @@ Playback state enum: `Playing`, `Paused`, `Stopped`, `Loading`, `Error`, `None`.
 - **useKeyboardIsOpen** (platform-resolved): Native uses Keyboard API; Web returns `false`.
 - **PlaylistSwipeRow.js**: Generic swipeable row (playlist rows, Music tab songs/albums, search results). Actions per direction from `settings.swipeRightAction`/`swipeLeftAction` (queue / play next / remove / action menu (left only) / none); configured action is revealed as a hint during the drag (layers always mounted behind an opaque row); 'menu' keeps the remove+play-next panel with parent-driven `open` state (safe with LegendList row recycling).
 - **useQueueDnD.js**: All queue drag-and-drop state shared by both full-screen players: list refs (`scroll`/`upNextScroll`), scroll offsets, viewports, `onLayout` box positions (`boxY`/`boxH`), `rowHeight`, the `isCurrentInQueue`/`queueItems` derivation (queue **rotated** to start at the current song — next song first, previous songs wrapped to the bottom; current song stays pinned above, `song.queue` remains the source of truth). The rotation anchors on **where `songInfo` actually sits in the queue**, not on `song.index` (up-next playback moves `songInfo` without moving `index`). `queueRealIndex` (display→real index mapping `(index + 1 + i) % queue.length`), `queueKeys`/`upNextKeys` (occurrence-aware row keys — `id` plus a duplicate counter — because plain indices carried the previous occupant's per-row state across a rotation and plain ids collide when a track is queued twice), the `lists` memo for `QueueDragProvider`, `handleMove` (routes through `Player.moveTrack`), and the scroll-to-top effect. Options: `bottomAligned` (desktop flex-end queue), `scrollAnimated`.
+- **offline.js (platform-resolved)**: connection state for offline mode. `.native.js` uses `@react-native-community/netinfo`; offline = `isConnected === false` (a connected-but-unreachable server is NOT offline — LAN Navidrome servers keep working and API errors surface as usual). `.web.js` uses `navigator.onLine` + online/offline events. Both expose `useOffline()` (`useSyncExternalStore`) and `getIsOffline()`.
+- **offlineContent.js**: pure selectors over the download state for offline browsing — `offlineSongs(downloads)` (newest first), `offlineCollections(downloads, type)` (album/playlist with ≥1 completed song, `songCount` recomputed from the index), `offlineCollectionSongs(downloads, type, id)` (songs whose `sources` include that collection — used when the API cache is empty), `isSongDownloaded(downloads, id)`. No network, no API.
 
 ---
 
@@ -166,22 +168,22 @@ Playback state enum: `Playing`, `Paused`, `Stopped`, `Loading`, `Error`, `None`.
 ### Tab Screens (app/screens/tabs/)
 | File | Description |
 |---|---|
-| Home.js | Renders home feed from `homeSections` config. Random song button, server scan trigger, refresh. |
-| Tracks.js | Music tab (4th tab position, no separate Search tab). Search bar on top (shared `mainStyles.searchBox`/`searchInput`); when empty shows the Selector (Songs/Albums/Artists, selected pill shows a check icon) + explorer; typing swaps to inline `SearchResults`. Grid/list toggle persists `gridView`. Fixed status-bar View pattern. |
-| Playlists.js | Lists user playlists (sorted, with pin filtering). Add playlist inline. Favorites section removed. |
+| Home.js | Renders home feed from `homeSections` config. Random song button, server scan trigger, refresh. Offline: downloaded albums + downloaded songs sections instead, Random Song shuffles the downloads (no radio mode), server buttons hidden. |
+| Tracks.js | Music tab (4th tab position, no separate Search tab). Search bar on top (shared `mainStyles.searchBox`/`searchInput`); when empty shows the Selector (Songs/Albums/Artists, selected pill shows a check icon) + explorer; typing swaps to inline `SearchResults`. Grid/list toggle persists `gridView`. Fixed status-bar View pattern. Offline: Songs/Albums views only (artists hidden), rebuilt from the download index (`OfflineSongs`/`OfflineCollections`), typing swaps to `OfflineSearch`. |
+| Playlists.js | Lists user playlists (sorted, with pin filtering). Add playlist inline. Favorites section removed. Offline: downloaded playlists only, Favorited section filtered to downloaded songs, refresh/create hidden. |
 | Settings.js | Master settings screen with navigation to sub-screens. App version, connect status, theme/language/cache/player/home/playlists/shares settings. |
 
 ### Pres Screens (app/screens/Pres/)
 | File | Description |
 |---|---|
-| Album.js | Album detail: track list, header with cover, favorited/random buttons. Fetches via `getAlbum` API. |
+| Album.js | Album detail: track list, header with cover, favorited/random buttons. Fetches via `getAlbum` API. Offline with an empty cache, songs fall back to the download index (`offlineCollectionSongs`). |
 | Artist.js | Artist detail: biography, albums sorted by year, top songs, similar artists, favorited songs. |
 | ArtistAlbums.js | Grid/list of an artist's albums. |
-| Favorited.js | List of starred/favorited songs. |
+| Favorited.js | List of starred/favorited songs. Offline: filtered to downloaded songs. |
 | Genre.js | Genre landing: albums by genre, artists extracted from albums/songs, song list. |
 | GenreAlbum.js | Paginated list of albums in a genre. |
 | GenreSong.js | Paginated list of songs in a genre. |
-| Playlist.js | Playlist detail with song list, optional reverse order, queue options. |
+| Playlist.js | Playlist detail with song list, optional reverse order, queue options. Offline with an empty cache, songs fall back to the download index. |
 | Songs.js | Static song list (used for top songs, etc.). Uses LegendList with sticky header. |
 
 ### Explorer Screens (app/screens/Explorer/)
@@ -237,7 +239,7 @@ Playback state enum: `Playing`, `Paused`, `Stopped`, `Loading`, `Error`, `None`.
 ### Bar Components (app/components/bar/)
 | File | Description |
 |---|---|
-| TabBar.js | Wrapper that renders `SideBar` or `BottomBar` based on `settings.isDesktop`, plus `Player`, plus `DownloadBanner` (mobile). |
+| TabBar.js | Wrapper that renders `SideBar` or `BottomBar` based on `settings.isDesktop`, plus `Player`, plus `DownloadBanner` + `OfflineBanner` (mobile). |
 | BottomBar.js | Bottom tab navigation bar for mobile. |
 | SideBar.js | Vertical sidebar tab navigation for desktop. |
 
@@ -245,6 +247,14 @@ Playback state enum: `Playing`, `Paused`, `Stopped`, `Loading`, `Error`, `None`.
 | File | Description |
 |---|---|
 | DownloadBanner.js | Slim status banner above the mini player when downloads are active: title of the active download, bytes, thin progress line. Tap → `Settings/Downloads`. |
+| OfflineBanner.js | Thin "you are offline" strip above the mini player (mobile; desktop sidebar left alone). The only signal that the app silently swapped to downloaded content. |
+
+### Offline Components (app/components/offline/)
+| File | Description |
+|---|---|
+| OfflineSongs.js | Tracks tab while offline: virtualized list/grid of the download index songs, no API/paging. Rows reuse `SongItem` + `PlaylistSwipeRow` + `OptionsSongsList`; playback always hits the cached file. |
+| OfflineCollections.js | Grid/list of downloaded albums or playlists (Tracks "albums" view, Playlists tab); tapping opens the Pres screen. Also exports `OfflineCollectionRow` (list row with cover + name/artist), reused by `OfflineSearch`. |
+| OfflineSearch.js | Search while offline: case-insensitive local filter over downloaded songs/albums/playlists, rendered as Albums/Playlists/Songs sections. No debounce, no network. |
 
 ### List Components (app/components/lists/)
 | File | Description |
@@ -278,7 +288,7 @@ Playback state enum: `Playing`, `Paused`, `Stopped`, `Loading`, `Error`, `None`.
 | PlayButton.js | Play/pause button. Switches icon based on `song.state`. Shows `ActivityIndicator` while loading. When `song.queueEnded` it restarts the queue from the top instead of resuming (resuming an already-ended track did nothing). |
 | IconButton.js | Generic icon button using `react-native-vector-icons`. |
 | FavoritedButton.js | Heart toggle button (albums, artists, playlists). Long-press opens rating popup. Calls `star`/`unstar` API. Songs/players use `PlaylistButton` instead. |
-| PlaylistButton.js | Songs + players replacement for the heart: a `circle-o`/`check-circle` button whose fill follows the song's starred state (its "Favourited" membership). Tap opens `PlaylistSelectPopup`; long-press keeps the rating popup. Syncs its local fill from the sheet's `onDone` extras since list sources don't re-fetch on close. |
+| PlaylistButton.js | Songs + players replacement for the heart: a `circle-o`/`check-circle` button whose fill follows the song's starred state (its "Favourited" membership). Tap opens `PlaylistSelectPopup`; long-press keeps the rating popup. Syncs its local fill from the sheet's `onDone` extras since list sources don't re-fetch on close. Hidden while offline (membership + star/unstar need the API). |
 | BackButton.js | Back navigation button (white chevron with dark text-shadow halo so it reads over any cover/theme). |
 | RotateIconButton.js | Icon button with optional rotation animation on press. |
 | RandomButton.js | Shuffle play button. |

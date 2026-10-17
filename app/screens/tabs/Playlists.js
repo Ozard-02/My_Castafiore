@@ -9,12 +9,16 @@ import { useConfig } from '~/contexts/config'
 import { useCachedAndApi, getApi } from '~/utils/api'
 import { useSettings, useSetSettings } from '~/contexts/settings'
 import { useTheme } from '~/contexts/theme'
+import { useOffline } from '~/utils/offline'
+import { useDownloads } from '~/utils/downloadManager'
+import { isSongDownloaded } from '~/utils/offlineContent'
 import RotateIconButton from '~/components/button/RotateIconButton'
 import IconButton from '~/components/button/IconButton'
 import mainStyles from '~/styles/main'
 import SongsList from '~/components/lists/SongsList'
 import VerticalPlaylist from '~/components/lists/VerticalPlaylist'
 import AllItem from '~/components/item/AllItem'
+import OfflineCollections from '~/components/offline/OfflineCollections'
 import size from '~/styles/size'
 
 const Playlists = ({ navigation }) => {
@@ -26,10 +30,19 @@ const Playlists = ({ navigation }) => {
 	const [layout, setLayout] = React.useState(settings.gridView ? 'grid' : 'list')
 	const theme = useTheme()
 	const [newPlaylist, setNewPlaylist] = React.useState(null)
+	const offline = useOffline()
+	const downloads = useDownloads()
 
 	const [favorited, refreshFavorited] = useCachedAndApi([], 'getStarred2', null, (json, setData) => {
 		setData(json?.starred2?.song)
 	}, [])
+
+	// offline only the starred songs that are actually on the device can play, so the
+	// section (and its count) shows exactly those
+	const favoritedList = React.useMemo(() => {
+		if (!offline) return favorited || []
+		return (favorited || []).filter((item) => isSongDownloaded(downloads, item?.id))
+	}, [offline, favorited, downloads])
 
 	const [playlists, refreshPlaylists, setPlaylists] = useCachedAndApi([], 'getPlaylists', null, (json, setData) => {
 		setData([...(json?.playlists?.playlist || [])].sort(sortPlaylist))
@@ -94,7 +107,7 @@ const Playlists = ({ navigation }) => {
 						icon="refresh"
 						size={size.icon.large}
 						color={theme.primaryText}
-						style={{ paddingHorizontal: 10 }}
+						style={{ paddingHorizontal: 10, display: offline ? 'none' : undefined }}
 						onPress={onRefresh}
 					/>
 				</View>
@@ -128,12 +141,12 @@ const Playlists = ({ navigation }) => {
 						</> :
 						<>
 							<Icon name="heart" size={size.icon.small} color={theme.primaryTouch} style={{ marginEnd: 10 }} />
-							<Text style={[mainStyles.subTitle(theme), { flex: 1 }]}>{t('Playlists')}</Text>
+							<Text style={[mainStyles.subTitle(theme), { flex: 1 }]}>{t(offline ? 'Downloaded playlists' : 'Playlists')}</Text>
 							<IconButton
 								icon="plus"
 								size={size.icon.tiny}
 								color={theme.secondaryText}
-								style={{ padding: 10 }}
+								style={{ padding: 10, display: offline ? 'none' : undefined }}
 								onPress={() => newPlaylist?.length > 0 ? addPlaylist() : setNewPlaylist('')} />
 						</>
 				}
@@ -150,11 +163,25 @@ const Playlists = ({ navigation }) => {
 				<Icon name="heart" size={size.icon.small} color={theme.primaryTouch} style={{ marginEnd: 10 }} />
 				<Text style={[mainStyles.subTitle(theme), { flex: 1 }]}>{t('Favorited')}</Text>
 				<Text style={{ color: theme.secondaryText, fontWeight: 'bold', fontSize: 15 }}>
-					{favorited?.length} <Icon name="chevron-right" size={15} color={theme.secondaryText} />
+					{favoritedList.length} <Icon name="chevron-right" size={15} color={theme.secondaryText} />
 				</Text>
 			</Pressable>
-			<SongsList songs={favorited?.slice(0, settings.previewFavorited)} listToPlay={favorited} />
+			<SongsList songs={favoritedList.slice(0, settings.previewFavorited)} listToPlay={favoritedList} />
 		</>
+	)
+
+	// offline: downloaded playlists only, with the header and the (filtered) Favorited
+	// section riding along as list header/footer so both layouts stay one scrollable
+	if (offline) return (
+		<View style={{ flex: 1 }}>
+			<View style={{ height: insets.top, backgroundColor: theme.primaryBack }} />
+			<OfflineCollections
+				type="playlist"
+				layout={layout}
+				ListHeaderComponent={header}
+				ListFooterComponent={favoritedSection}
+			/>
+		</View>
 	)
 
 	if (layout === 'grid') return (

@@ -6,6 +6,7 @@ import Icon from 'react-native-vector-icons/FontAwesome'
 
 import { useTheme } from '~/contexts/theme'
 import { useSettings, useSetSettings } from '~/contexts/settings'
+import { useOffline } from '~/utils/offline'
 import mainStyles from '~/styles/main'
 import Selector from '~/components/Selector'
 import IconButton from '~/components/button/IconButton'
@@ -13,9 +14,15 @@ import SongExplorer from '~/screens/Explorer/SongExplorer'
 import AlbumExplorer from '~/screens/Explorer/AlbumExplorer'
 import ArtistExplorer from '~/screens/Explorer/ArtistExplorer'
 import SearchResults from '~/components/search/SearchResults'
+import OfflineSongs from '~/components/offline/OfflineSongs'
+import OfflineCollections from '~/components/offline/OfflineCollections'
+import OfflineSearch from '~/components/offline/OfflineSearch'
 import size from '~/styles/size'
 
 const VIEWS = ['tracks', 'albums', 'artists']
+// offline there is no artists catalog to list (artists are derived server-side), so the
+// artist view would be empty; tracks + albums cover what is actually downloaded
+const OFFLINE_VIEWS = ['tracks', 'albums']
 
 const Tracks = () => {
 	const { t } = useTranslation()
@@ -23,9 +30,11 @@ const Tracks = () => {
 	const theme = useTheme()
 	const settings = useSettings()
 	const setSettings = useSetSettings()
+	const offline = useOffline()
 	const [view, setView] = React.useState('tracks')
 	const [layout, setLayout] = React.useState(settings.gridView ? 'grid' : 'list')
 	const [query, setQuery] = React.useState('')
+	const shownView = offline && view === 'artists' ? 'tracks' : view
 
 	return (
 		<View style={[mainStyles.mainContainer(theme)]}>
@@ -73,14 +82,18 @@ const Tracks = () => {
 					}
 					<Icon name="search" size={size.icon.tiny} color={theme.secondaryText} style={{ position: 'absolute', left: 0, lineHeight: 20, paddingVertical: 11.5, paddingHorizontal: 12 }} />
 				</View>
-				{query.length === 0 && <Selector current={view} items={VIEWS} setData={setView} />}
+				{query.length === 0 && <Selector current={shownView} items={offline ? OFFLINE_VIEWS : VIEWS} setData={setView} />}
 			</View>
 			{query.length > 0
-				? <SearchResults query={query} setQuery={setQuery} />
+				? (offline ? <OfflineSearch query={query} /> : <SearchResults query={query} setQuery={setQuery} />)
 				: <>
-					{view === 'tracks' && <SongExplorer layout={layout} showHeader={false} />}
-					{view === 'albums' && <AlbumExplorer layout={layout} showHeader={false} />}
-					{view === 'artists' && <ArtistExplorer layout={layout} showHeader={false} />}
+					{shownView === 'tracks' && (offline
+						? <OfflineSongs layout={layout} />
+						: <SongExplorer layout={layout} showHeader={false} />)}
+					{shownView === 'albums' && (offline
+						? <OfflineCollections type="album" layout={layout} />
+						: <AlbumExplorer layout={layout} showHeader={false} />)}
+					{shownView === 'artists' && !offline && <ArtistExplorer layout={layout} showHeader={false} />}
 				</>}
 		</View>
 	)

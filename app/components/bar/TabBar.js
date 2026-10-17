@@ -6,6 +6,7 @@ import Player from '~/components/player/Player'
 import BottomBar from '~/components/bar/BottomBar'
 import SideBar from '~/components/bar/SideBar'
 import DownloadBanner from '~/components/banner/DownloadBanner'
+import OfflineBanner from '~/components/banner/OfflineBanner'
 
 const TabBar = ({ state, descriptors, navigation }) => {
 	const config = useConfig()
@@ -25,6 +26,7 @@ const TabBar = ({ state, descriptors, navigation }) => {
 					: <BottomBar state={state} descriptors={descriptors} navigation={navigation} />
 			}
 			{!settings.isDesktop && <DownloadBanner navigation={navigation} />}
+			{!settings.isDesktop && <OfflineBanner />}
 			<Player state={state} />
 		</>
 	)

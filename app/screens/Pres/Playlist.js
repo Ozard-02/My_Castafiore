@@ -23,6 +23,9 @@ import OptionsPlaylist from '~/components/options/OptionsPlaylist'
 import OptionsPopup from '~/components/popup/OptionsPopup'
 import size from '~/styles/size'
 import { useSong, useSongDispatch } from '~/contexts/song'
+import { useOffline } from '~/utils/offline'
+import { useDownloads } from '~/utils/downloadManager'
+import { offlineCollectionSongs } from '~/utils/offlineContent'
 import { playSong, addToQueue, addToUpNext } from '~/utils/player'
 
 const sortOptions = [
@@ -50,6 +53,8 @@ const Playlist = ({ route: { params } }) => {
 	const [isSortOpen, setIsSortOpen] = React.useState(false)
 	const song = useSong()
 	const songDispatch = useSongDispatch()
+	const offline = useOffline()
+	const downloads = useDownloads()
 
 	const [songs, refresh] = useCachedAndApi([], 'getPlaylist', `id=${params.playlist.id}`, (json, setData) => {
 		setInfo(json?.playlist)
@@ -57,8 +62,15 @@ const Playlist = ({ route: { params } }) => {
 		else setData(json?.playlist?.entry?.map((item, index) => ({ ...item, index })) || [])
 	}, [params.playlist.id, settings.reversePlaylist])
 
+	// offline, a downloaded playlist whose getPlaylist cache is gone would open empty:
+	// rebuild its songs from the download index instead
+	const list = React.useMemo(() => {
+		if (songs.length || !offline) return songs
+		return offlineCollectionSongs(downloads, 'playlist', params.playlist.id)
+	}, [songs, offline, downloads, params.playlist.id])
+
 	const filteredSortedSongs = React.useMemo(() => {
-		let result = songs
+		let result = list
 
 		if (searchQuery) {
 			const query = searchQuery.toLowerCase()
@@ -80,7 +92,7 @@ const Playlist = ({ route: { params } }) => {
 		}
 
 		return result
-	}, [songs, searchQuery, sortOption])
+	}, [list, searchQuery, sortOption])
 
 	const saveSort = (key) => {
 		setSortOption(key)
@@ -137,19 +149,19 @@ const Playlist = ({ route: { params } }) => {
 					<>
 						<PresHeader
 							title={info?.name || params.playlist.name}
-							subTitle={`${Math.floor((info?.duration || params?.playlist?.duration) / 60)} ${t('minutes')} · ${info?.songCount || params?.playlist?.songCount} ${t('songs')}`}
+							subTitle={`${Math.floor((info?.duration || params?.playlist?.duration || list.reduce((total, item) => total + (item.duration || 0), 0)) / 60)} ${t('minutes')} · ${info?.songCount || params?.playlist?.songCount || list.length} ${t('songs')}`}
 							imgSrc={urlCover(config, params.playlist)}
 							onPressOption={() => {
 								setIsOption(true)
 							}}
 						>
-							<RandomButton songList={songs} style={presStyles.button} />
+							<RandomButton songList={list} style={presStyles.button} />
 							<DownloadButton
 								type="playlist"
 								id={info?.id || params.playlist.id}
 								name={info?.name || params.playlist.name}
 								cover={urlCover(config, params.playlist)}
-								songs={songs}
+								songs={list}
 								style={presStyles.button}
 							/>
 						</PresHeader>

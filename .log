@@ -904,3 +904,32 @@ flips between them automatically. Found three distinct mechanisms:
   DELETE /api/song/:id is GET-only, plugin HTTP endpoints (PR #5045) still Draft/unmerged.
 - Decision: wait for upstream, no sidecar. No code changes.
 - Recorded TODO #37 + plans/delete-song-from-library.md. Re-check upstream before starting.
+
+## 2026-10-17 — Offline mode + heart→playlist circle (TODO #38, #39)
+- #38 (commit dc48aaf): song-row and player heart replaced by the playlist sheet's
+  circle (`PlaylistButton`): tap opens the add-to-playlist sheet, long-press keeps the
+  rating popup, fill follows `starred` (Favourited membership). `PlaylistSelectPopup`
+  reworked around a `songs` prop with a Favourited pseudo-playlist row (all starred →
+  filled; partial → empty and untouched unless tapped; deselect unstars). Five callers
+  rewired; `setRating` only rewrites the rating when one is passed.
+- #39 offline mode, automatic via NetInfo (`isConnected === false`; a connected but
+  unreachable server is NOT offline — LAN Navidrome must keep working, and
+  `isInternetReachable` is unreliable exactly there). `useOffline()`/`getIsOffline()`
+  in `utils/offline.{native,web}.js`.
+- `utils/offlineContent.js` selectors over the download state (songs/collections/
+  collection songs/isSongDownloaded) — pure, sanity-checked with a node harness
+  (sorting, size-0 filtering, favorited excluded, empty state).
+- UI: `OfflineSongs`/`OfflineCollections`/`OfflineSearch` + `OfflineBanner`; Tracks
+  (songs/albums, artists hidden, local search), Playlists (downloaded + Favorited
+  filtered, refresh/create hidden), Home (downloaded albums/songs, random shuffles
+  downloads), Album/Playlist fall back to the index when the cache is empty, Favorited
+  filtered, `PlaylistButton` hidden offline.
+- `buildMeta` now stores duration/albumId/artistId/coverArt/track (old entries degrade).
+- i18n: en + it keys; other locales fall back to en (`fallbackLng: 'en'`).
+- Known gap at this point: covers still point at server URLs offline → cover cache
+  added right after (separate entry).
+- eslint clean; release APK built (bundle regenerated) and installed on tablet
+  R52Y80837NY (authorized now; `adb install -r` → Success). Launch sanity check via
+  monkey + logcat: no native crash, no ReactNativeJS errors.
+- Docs: STRUCTURE.md (offline utils/components/screens, banner, downloadManager row),
+  TODO #38/#39, plans/offline-mode.md.

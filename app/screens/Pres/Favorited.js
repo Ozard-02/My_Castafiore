@@ -6,6 +6,9 @@ import Icon from 'react-native-vector-icons/FontAwesome'
 
 import { useTheme } from '~/contexts/theme'
 import { useCachedFirst } from '~/utils/api'
+import { useOffline } from '~/utils/offline'
+import { useDownloads } from '~/utils/downloadManager'
+import { isSongDownloaded } from '~/utils/offlineContent'
 import mainStyles from '~/styles/main'
 import OptionsFavorited from '~/components/options/OptionsFavorited'
 import OptionsSongsList from '~/components/options/OptionsSongsList'
@@ -24,28 +27,37 @@ const Favorited = () => {
 	const [favorited] = useCachedFirst([], 'getStarred2', null, (json, setData) => {
 		setData(json?.starred2?.song || [])
 	}, [])
+	const offline = useOffline()
+	const downloads = useDownloads()
+
+	// offline only the starred songs that are actually downloaded can play, so the whole
+	// screen narrows to those
+	const list = React.useMemo(() => {
+		if (!offline) return favorited
+		return favorited.filter((item) => isSongDownloaded(downloads, item?.id))
+	}, [offline, favorited, downloads])
 
 	const renderItem = React.useCallback(({ item, index }) => (
 		<SongItem
 			song={item}
-			queue={favorited}
+			queue={list}
 			index={index}
 			setIndexOptions={setIndexOptions}
 			style={{
 				paddingHorizontal: 20,
 			}}
 		/>
-	), [favorited])
+	), [list])
 
 	return (
 		<>
 			<OptionsFavorited
-				favorited={favorited}
+				favorited={list}
 				isOpen={isOption}
 				onClose={() => setIsOption(false)}
 			/>
 			<LegendList
-				data={favorited}
+				data={list}
 				keyExtractor={(item, index) => item?.id ?? index}
 				style={mainStyles.mainContainer(theme)}
 				contentContainerStyle={mainStyles.contentMainContainer(insets, false)}
@@ -55,17 +67,17 @@ const Favorited = () => {
 				ListHeaderComponent={
 					<PresHeaderIcon
 						title={<><Icon name="heart" size={size.icon.small} color={theme.primaryTouch} /> {t('Favorited')}</>}
-						subTitle={`${favorited?.length || 0} ${t('songs')}`}
+						subTitle={`${list?.length || 0} ${t('songs')}`}
 						icon="heart"
 						onPressOption={() => setIsOption(true)}
 					>
-						<RandomButton songList={favorited} />
+						<RandomButton songList={list} />
 					</PresHeaderIcon>
 				}
 				renderItem={renderItem}
 			/>
 			<OptionsSongsList
-				songs={favorited}
+				songs={list}
 				indexOptions={indexOptions}
 				setIndexOptions={setIndexOptions}
 			/>
