@@ -710,6 +710,9 @@
       Favourited state so `PlaylistButton` syncs its own fill. All 5 callers updated
       (`OptionsSongsList/Queue/Player/Album/Albums`); song reducer `setRating` only rewrites
       the rating when one is passed (the sheet updates `starred` alone).
+    - Follow-up same day (user: "circle is too small"): the glyph is replaced by a drawn
+      circle — sheet's `SelectCircle` look (2px ring; filled disc + check when starred),
+      `size` = diameter (default 26, desktop mini 22).
 
 39. **Offline mode (no connection → downloaded content only)** ✅ done 2026-10-17 (needs on-device verify)
     - User: when there is no connection, allow an offline mode showing only downloaded
@@ -728,6 +731,10 @@
       downloaded; refresh/create hidden), Home (downloaded albums + songs, Random shuffles
       downloads, server buttons hidden), Album/Playlist fall back to download-index songs when
       the API cache is empty, Favorited filters to downloaded, `PlaylistButton` hides offline.
+    - Follow-up same day (user: covers offline): cover cache — enqueues queue the getCoverArt
+      image (`cache/covers/<id>.jpg`, deduped, ≤4 concurrent, HTTP-200 only); `initDownloads`
+      backfills older downloads when online; `urlCover` prefers the local file offline; old
+      entries derive `coverArt` from their baked cover URL.
 
 ## Build & Release (local APK)
 

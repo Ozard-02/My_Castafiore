@@ -2,8 +2,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 import * as FileSystem from 'expo-file-system'
 import { useSyncExternalStore } from 'react'
 
-import { urlStream, urlCover } from '~/utils/url'
+import { urlStream, urlCover, coverIdFromUrl } from '~/utils/url'
 import { getPathSong, songCacheKey } from '~/utils/cache'
+import { getIsOffline } from '~/utils/offline'
 import logger from '~/utils/logger'
 
 const WINDOW_MS = 10_000
@@ -174,6 +175,7 @@ export const initDownloads = async () => {
 		queueById = new Map(queue.map((q) => [q.songId, q]))
 		notify()
 		repointQueued()
+		await initCovers()
 	} catch (error) {
 		logger.error('downloadManager', 'Error loading downloads', error)
 	}
@@ -220,6 +222,85 @@ export const coverForCurrentServer = (meta, config) => {
 }
 
 // ---------------------------------------------------------------------------
+// Cover cache (offline artwork)
+// ---------------------------------------------------------------------------
+// Cover files are named after the `id` in the getCoverArt URL (the album id for songs on
+// Navidrome, coverArt elsewhere): one file answers every song, album and playlist that
+// references it. Downloaded alongside the songs with a small concurrency cap — a full
+// playlist enqueue must not fire one request per song at once. Not pruned when a single
+// song goes: covers are shared per album and tiny; clearAllDownloads wipes the folder.
+const COVERS_DIR = `${FileSystem.documentDirectory}cache/covers/`
+const MAX_COVER_DOWNLOADS = 4
+const localCovers = new Set()
+const coversInFlight = new Set()
+const coverQueue = []
+let activeCovers = 0
+
+export const getLocalCoverUri = (coverId) => (coverId && localCovers.has(coverId) ? `${COVERS_DIR}${coverId}.jpg` : null)
+
+const pumpCovers = () => {
+	while (activeCovers < MAX_COVER_DOWNLOADS && coverQueue.length > 0) {
+		const { id, url } = coverQueue.shift()
+		if (localCovers.has(id) || coversInFlight.has(id)) continue
+		coversInFlight.add(id)
+		activeCovers++
+		FileSystem.makeDirectoryAsync(COVERS_DIR, { intermediates: true })
+			.catch(() => { })
+			.then(() => FileSystem.downloadAsync(url, `${COVERS_DIR}${id}.jpg`))
+			.then((res) => {
+				if (res?.status === 200) {
+					localCovers.add(id)
+					return
+				}
+				// downloadAsync resolves on HTTP errors and writes the body to disk: drop it
+				return FileSystem.deleteAsync(res?.uri || `${COVERS_DIR}${id}.jpg`, { idempotent: true }).catch(() => { })
+			})
+			.catch((error) => logger.error('downloadManager', `cover ${id}: ${error?.message || error}`))
+			.finally(() => {
+				coversInFlight.delete(id)
+				activeCovers = Math.max(0, activeCovers - 1)
+				pumpCovers()
+			})
+	}
+}
+
+const queueCover = (url) => {
+	const id = coverIdFromUrl(url)
+	if (!id || localCovers.has(id) || coversInFlight.has(id) || coverQueue.some((c) => c.id === id)) return
+	coverQueue.push({ id, url })
+	pumpCovers()
+}
+
+const initCovers = async () => {
+	try {
+		await FileSystem.makeDirectoryAsync(COVERS_DIR, { intermediates: true }).catch(() => { })
+		const files = await FileSystem.readDirectoryAsync(COVERS_DIR)
+		files.forEach((file) => {
+			if (file.endsWith('.jpg')) localCovers.add(file.slice(0, -4))
+		})
+	} catch (error) {
+		logger.error('downloadManager', 'Error loading covers', error)
+	}
+
+	// Backfill: songs (and collections) downloaded before the cover cache existed have no
+	// artwork on disk. Restartable by design — only the missing ids are queued — and skipped
+	// while offline so a plane-mode start doesn't spin against an unreachable server.
+	if (getIsOffline()) return
+	const indexEntries = Object.values(state.index)
+	const missing = indexEntries.filter((entry) => {
+		const id = coverIdFromUrl(coverForCurrentServer(entry.meta, global.config))
+		return id && !localCovers.has(id)
+	})
+	if (missing.length > 0) logger.info('downloadManager', `cover cache: backfilling ${missing.length} entrie(s)`)
+	for (const entry of indexEntries) {
+		queueCover(coverForCurrentServer(entry.meta, global.config))
+	}
+	for (const collection of Object.values(state.collections)) {
+		queueCover(collection.cover)
+	}
+}
+
+// ---------------------------------------------------------------------------
 // Queue engine
 // ---------------------------------------------------------------------------
 const progressTimestamps = new Map()
@@ -243,7 +324,7 @@ const onProgress = (songId) => (progress) => {
 const moveToQueue = (song, source, silent = false) => {
 	if (isCached(song.id)) return null
 	if (queueById.has(song.id)) return null
-	return {
+	const item = {
 		songId: song.id,
 		url: songUrl(song),
 		partUri: `${getPathSong(song.id, global.streamFormat, global.maxBitRate)}.part`,
@@ -258,6 +339,8 @@ const moveToQueue = (song, source, silent = false) => {
 		error: null,
 		createdAt: Date.now(),
 	}
+	queueCover(item.meta.cover)
+	return item
 }
 
 export const enqueueSong = async (song, source = null, silent = false) => {
@@ -276,6 +359,7 @@ export const enqueueCollection = async ({ type, id, name, artist = '', cover, so
 	collection.name = collection.name || name
 	collection.artist = collection.artist || artist
 	collection.cover = collection.cover || cover
+	queueCover(collection.cover)
 
 	const source = { type, id, name: collection.name }
 	const newItems = songs.map((song) => moveToQueue(song, source)).filter(Boolean)
@@ -509,6 +593,9 @@ export const clearAllDownloads = async () => {
 	for (const songId of Object.keys(state.index)) {
 		await FileSystem.deleteAsync(getPathSong(songId, global.streamFormat, global.maxBitRate)).catch(() => { })
 	}
+	coverQueue.length = 0
+	localCovers.clear()
+	await FileSystem.deleteAsync(COVERS_DIR, { idempotent: true }).catch(() => { })
 	speedIds.clear()
 	lastBytes.clear()
 	if (global.listCacheSong) global.listCacheSong = []

@@ -1,3 +1,6 @@
+import { getLocalCoverUri } from '~/utils/downloadManager'
+import { getIsOffline } from '~/utils/offline'
+
 const getUrl = (config, path, query = '') => {
 	const encodedQuery = Object.keys(query).map((key) => `${key}=${encodeURIComponent(query[key])}`).join('&')
 	return `${config.url}/rest/${path}?${encodedQuery}&${config.query}`
@@ -11,6 +14,19 @@ const realCover = (config, id, size = null) => {
 	return getUrl(config, 'getCoverArt', { id, size })
 }
 
+// The `id` carried by a getCoverArt URL. The download manager names cached cover files after
+// it, so an offline lookup can find the artwork without re-deriving the id from the item.
+export const coverIdFromUrl = (url) => {
+	if (typeof url !== 'string') return null
+	const match = /[?&]id=([^&]+)/.exec(url)
+	return match ? decodeURIComponent(match[1]) : null
+}
+
+// Offline there is no server to ask: prefer the cover file downloaded alongside the songs
+// (named after its getCoverArt id). A miss falls through to the server URL, which fails to
+// load and lets ImageError show the placeholder — same as before the cache existed.
+const offlineCover = (coverId) => (coverId && getIsOffline() ? getLocalCoverUri(coverId) : null)
+
 export const urlCover = (config, id, size = null) => {
 	if (!id) return null
 	if (!config?.url || !config?.query) return null
@@ -21,19 +37,19 @@ export const urlCover = (config, id, size = null) => {
 		if (item.homePageUrl && item.homePageUrl.startsWith('http')) {
 			return item.homePageUrl + '/favicon.ico'
 		}
+		const navidromeLike = ['navidrome', 'ampache'].includes(config?.type) || !config?.type
+		let coverId = null
 		if (['artist', 'album', 'playlist'].includes(item.mediaType)) {
-			if (['navidrome', 'ampache'].includes(config?.type) || !config?.type) return realCover(config, item.id || item.coverArt, size)
-			else return realCover(config, item.coverArt || item.id, size)
+			coverId = navidromeLike ? item.id || item.coverArt : item.coverArt || item.id
 		} else if (item.mediaType === 'song') {
-			if (['navidrome', 'ampache'].includes(config?.type) || !config?.type) return realCover(config, item.albumId || item.coverArt, size)
-			else return realCover(config, item.coverArt || item.albumId || item.id, size)
+			coverId = navidromeLike ? item.albumId || item.coverArt : item.coverArt || item.albumId || item.id
 		} else {
-			if (['navidrome', 'ampache'].includes(config?.type) || !config?.type) return realCover(config, item.albumId || item.id || item.coverArt, size)
-			else return realCover(config, item.coverArt || item.albumId || item.id, size)
+			coverId = navidromeLike ? item.albumId || item.id || item.coverArt : item.coverArt || item.albumId || item.id
 		}
+		return offlineCover(coverId) || realCover(config, coverId, size)
 	} else {
 		if (id.startsWith('http://') || id.startsWith('https://')) return id
-		return realCover(config, id, size)
+		return offlineCover(id) || realCover(config, id, size)
 	}
 }
 

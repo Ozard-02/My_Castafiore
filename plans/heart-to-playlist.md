@@ -1,6 +1,7 @@
 # Feature 1 — Song "heart" → "Add to playlist" (circle, filled = Favourited)
 
-Status: implementing (2026-10-17).
+Status: shipped 2026-10-17 (commit `dc48aaf`); the circle-size follow-up (drawn circle)
+landed the same day.
 
 ## User request
 
@@ -62,8 +63,19 @@ Untouched: `ExplorerItem` (album/artist rows), `HorizontalPlaylists` (playlist r
 each maps its current `songIds` to `{ id, starred }` objects.
 
 ## Open items
-- Offline: the sheet's `getPlaylists` is a live call; offline behaviour is deferred to
-  feature 2 (offline mode). The button will be hidden/disabled offline there if needed.
+- Offline: the sheet's `getPlaylists` is a live call; offline behaviour was deferred to
+  feature 2 (offline mode) — resolved there: the button is hidden offline.
 - Multi-select favouriting from option menus changes stars for songs whose row buttons
   are in other lists → those rows re-sync on next fetch (same staleness the hearts
   always had; queue rows update live via `songDispatch`).
+
+## Follow-up — circle size (2026-10-17, same day)
+
+- User: "i do not like the circle, is too small". The FA glyph (`circle-o` at font-size
+  23 ≈ 20px visible ring) reads much smaller than the solid heart it replaced.
+- `PlaylistButton` now **draws** the circle: 2px ring in `primaryTouch`; filled disc +
+  `check` in `primaryBack` when starred — the sheet's `SelectCircle` look exactly.
+- `size` prop is now the **diameter** (was font size): default 26 (song rows, both
+  full-screen players, mobile mini), 22 on the desktop mini (compact bar).
+- Tap / long-press / offline-hide behaviour unchanged. Installed on tablet +
+  phone; awaiting the user's word on the new size.

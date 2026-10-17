@@ -143,7 +143,7 @@ const BoxPlayer = ({ setFullScreen }) => {
 						id={song.songInfo.id}
 						isFavorited={starredIds.has(song.songInfo.id)}
 						rating={song.songInfo?.userRating ?? song.songInfo?.rating ?? 0}
-						size={size.icon.small}
+						size={26}
 						style={{ paddingVertical: 5, paddingHorizontal: 6 }}
 					/>
 				)}

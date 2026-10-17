@@ -933,3 +933,24 @@ flips between them automatically. Found three distinct mechanisms:
   monkey + logcat: no native crash, no ReactNativeJS errors.
 - Docs: STRUCTURE.md (offline utils/components/screens, banner, downloadManager row),
   TODO #38/#39, plans/offline-mode.md.
+
+## 2026-10-17 (2) — Offline covers + bigger playlist circle
+- Circle size follow-up (user: "is too small"): the FA glyph (~20px visible ring at
+  font-size 23) read much smaller than the solid heart it replaced. `PlaylistButton`
+  now *draws* the circle (sheet's `SelectCircle` look: 2px ring, filled disc + check
+  when starred); `size` = diameter: default 26 (song rows, both full-screen players,
+  mobile mini), 22 on the desktop mini. Tap/long-press/offline-hide unchanged.
+- Cover cache (user ask: covers offline for downloaded tracks): every enqueue (and
+  collection cover) queues the getCoverArt image — deduped per cover id, ≤4
+  concurrent, HTTP-200 validated, stored at `cache/covers/<id>.jpg`. `initDownloads`
+  scans the folder and backfills missing covers for already-downloaded songs when
+  online (restartable; skipped offline). `urlCover` asks `getLocalCoverUri` first
+  while offline → rows, album/playlist headers and players show real art; a miss
+  falls through to the server URL as before. `coverIdFromUrl` in url.js; old index
+  entries recover their cover id from the baked cover URL (`offlineContent`), so
+  pre-cache downloads resolve too. `clearAllDownloads` wipes the folder.
+- url.js ↔ downloadManager import is a runtime-only cycle (no module-init use);
+  verified on device: app launches, playlist models still resolve.
+- eslint clean; APK (16:06) installed on tablet R52Y80837NY and phone R5CY71GYKWF
+  (`Success`). Phone launch check: playing, mixing remote stream + local
+  `file:///...cache/song...` files, no errors/warnings.

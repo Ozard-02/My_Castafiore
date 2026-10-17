@@ -82,11 +82,23 @@ queue works with no network. Songs that are *not* cached keep the old behaviour
 (stream attempt fails) — the offline lists only offer downloaded songs, but
 cached Pres screens can still taste stale entries; documented, not blocked.
 
-## Deferred / known limits
+## Cover cache (shipped same day)
 
-- Covers come from the server; offline they show the placeholder unless the image
-  cache has them. `meta.cover` re-pointing exists but RN Image caching is not
-  guaranteed.
+- Every enqueued song queues its getCoverArt image — deduped per cover id, ≤4
+  concurrent, HTTP-200-only, stored at `cache/covers/<id>.jpg`; collection covers
+  too. Hooked in `moveToQueue` so silent auto-caching also warms covers.
+- `initDownloads` scans the folder and backfills missing covers for songs
+  downloaded before the cache existed (online only, restartable).
+- `urlCover` asks `getLocalCoverUri` first while offline → rows, album/playlist
+  headers and players show real art with no network; a miss falls through to the
+  server URL (placeholder as before).
+- Old index entries derive `coverArt` from their baked cover URL so the lookup
+  matches the file name.
+- Known limits: covers are stored full-size (no `size` param) — one file per
+  album, shared by every row; removing a single song keeps its album cover
+  (shared, tiny), `clearAllDownloads` wipes the folder.
+
+## Deferred / known limits
 - `PlaylistButton` (song circle) hides offline: playlist membership needs the
   API, and star/unstar would fail.
 - Album header heart / artist screens: kept as-is; their writes fail silently if

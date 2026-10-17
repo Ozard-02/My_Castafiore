@@ -6,6 +6,15 @@
 
 const isDownloaded = (entry) => !!entry && entry.size > 0
 
+// The `id` carried by a getCoverArt URL — mirrors url.js coverIdFromUrl (kept local so this
+// module stays import-free). Entries downloaded before the meta carried albumId/coverArt
+// still have the id in their baked cover URL, and that is what the cover file is named after.
+const coverIdFromUrl = (url) => {
+	if (typeof url !== 'string') return null
+	const match = /[?&]id=([^&]+)/.exec(url)
+	return match ? decodeURIComponent(match[1]) : null
+}
+
 const entryToSong = (songId, entry) => ({
 	id: songId,
 	title: entry?.meta?.title || '',
@@ -14,7 +23,7 @@ const entryToSong = (songId, entry) => ({
 	duration: entry?.meta?.duration,
 	albumId: entry?.meta?.albumId,
 	artistId: entry?.meta?.artistId,
-	coverArt: entry?.meta?.coverArt,
+	coverArt: entry?.meta?.coverArt || coverIdFromUrl(entry?.meta?.cover) || undefined,
 	track: entry?.meta?.track,
 	mediaType: 'song',
 })

@@ -1,20 +1,26 @@
 import React from 'react'
+import { Pressable, StyleSheet, View } from 'react-native'
+import Icon from 'react-native-vector-icons/FontAwesome'
 
 import { useConfig } from '~/contexts/config'
 import { useSongDispatch } from '~/contexts/song'
 import { useTheme } from '~/contexts/theme'
 import { getApi } from '~/utils/api'
 import { useOffline } from '~/utils/offline'
-import IconButton from '~/components/button/IconButton'
 import RatingPopup from '~/components/popup/RatingPopup'
 import PlaylistSelectPopup from '~/components/popup/PlaylistSelectPopup'
+import mainStyles from '~/styles/main'
 import logger from '~/utils/logger'
 
 // Song rows and players: the old heart starred the song on tap. The tap now opens the
 // add-to-playlist sheet, where "Favourited" is a pseudo-playlist — starring stays one tap
 // away but the primary action is playlist membership. The circle reads the song's starred
 // state (its Favourited membership), so empty/full needs no per-row membership API.
-const PlaylistButton = ({ id, isFavorited = false, rating: initialRating = undefined, style = {}, size = 23 }) => {
+//
+// Drawn, not a FontAwesome glyph: the sheet's SelectCircle look (2px ring, check when
+// filled) with `size` as the diameter. An outline glyph reads much smaller than the solid
+// heart it replaced at the same font size.
+const PlaylistButton = ({ id, isFavorited = false, rating: initialRating = undefined, style = {}, size = 26 }) => {
 	const [favorited, setFavorited] = React.useState(isFavorited)
 	const [rating, setRating] = React.useState(initialRating ?? 0)
 	const [isRatingOpen, setIsRatingOpen] = React.useState(false)
@@ -45,14 +51,30 @@ const PlaylistButton = ({ id, isFavorited = false, rating: initialRating = undef
 
 	return (
 		<>
-			<IconButton
-				style={[{ padding: 20 }, style]}
+			<Pressable
+				style={({ pressed }) => ([mainStyles.opacity({ pressed }), styles.button, StyleSheet.flatten(style)])}
 				onPress={() => { if (id) setIsPlaylistOpen(true) }}
 				onLongPress={() => initialRating !== undefined ? setIsRatingOpen(true) : null}
-				size={size}
-				icon={favorited ? 'check-circle' : 'circle-o'}
-				color={theme.primaryTouch}
-			/>
+				delayLongPress={200}
+				onContextMenu={(ev) => {
+					ev.stopPropagation()
+					ev.preventDefault()
+					if (initialRating !== undefined) setIsRatingOpen(true)
+				}}
+			>
+				<View style={{
+					width: size,
+					height: size,
+					borderRadius: size / 2,
+					borderWidth: 2,
+					borderColor: theme.primaryTouch,
+					backgroundColor: favorited ? theme.primaryTouch : 'transparent',
+					alignItems: 'center',
+					justifyContent: 'center',
+				}}>
+					{favorited && <Icon name="check" size={Math.round(size * 0.58)} color={theme.primaryBack} />}
+				</View>
+			</Pressable>
 			<PlaylistSelectPopup
 				visible={isPlaylistOpen}
 				songs={id ? [{ id, starred: favorited }] : []}
@@ -73,5 +95,11 @@ const PlaylistButton = ({ id, isFavorited = false, rating: initialRating = undef
 		</>
 	)
 }
+
+const styles = StyleSheet.create({
+	button: {
+		justifyContent: 'center',
+	},
+})
 
 export default PlaylistButton
