@@ -5,13 +5,16 @@ import { useTranslation } from 'react-i18next'
 import Icon from 'react-native-vector-icons/FontAwesome'
 
 import { useConfig } from '~/contexts/config'
+import { useSetUpdateApi } from '~/contexts/updateApi'
+import { useSongDispatch } from '~/contexts/song'
 import { useTheme } from '~/contexts/theme'
-import { getApi, getApiCacheFirst, updatePlaylistEntries } from '~/utils/api'
+import { getApi, getApiCacheFirst, refreshApi, updatePlaylistEntries } from '~/utils/api'
 import { urlCover } from '~/utils/url'
 import { confirmAlert } from '~/utils/alert'
 import ImageError from '~/components/ImageError'
 import mainStyles from '~/styles/main'
 import size from '~/styles/size'
+import logger from '~/utils/logger'
 
 // getPlaylists does not include entries, so membership costs one getPlaylist per playlist.
 // Cap the fan-out so a library with hundreds of playlists does not open 300 sockets at once.
@@ -49,19 +52,26 @@ const SelectCircle = ({ selected, theme }) => (
 
 // Multi-select "Add to playlist" sheet. Really a membership editor: playlists that already
 // contain the song(s) start filled, and deselecting one REMOVES them from it.
-const PlaylistSelectPopup = ({ visible, close, songIds, onDone = () => { } }) => {
+// "Favourited" is a pseudo-playlist at the top backed by the Subsonic star API, so the
+// favouriting action the old hearts performed lives on inside this one sheet.
+const PlaylistSelectPopup = ({ visible, close, songs = [], onDone = () => { } }) => {
 	const { t } = useTranslation()
 	const theme = useTheme()
 	const config = useConfig()
+	const songDispatch = useSongDispatch()
+	const setUpdateApi = useSetUpdateApi()
 	const insets = useSafeAreaInsets()
 	const [playlists, setPlaylists] = React.useState([])
 	const [initial, setInitial] = React.useState(new Set())
 	const [selected, setSelected] = React.useState(new Set())
+	const [favorited, setFavorited] = React.useState(false)
+	const [initialFavorited, setInitialFavorited] = React.useState(false)
+	const [starCount, setStarCount] = React.useState(null)
 	const [loading, setLoading] = React.useState(false)
 	const [saving, setSaving] = React.useState(false)
 	const alive = React.useRef(true)
 
-	const idsKey = (songIds || []).join(',')
+	const idsKey = (songs || []).map((song) => song?.id).filter(Boolean).join(',')
 
 	React.useEffect(() => {
 		if (!visible) return
@@ -73,11 +83,24 @@ const PlaylistSelectPopup = ({ visible, close, songIds, onDone = () => { } }) =>
 	}, [visible, idsKey])
 
 	const load = async () => {
-		const wanted = new Set((songIds || []).filter(Boolean))
-		if (!wanted.size) {
-			if (alive.current) setLoading(false)
+		const wanted = (songs || []).filter((song) => song?.id)
+		if (!wanted.length) {
+			if (alive.current) {
+				setLoading(false)
+				setInitialFavorited(false)
+				setFavorited(false)
+				setStarCount(null)
+			}
 			return
 		}
+		// count for the Favourited row subtitle: cache-first, absent is fine
+		setStarCount(null)
+		getApiCacheFirst(config, 'getStarred2', null)
+			.then((json) => {
+				if (alive.current) setStarCount((json?.starred2?.song || []).length)
+			})
+			.catch(() => { })
+
 		const json = await getApi(config, 'getPlaylists').catch(() => null)
 		const list = json?.playlists?.playlist || []
 		const entries = await mapWithLimit(list, MEMBERSHIP_CONCURRENCY, (playlist) =>
@@ -93,10 +116,12 @@ const PlaylistSelectPopup = ({ visible, close, songIds, onDone = () => { } }) =>
 		// .m3u/.nsp on disk, where the file is the source of truth and API writes are
 		// refused (Subsonic error 50) no matter who owns it. Without this the only way to
 		// discover it was to attempt a write and swallow the failure.
+		const wantedIds = new Set(wanted.map((song) => song.id))
+		const allStarred = wanted.every((song) => song.starred === true)
 		const full = new Set()
 		const rows = list.map((playlist, index) => {
 			const ids = new Set((entries[index] || []).map((song) => song.id))
-			const isFull = [...wanted].every((id) => ids.has(id))
+			const isFull = [...wantedIds].every((id) => ids.has(id))
 			const readonly = playlist.readonly === true
 			if (isFull && !readonly) full.add(playlist.id)
 			return { ...playlist, songCount: (entries[index] || []).length, isFull, readonly }
@@ -104,6 +129,8 @@ const PlaylistSelectPopup = ({ visible, close, songIds, onDone = () => { } }) =>
 		setPlaylists(rows)
 		setInitial(new Set(full))
 		setSelected(new Set(full))
+		setInitialFavorited(allStarred)
+		setFavorited(allStarred)
 		setLoading(false)
 	}
 
@@ -117,16 +144,23 @@ const PlaylistSelectPopup = ({ visible, close, songIds, onDone = () => { } }) =>
 	}
 
 	const apply = async () => {
+		const wanted = (songs || []).filter((song) => song?.id)
+		// Favourited deltas: turning it on stars only the missing songs; turning it off
+		// unstars every target (the row is only filled when all of them were starred).
+		const starIds = favorited === initialFavorited
+			? []
+			: wanted.filter((song) => favorited ? song.starred !== true : song.starred === true).map((song) => song.id)
+		const wantedIds = wanted.map((song) => song.id)
 		const toAdd = playlists.filter((p) => !p.readonly && selected.has(p.id) && !initial.has(p.id))
 		const toRemove = playlists.filter((p) => !p.readonly && !selected.has(p.id) && initial.has(p.id))
 		// nothing changed -> just close, no API traffic
-		if (!toAdd.length && !toRemove.length) return close()
+		if (!toAdd.length && !toRemove.length && !starIds.length) return close()
 
 		const run = async () => {
 			setSaving(true)
 			const targets = [
-				...toAdd.map((playlist) => ({ playlist, addIds: songIds, removeIds: [] })),
-				...toRemove.map((playlist) => ({ playlist, addIds: [], removeIds: songIds })),
+				...toAdd.map((playlist) => ({ playlist, addIds: wantedIds, removeIds: [] })),
+				...toRemove.map((playlist) => ({ playlist, addIds: [], removeIds: wantedIds })),
 			]
 			let ok = 0
 			for (const target of targets) {
@@ -134,9 +168,31 @@ const PlaylistSelectPopup = ({ visible, close, songIds, onDone = () => { } }) =>
 					.catch(() => null)
 				if (res?.ok) ok++
 			}
+			// star/unstar, then keep the queue copy and the getStarred2 listeners in sync
+			// exactly like the old FavoritedButton heart did
+			let starOk = 0
+			if (starIds.length) {
+				const method = favorited ? 'star' : 'unstar'
+				for (const songId of starIds) {
+					const done = await getApi(config, method, { id: songId })
+						.then(() => true)
+						.catch((e) => {
+							logger.error('PlaylistSelectPopup', `${method} ${songId}: ${e.message}`)
+							return false
+						})
+					if (done) {
+						starOk++
+						songDispatch({ type: 'setRating', id: songId, starred: favorited })
+					}
+				}
+				refreshApi(config, 'getStarred2', null)
+					.finally(() => setUpdateApi({ path: 'getStarred2', query: null, uid: 1 }))
+			}
 			setSaving(false)
 			close()
-			onDone(ok, targets.length)
+			// extras.starred: the resulting Favourited state when every star call landed
+			// (null when untouched or partially failed — the row keeps its previous state)
+			onDone(ok, targets.length, { starred: starIds.length ? (starOk === starIds.length ? favorited : null) : null })
 			// partial failure: report it rather than rolling back (a rollback would be a
 			// second destructive pass the user never asked for)
 			if (ok < targets.length) {
@@ -187,6 +243,39 @@ const PlaylistSelectPopup = ({ visible, close, songIds, onDone = () => { } }) =>
 						</View>
 					) : (
 						<ScrollView style={{ maxHeight: '100%' }} keyboardShouldPersistTaps="handled">
+							<Pressable
+								onPress={() => setFavorited((prev) => !prev)}
+								style={({ pressed }) => [mainStyles.opacity({ pressed }), {
+									flexDirection: 'row',
+									alignItems: 'center',
+									gap: 12,
+									paddingHorizontal: 20,
+									paddingVertical: 10,
+								}]}
+							>
+								<View
+									style={{
+										width: 40,
+										height: 40,
+										borderRadius: size.radius.standard,
+										alignItems: 'center',
+										justifyContent: 'center',
+										backgroundColor: theme.primaryBack,
+									}}
+								>
+									<Icon name="heart" size={18} color={theme.primaryTouch} />
+								</View>
+								<View style={{ flex: 1 }}>
+									<Text style={mainStyles.mediumText(theme.primaryText)} numberOfLines={1}>{t('Favorited')}</Text>
+									{starCount !== null && (
+										<Text style={mainStyles.smallText(theme.secondaryText)} numberOfLines={1}>
+											{starCount} {t('songs')}
+										</Text>
+									)}
+								</View>
+								<SelectCircle selected={favorited} theme={theme} />
+							</Pressable>
+
 							{playlists.length === 0 ? (
 								<View style={{ paddingVertical: 40, alignItems: 'center' }}>
 									<Text style={mainStyles.smallText(theme.secondaryText)}>{t('No playlists found')}</Text>

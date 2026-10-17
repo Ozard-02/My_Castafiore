@@ -18,7 +18,7 @@ const OptionsAlbum = ({ album, isOpen, onClose }) => {
 	const navigation = useNavigation()
 	const refOption = React.useRef()
 	const [playlistVisible, setPlaylistVisible] = React.useState(false)
-	const [playlistIds, setPlaylistIds] = React.useState([])
+	const [playlistSongs, setPlaylistSongs] = React.useState([])
 	const songDispatch = useSongDispatch()
 	const song = useSong()
 
@@ -31,17 +31,17 @@ const OptionsAlbum = ({ album, isOpen, onClose }) => {
 		refOption.current.close()
 	}
 
-	// the whole album, resolved to song ids once; the sheet handles membership from there
+	// the whole album, resolved to songs once; the sheet handles membership from there
 	const openPlaylistSelect = () => {
-		const ids = (album?.song || []).map((track) => track.id).filter(Boolean)
-		if (!ids.length) return
+		const list = (album?.song || []).filter((track) => track?.id)
+		if (!list.length) return
 		refOption.current.close()
-		setPlaylistIds(ids)
+		setPlaylistSongs(list)
 		setPlaylistVisible(true)
 	}
 
 	if (!album) return (
-		<PlaylistSelectPopup visible={playlistVisible} songIds={playlistIds} close={() => setPlaylistVisible(false)} />
+		<PlaylistSelectPopup visible={playlistVisible} songs={playlistSongs} close={() => setPlaylistVisible(false)} />
 	)
 	return (
 		<>
@@ -151,7 +151,7 @@ const OptionsAlbum = ({ album, isOpen, onClose }) => {
 		/>
 		<PlaylistSelectPopup
 			visible={playlistVisible}
-			songIds={playlistIds}
+			songs={playlistSongs}
 			close={() => setPlaylistVisible(false)}
 		/>
 		</>

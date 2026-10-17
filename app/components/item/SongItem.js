@@ -10,7 +10,7 @@ import { useSongDispatch } from '~/contexts/song'
 import { useTheme } from '~/contexts/theme'
 import { urlCover } from '~/utils/url'
 import { useDownloads, getSongState } from '~/utils/downloadManager'
-import FavoritedButton from '~/components/button/FavoritedButton'
+import PlaylistButton from '~/components/button/PlaylistButton'
 import ImageError from '~/components/ImageError'
 import mainStyles from '~/styles/main'
 import size from '~/styles/size'
@@ -122,7 +122,7 @@ const SongItem = ({ song, queue, index, isIndex = false, isPlaying = false, setI
 					</Text>
 				) : null}
 			<Cached song={song} />
-			<FavoritedButton
+			<PlaylistButton
 				id={song.id}
 				isFavorited={song?.starred}
 				rating={song?.userRating ?? song?.rating ?? 0}

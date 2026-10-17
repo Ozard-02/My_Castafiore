@@ -10,7 +10,7 @@ import { urlCover } from '~/utils/url'
 import PlayButton from '~/components/button/PlayButton'
 import Player from '~/utils/player'
 import ImageError from '~/components/ImageError'
-import FavoritedButton from '~/components/button/FavoritedButton'
+import PlaylistButton from '~/components/button/PlaylistButton'
 import size from '~/styles/size'
 import useKeyboardIsOpen from '~/utils/useKeyboardIsOpen'
 import { useStarredIds } from '~/utils/starred'
@@ -139,7 +139,7 @@ const BoxPlayer = ({ setFullScreen }) => {
 					</View>
 				</Animated.View>
 				{song?.songInfo?.id && (
-					<FavoritedButton
+					<PlaylistButton
 						id={song.songInfo.id}
 						isFavorited={starredIds.has(song.songInfo.id)}
 						rating={song.songInfo?.userRating ?? song.songInfo?.rating ?? 0}

@@ -9,7 +9,7 @@ import { useSong, useSongDispatch } from '~/contexts/song'
 import { useTheme } from '~/contexts/theme'
 import { useCachedFirst } from '~/utils/api'
 import { urlCover } from '~/utils/url'
-import FavoritedButton from '~/components/button/FavoritedButton'
+import PlaylistButton from '~/components/button/PlaylistButton'
 import IconButton from '~/components/button/IconButton'
 import ImageError from '~/components/ImageError'
 import Lyric from '~/components/player/Lyric'
@@ -184,7 +184,7 @@ const FullScreenHorizontalPlayer = ({ setFullScreen }) => {
 					>
 						<ImageError style={styles.imageCover} source={{ uri: urlCover(config, song?.songInfo) }} />
 						<View style={{ flex: 1, flexDirection: 'column', justifyContent: 'center' }}>
-							<FavoritedButton
+							<PlaylistButton
 								id={song?.songInfo?.id}
 								isFavorited={stars.some(s => s.id === song.songInfo.id)}
 								rating={song.songInfo?.userRating ?? song.songInfo?.rating ?? 0}

@@ -143,7 +143,7 @@ const OptionsQueue = ({ queue, indexOptions, setIndexOptions, closePlayer }) => 
 			]} />
 		<PlaylistSelectPopup
 			visible={playlistVisible}
-			songIds={indexOptions >= 0 && queue[indexOptions]?.id ? [queue[indexOptions].id] : []}
+			songs={indexOptions >= 0 && queue[indexOptions]?.id ? [queue[indexOptions]] : []}
 			close={() => setPlaylistVisible(false)}
 		/>
 		</>

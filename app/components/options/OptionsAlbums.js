@@ -20,7 +20,7 @@ const OptionsAlbums = ({ albums, indexOptions, setIndexOptions }) => {
 	const config = useConfig()
 	const refOption = React.useRef()
 	const [playlistVisible, setPlaylistVisible] = React.useState(false)
-	const [playlistIds, setPlaylistIds] = React.useState([])
+	const [playlistSongs, setPlaylistSongs] = React.useState([])
 	const songDispatch = useSongDispatch()
 
 	const playSimilarSongs = () => {
@@ -32,14 +32,14 @@ const OptionsAlbums = ({ albums, indexOptions, setIndexOptions }) => {
 		refOption.current.close()
 	}
 
-	// the long-pressed album, resolved to song ids once, then handed to the sheet
+	// the long-pressed album, resolved to songs once, then handed to the sheet
 	const openPlaylistSelect = async () => {
-		const ids = await getApiCacheFirst(config, 'getAlbum', { id: albums[indexOptions].id })
-			.then((json) => (json?.album?.song || []).map((track) => track.id).filter(Boolean))
+		const list = await getApiCacheFirst(config, 'getAlbum', { id: albums[indexOptions].id })
+			.then((json) => (json?.album?.song || []).filter((track) => track?.id))
 			.catch(() => [])
-		if (!ids.length) return
+		if (!list.length) return
 		refOption.current.close()
-		setPlaylistIds(ids)
+		setPlaylistSongs(list)
 		setPlaylistVisible(true)
 	}
 
@@ -150,7 +150,7 @@ const OptionsAlbums = ({ albums, indexOptions, setIndexOptions }) => {
 		/>
 		<PlaylistSelectPopup
 			visible={playlistVisible}
-			songIds={playlistIds}
+			songs={playlistSongs}
 			close={() => setPlaylistVisible(false)}
 		/>
 		</>

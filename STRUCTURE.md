@@ -264,7 +264,7 @@ Playback state enum: `Playing`, `Paused`, `Stopped`, `Loading`, `Error`, `None`.
 ### Item Components (app/components/item/)
 | File | Description |
 |---|---|
-| SongItem.js | Single song row with cover, title, artist, favorited button, cached indicator. `playsOnPress` (default `true`) decides whether the row calls `playSong` itself — set `false` when `onPress` owns playback (queue-view jumps). The old contract inferred this from `onPress`'s return value, so a handler returning a Promise (always truthy) made the row fire a second `playSong` on top of its own `setIndex`. |
+| SongItem.js | Single song row with cover, title, artist, add-to-playlist circle (`PlaylistButton`), cached indicator. `playsOnPress` (default `true`) decides whether the row calls `playSong` itself — set `false` when `onPress` owns playback (queue-view jumps). The old contract inferred this from `onPress`'s return value, so a handler returning a Promise (always truthy) made the row fire a second `playSong` on top of its own `setIndex`. |
 | ExplorerItem.js | Item with cover, title, subtitle for explorer lists. |
 | AllItem.js | Grid tile for the `LegendList numColumns={2}` grids (Tracks/Explorer grids, SearchMore, Playlists, ShowAll). Root is `width:'100%'` to fill its numColumns cell. |
 | LBAlbumItem.js | Album item from ListenBrainz (used in FreshReleases). |
@@ -277,7 +277,8 @@ Playback state enum: `Playing`, `Paused`, `Stopped`, `Loading`, `Error`, `None`.
 |---|---|
 | PlayButton.js | Play/pause button. Switches icon based on `song.state`. Shows `ActivityIndicator` while loading. When `song.queueEnded` it restarts the queue from the top instead of resuming (resuming an already-ended track did nothing). |
 | IconButton.js | Generic icon button using `react-native-vector-icons`. |
-| FavoritedButton.js | Heart toggle button. Long-press opens rating popup. Calls `star`/`unstar` API. |
+| FavoritedButton.js | Heart toggle button (albums, artists, playlists). Long-press opens rating popup. Calls `star`/`unstar` API. Songs/players use `PlaylistButton` instead. |
+| PlaylistButton.js | Songs + players replacement for the heart: a `circle-o`/`check-circle` button whose fill follows the song's starred state (its "Favourited" membership). Tap opens `PlaylistSelectPopup`; long-press keeps the rating popup. Syncs its local fill from the sheet's `onDone` extras since list sources don't re-fetch on close. |
 | BackButton.js | Back navigation button (white chevron with dark text-shadow halo so it reads over any cover/theme). |
 | RotateIconButton.js | Icon button with optional rotation animation on press. |
 | RandomButton.js | Shuffle play button. |
@@ -318,7 +319,7 @@ Playback state enum: `Playing`, `Paused`, `Stopped`, `Loading`, `Error`, `None`.
 | File | Description |
 |---|---|
 | OptionsPopup.js | Generic bottom-sheet-style popup with custom options. |
-| PlaylistSelectPopup.js | Multi-select "Add to playlist" sheet, shared by all five entry points (`OptionsPlayer`, `OptionsSongsList`, `OptionsQueue`, `OptionsAlbum`, `OptionsAlbums`). Really a **membership editor**: a playlist already containing the song(s) starts with a filled circle, and deselecting it REMOVES them. A partially-containing playlist shows an empty circle and is left alone unless tapped. Membership costs one `getPlaylist` per playlist (capped at 5 concurrent) since `getPlaylists` omits entries. Rows flagged `readonly` by the server (Navidrome: synced from a `.m3u`/`.nsp`, where the file is the source of truth and writes are refused with Subsonic error 50 regardless of owner) are dimmed with a lock and never written. Done button is always enabled; with nothing changed it just closes. |
+| PlaylistSelectPopup.js | Multi-select "Add to playlist" sheet, shared by all entry points (`OptionsPlayer`, `OptionsSongsList`, `OptionsQueue`, `OptionsAlbum`, `OptionsAlbums`, `PlaylistButton`). Really a **membership editor**: a playlist already containing the song(s) starts with a filled circle, and deselecting it REMOVES them. A partially-containing playlist shows an empty circle and is left alone unless tapped. Membership costs one `getPlaylist` per playlist (capped at 5 concurrent) since `getPlaylists` omits entries. Rows flagged `readonly` by the server (Navidrome: synced from a `.m3u`/`.nsp`, where the file is the source of truth and writes are refused with Subsonic error 50 regardless of owner) are dimmed with a lock and never written. Takes a `songs` prop (`{ id, starred }[]`). The top row is the **Favourited pseudo-playlist**: filled when all target songs are starred, tapping stars only the missing ones, deselecting unstars; applied via `star`/`unstar` + `songDispatch setRating` + `refreshApi getStarred2` (same sync the old heart did). Done button is always enabled; with nothing changed it just closes. `onDone(ok, total, { starred })` reports the resulting Favourited state back to `PlaylistButton`. |
 | RatingPopup.js | Star rating selection popup. |
 | DiscoveryPanel.native.js | Chromecast device discovery panel (native only). |
 
@@ -403,7 +404,7 @@ Playback state enum: `Playing`, `Paused`, `Stopped`, `Loading`, `Error`, `None`.
 15. Screens and components use `useConfig()` to get the server connection.
 16. API data is fetched via hooks (`useCachedAndApi`, `useCachedFirst`) or direct calls (`getApi`, `getApiNetworkFirst`).
 17. The caching layer (`cache.js`) handles both API response caching (AsyncStorage on native, Cache API on web) and song file caching (expo-file-system on native).
-18. When a star/favorite action occurs (`FavoritedButton`), the API is called and then `refreshApi()` + `setUpdateApi()` broadcast a cache invalidation that triggers `useCachedAndApi` effects in other components.
+18. When a star/favorite action occurs (`FavoritedButton`, or the Favourited row inside `PlaylistSelectPopup`), the API is called and then `refreshApi()` + `setUpdateApi()` broadcast a cache invalidation that triggers `useCachedAndApi` effects in other components.
 
 ### 5. Playback Flow
 19. User presses a song (`SongItem.onPress` or `PlayButton.onPress`).

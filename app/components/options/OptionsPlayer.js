@@ -157,7 +157,7 @@ const OptionsPlayer = ({ song, isOpen, setIsOpen, closePlayer }) => {
 		)}
 		<PlaylistSelectPopup
 			visible={playlistVisible}
-			songIds={song?.id ? [song.id] : []}
+			songs={song?.id ? [song] : []}
 			close={() => setPlaylistVisible(false)}
 		/>
 		</>

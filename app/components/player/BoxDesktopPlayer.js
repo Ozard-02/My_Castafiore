@@ -11,7 +11,7 @@ import Player from '~/utils/player'
 import IconButton from '~/components/button/IconButton'
 import ImageError from '~/components/ImageError'
 import SlideBar from '~/components/button/SlideBar'
-import FavoritedButton from '~/components/button/FavoritedButton'
+import PlaylistButton from '~/components/button/PlaylistButton'
 import size from '~/styles/size'
 import PlayButton from '~/components/button/PlayButton'
 
@@ -47,7 +47,7 @@ const BoxDesktopPlayer = ({ setFullScreen }) => {
 					<Text numberOfLines={1} style={{ color: theme.primaryText, textAlign: 'left', fontWeight: '700', letterSpacing: -0.3, maxWidth: 400 }}>{song?.songInfo?.track ? `${song?.songInfo?.track}. ` : null}{song?.songInfo?.title ? song.songInfo.title : 'Song title'}</Text>
 					<Text numberOfLines={1} style={{ color: theme.secondaryText, textAlign: 'left', maxWidth: 400 }}>{song?.songInfo?.artist ? song.songInfo.artist : 'Artist'}</Text>
 				</View>
-				<FavoritedButton
+				<PlaylistButton
 					id={song?.songInfo?.id}
 					isFavorited={stars.some(s => s.id === song.songInfo.id)}
 					rating={song.songInfo?.userRating ?? song.songInfo?.rating ?? 0}

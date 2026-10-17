@@ -9,7 +9,7 @@ import { useSong, useSongDispatch } from '~/contexts/song'
 import { useTheme } from '~/contexts/theme'
 import { useCachedFirst } from '~/utils/api'
 import { urlCover } from '~/utils/url'
-import FavoritedButton from '~/components/button/FavoritedButton'
+import PlaylistButton from '~/components/button/PlaylistButton'
 import IconButton from '~/components/button/IconButton'
 import Icon from 'react-native-vector-icons/FontAwesome'
 import ImageError from '~/components/ImageError'
@@ -331,7 +331,7 @@ const FullScreenPlayer = ({ setFullScreen }) => {
 								setFullScreen={setFullScreen}
 							/>
 						</View>
-						<FavoritedButton
+						<PlaylistButton
 							id={song.songInfo.id}
 							isFavorited={stars.some(s => s.id === song.songInfo.id)}
 							rating={song.songInfo?.userRating ?? song.songInfo?.rating ?? 0}

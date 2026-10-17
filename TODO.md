@@ -694,6 +694,21 @@
       `confirmAlert`, then `startScan` + `refreshApi`.
     - Plan: `plans/delete-song-from-library.md`.
 
+38. **Song heart → "Add to playlist" circle + Favourited as playlist** 🚧 in progress (2026-10-17)
+    - User: replace the heart in songs with the empty/full circle used in the playlist
+      sheet; tap opens the add-to-playlist menu instead of starring; "Favourited" becomes
+      a choosable pseudo-playlist there.
+    - Decisions: scope = song rows + player (album/artist/playlist hearts unchanged);
+      filled = starred; keep long-press rating.
+    - Plan: `plans/heart-to-playlist.md`. New `PlaylistButton`, `PlaylistSelectPopup`
+      gains the Favourited row and a `songs` prop.
+
+39. **Offline mode (no connection → downloaded content only)** 🚧 planned (2026-10-17)
+    - User: when there is no connection, allow an offline mode showing only downloaded
+      albums/tracks/playlists; search stays enabled but within downloaded content.
+    - Automatic only (NetInfo, already a dependency); no manual switch.
+    - Plan: `plans/offline-mode.md` (to write at feature start; feature 2, after #38).
+
 ## Build & Release (local APK)
 
 Release APK output:

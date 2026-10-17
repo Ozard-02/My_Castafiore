@@ -228,7 +228,7 @@ const OptionsSongsList = ({ songs, indexOptions, setIndexOptions, onUpdate = () 
 			]} />
 		<PlaylistSelectPopup
 			visible={playlistVisible}
-			songIds={indexOptions >= 0 && songs[indexOptions]?.id ? [songs[indexOptions].id] : []}
+			songs={indexOptions >= 0 && songs[indexOptions]?.id ? [songs[indexOptions]] : []}
 			close={() => setPlaylistVisible(false)}
 			onDone={onUpdate}
 		/>

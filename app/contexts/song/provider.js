@@ -186,15 +186,13 @@ export const songReducer = (state, action) => {
 				if (track.id !== action.id) return track
 				return {
 					...track,
-					userRating: action.rating,
-					rating: action.rating,
+					...(action.rating === undefined ? {} : { userRating: action.rating, rating: action.rating }),
 					...(action.starred === undefined ? {} : { starred: action.starred }),
 				}
 			})
 			const songInfo = state.songInfo?.id === action.id ? {
 				...state.songInfo,
-				userRating: action.rating,
-				rating: action.rating,
+				...(action.rating === undefined ? {} : { userRating: action.rating, rating: action.rating }),
 				...(action.starred === undefined ? {} : { starred: action.starred }),
 			} : state.songInfo
 			return newSong(state, {
