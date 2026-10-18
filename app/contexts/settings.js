@@ -118,6 +118,11 @@ export const defaultSettings = {
 	streamFormat: 'raw',
 	maxBitRate: 0,
 	playSeedFirst: false,
+	// Full-screen player appearance (spec 2026-10-18): animated fBM background colored
+	// from the cover, on by default; reduce transparency swaps the translucent panels
+	// for opaque surfaces (accessibility fallback).
+	playerBackground: true,
+	reduceTransparency: false,
 	// Repeat the whole queue when it runs out. Off by default: a queue that silently
 	// wrapped forever was indistinguishable from "the playlist loops" (endless-radio
 	// sessions set song.radioMode and keep sampling instead).

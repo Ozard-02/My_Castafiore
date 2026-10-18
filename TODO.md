@@ -736,6 +736,44 @@
       backfills older downloads when online; `urlCover` prefers the local file offline; old
       entries derive `coverArt` from their baked cover URL.
 
+40. **Full-screen player: animated fBM background + translucent pill UI** ✅ done 2026-10-18
+    - User spec: full-bleed animated fBM noise background colored from the album cover; two
+      flat translucent containers on the player (pill control bar + rounded cover/lyrics
+      pane); queue view bare with reduced-opacity content; legibility (contrast ≥ 4.5:1);
+      reduce-motion/transparency honored; 30–60 FPS cap, pause when backgrounded.
+    - Implemented: `expo-gl` shader background (`PlayerBackground.{native,web}.js`), cover
+      palette (`utils/playerPalette.js`: react-native-image-colors + luminance clamp +
+      AsyncStorage cache + theme fallback), player reworked into the two spec containers,
+      queue restyled (scrim + 0.9-opacity rows + shadows), Settings → Player "Appearance"
+      (Animated background / Reduce transparency), en+it keys. Decisions: user picked
+      expo-gl, image-colors, Android-first, on-by-default (2026-10-18).
+    - First release build launched to a hard crash (`TypeError: 0.5 is not a function` at
+      bundle load): backticks inside the FRAGMENT_SHADER **template literal** closed it
+      early, so the rest was parsed as JS — `... * 0.5 + 0.5` + a second backtick became a
+      **tagged template call on the number 0.5**. Fixed by removing the backticks from the
+      in-shader comment; shader source re-verified by evaluating the transformed template.
+      Detail + the bytecode-offset→file:line diagnostic recipe in `.log` + the plan file.
+    - Verified on device (GLView-in-Modal z-order, perf/battery, palette quality, pill/pane
+      proportions); user verdict: "tutto perfetto". Two release-only R8 crashes surfaced and
+      were fixed with keep rules (GLView constructor + GLContext.flush; rationale in `.log`
+      and `android/app/proguard-rules.pro`, now re-applied automatically after prebuild by
+      `plugins/proguardRules.js`). Feedback round: control pill radius 999 → 24 (matches the
+      cover pane) and the queue fades the player content out (`playerOpacity`) so only the
+      background shows through. Desktop player + web untouched by decision.
+    - Plan: `plans/fbm-player-background.md`.
+
+41. **Player background: frozen top strip ("gold artifact")** ✅ done 2026-10-18
+    - Symptom: top ~15% of the full-screen player was pixel-frozen (frame-diff 0.0 over 1.4 s)
+      while the rest animated; the strip showed the *previous* palette (gold).
+    - Cause: `expo-gl` creates the EGL surface once from the size at mount time and ignores
+      later size changes (`GLView.kt` re-initializes only after a 0-size start). A mount
+      during an intermediate/different window mode captured `1313x2028` on a 1080x2520
+      screen → all draws landed in that buffer → the uncovered strip kept old pixels.
+    - Fix: `PlayerBackground.native.js` self-measures (`onLayout` → dp x PixelRatio) and
+      remounts the `GLView` (capped at 5, ≥500 ms apart) while `gl.drawingBufferWidth/Height`
+      don't match; logs `context WxH (view VxV)` + remount lines. Same mechanism suspected
+      behind "background stops working" reports (context created mid-layout → partial draw).
+
 ## Build & Release (local APK)
 
 Release APK output:
@@ -757,6 +795,7 @@ adb install -r android/app/build/outputs/apk/release/app-release.apk
 ### Gotchas (things `expo prebuild` wipes / ignores)
 - `reactNativeArchitectures` in `gradle.properties` is **ignored** on old-arch (`newArchEnabled=false`). ABI filtering must be set explicitly in `android/app/build.gradle`: `ndk { abiFilters 'arm64-v8a' }`.
 - `android/app/build.gradle` edits (abiFilters) and `android/gradle.properties` knobs (proguard/shrink) are **regenerated/deleted** by `expo prebuild --clean`. Re-apply them after a fresh prebuild.
+- `android/app/proguard-rules.pro` keeps reanimated + turbomodule, plus the expo-gl `GLView` constructor and `GLContext.flush` rules (comments in the file, rationale in `.log`). Since 2026-10-18 `plugins/proguardRules.js` re-appends the custom block automatically during `expo prebuild`, so only the abiFilters/proguard knobs still need a manual re-apply after a fresh `prebuild --clean`.
 - `android/local.properties` (`sdk.dir=/home/espo/Android`) can be wiped by `prebuild --clean`. Recreate it.
 - Root `react-native.config.js` (fixes `expo.core.ExpoModulesPackage` compile error) survives prebuild.
 

@@ -70,6 +70,9 @@ module.exports = ({ config }) => {
 					'./plugins/asyncStorage.js'
 				],
 				[
+					'./plugins/proguardRules.js'
+				],
+				[
 					"react-native-google-cast",
 					{
 					  androidPlayServicesCastFrameworkVersion: "22.2.0",

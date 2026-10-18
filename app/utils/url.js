@@ -27,6 +27,21 @@ export const coverIdFromUrl = (url) => {
 // load and lets ImageError show the placeholder — same as before the cache existed.
 const offlineCover = (coverId) => (coverId && getIsOffline() ? getLocalCoverUri(coverId) : null)
 
+// Why the id choice matters (navidrome vs generic Subsonic servers): kept in one place
+// because the offline cover cache names its files after exactly this id, and the palette
+// extractor looks up those files — a drift here would silently break offline artwork.
+export const coverIdOf = (config, item) => {
+	if (!item) return null
+	const navidromeLike = ['navidrome', 'ampache'].includes(config?.type) || !config?.type
+	if (['artist', 'album', 'playlist'].includes(item.mediaType)) {
+		return navidromeLike ? item.id || item.coverArt : item.coverArt || item.id
+	}
+	if (item.mediaType === 'song') {
+		return navidromeLike ? item.albumId || item.coverArt : item.coverArt || item.albumId || item.id
+	}
+	return navidromeLike ? item.albumId || item.id || item.coverArt : item.coverArt || item.albumId || item.id
+}
+
 export const urlCover = (config, id, size = null) => {
 	if (!id) return null
 	if (!config?.url || !config?.query) return null
@@ -37,15 +52,7 @@ export const urlCover = (config, id, size = null) => {
 		if (item.homePageUrl && item.homePageUrl.startsWith('http')) {
 			return item.homePageUrl + '/favicon.ico'
 		}
-		const navidromeLike = ['navidrome', 'ampache'].includes(config?.type) || !config?.type
-		let coverId = null
-		if (['artist', 'album', 'playlist'].includes(item.mediaType)) {
-			coverId = navidromeLike ? item.id || item.coverArt : item.coverArt || item.id
-		} else if (item.mediaType === 'song') {
-			coverId = navidromeLike ? item.albumId || item.coverArt : item.coverArt || item.albumId || item.id
-		} else {
-			coverId = navidromeLike ? item.albumId || item.id || item.coverArt : item.coverArt || item.albumId || item.id
-		}
+		const coverId = coverIdOf(config, item)
 		return offlineCover(coverId) || realCover(config, coverId, size)
 	} else {
 		if (id.startsWith('http://') || id.startsWith('https://')) return id

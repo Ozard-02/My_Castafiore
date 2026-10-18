@@ -954,3 +954,121 @@ flips between them automatically. Found three distinct mechanisms:
 - eslint clean; APK (16:06) installed on tablet R52Y80837NY and phone R5CY71GYKWF
   (`Success`). Phone launch check: playing, mixing remote stream + local
   `file:///...cache/song...` files, no errors/warnings.
+
+## 2026-10-18 — Animated fBM player background (TODO #40)
+- User dropped a full spec: animated fBM noise background colored from the cover, two flat
+  translucent containers on the player (pill controls + rounded cover/lyrics pane), bare
+  queue at reduced opacity, reduce-motion/transparency, 30-60fps, pause when backgrounded.
+- User decisions: `expo-gl` GLSL (not Skia), `react-native-image-colors` palette (not
+  theme-only), Android mobile player + queue first, background on by default with settings.
+- Added deps `expo-gl@~15.1.7` + `react-native-image-colors@^2.6.0` (npm; pnpm-lock stale).
+- Legibility by construction: palette clamped to WCAG rel. luminance ≤ 0.30 (linear-space
+  scale, near-black ramps lifted), containers rgba(0,0,0,0.35), 0.15 shader dim → white
+  text ≥ 4.5:1 worst case without per-frame contrast math. Reduce transparency → opaque
+  panels; both toggles in Settings → Player → Appearance.
+- Palette extraction prefers the offline local cover file, then `urlCover(..., 150)`;
+  cached per cover id in AsyncStorage (`playerPalette:<id>`); `themedPalette` gives an
+  instant accent-derived ramp so there is no grey flash while extraction runs.
+- url.js refactor: `coverIdOf()` shared by `urlCover` + the palette, so the offline cover
+  cache and the extractor can never disagree on a file name.
+- Shader: 5-octave 3D simplex fBM, lacunarity 2 / gain 0.5, time on the z axis; 6-slot
+  palette via an unrolled mix chain (GLSL ES 1.0 only guarantees constant indices into
+  uniform arrays); 30 fps cap; 450 ms palette crossfade; time frozen under system Reduce
+  Motion; AppState pause when backgrounded; viewport re-read per frame (rotation-free).
+- Web: `PlayerBackground.web.js` stub returns null (expo-gl stays out of the web bundle);
+  desktop player untouched by decision. Bass reactivity skipped (optional in the spec).
+- eslint clean; palette pure helpers smoke-tested with node (clamp/lift/parse assertions);
+  release APK built — devices were unplugged at build time, install + on-device pass next.
+
+### 2026-10-18 (cont.) — the first release launch crashed (TODO #40)
+- Installed that APK on phone R5CY71GYKWF: it died instantly and repeatedly
+  (`Invariant Violation: "main" has not been registered`) — a release-only regression.
+- Root cause: in `PlayerBackground.native.js` the shader "comment" line inside the
+  FRAGMENT_SHADER **template literal** contained backticks:
+  `// Normalization matters: plain \`* 0.5 + 0.5\` leaves the tails ...`
+  A backtick closes the template early, so everything after it was parsed as JS:
+  `... * 0.5 + 0.5` followed by another backtick starts a **tagged template**, i.e. a
+  call with the number `0.5` as the tag function. That is the whole story:
+  `TypeError: 0.5 is not a function` while the module body ran, at load, before
+  `AppRegistry.registerComponent`. Fix: drop the backticks from that comment.
+- Diagnostic recipe (keep!): the release stack is Hermes **bytecode offsets**, not JS
+  positions. Two commands turn it into a real file:line —
+  1. `npx expo export:embed --platform android --dev false --reset-cache --minify false
+     --entry-file index.js --bundle-output /tmp/device.js --sourcemap-output /tmp/device.map`
+     reproduces the exact JS the build feeds to hermesc (the gradle task passes
+     `--reset-cache` and `--minify false`: with Hermes, Metro does not minify, Hermes -O
+     optimizes — see `@react-native/gradle-plugin` TaskConfiguration.kt:76);
+  2. `hermesc -w -emit-binary -max-diagnostic-width=80 -O -output-source-map -out device.hbc
+     device.js` reproduces the artifact (2068844 bytes, same as the APK), and its
+     `device.hbc.map` maps the trace offset back to a bundle position — then a line of
+     `device.js` shows the offending expression.
+- Both earlier theories were wrong and are retired: (a) Metro/terser inlining `GAIN` into
+  `.5.toFixed(1)` only appears in `--minify true` bundles we do not ship (verified with
+  hermesc that leading-dot literals do break Hermes, hence `glslFloat()` stays as cheap
+  insurance, but it was never the crash), and (b) the GLView/expo-gl import was innocent.
+- Lesson: never put backticks (or `${` text) in a JS comment *inside* a template literal;
+  the shader strings are the risky spot. Verify shader source by extracting the
+  transformed template and running it in node (asserts the GLSL floats came out right).
+
+### 2026-10-18 (cont.) — second crash of the same build: R8 vs expo-gl's GLView
+- With the JS fixed the app boots, but it crash-loops on a **native** exception the first
+  time the GLView is actually rendered:
+  `IllegalStateException: Didn't find a correct constructor for class I6.d` inside
+  `expo.modules.kotlin.views...SimpleViewManagerWrapper.createViewInstance`.
+- `I6.d` is the obfuscated name of `expo.modules.gl.GLView` (looked up in
+  `android/app/build/outputs/mapping/release/mapping.txt`, kept after release builds).
+- Why: expo creates its views **reflectively** and looks for a `(Context)` or
+  `(Context, AppContext)` constructor. `expo-gl`'s GLView extends `TextureView`
+  *directly* (not expo's `ExpoView` base class), and expo-gl ships **no** consumer
+  ProGuard rules, while `expo-modules-core`'s generic rule only covers
+  `implements ExpoView` classes. With `minifyEnabled=true` (gradle.properties) R8 sees
+  the record constructor as unused and strips it → reflective lookup fails. The app then
+  crashes at first player render, restarts, and loops.
+- Fix: one keep rule in `android/app/proguard-rules.pro` (rule text explains itself).
+  Class is referenced by the autolinked package list, so keeping the single constructor
+  is enough; no rule needed for `GLObjectManagerModule` (covered by the generic Module
+  rules already).
+- Lesson for any future expo module with a native view: check whether the view class
+  conforms to expo's `ExpoView` base or to `kotlin.reflect` construction, and add the
+  matching keep rule the moment a release build renders it. Diagnose fast via
+  mapping.txt (`grep "obfuscated_name ->" mapping.txt`).
+
+### 2026-10-18 (cont.) — third crash of the same build: R8 vs GLContext.flush (name-based JNI)
+- With the view class kept, the next launch reached the first GL frame and then the process
+  *aborted natively*: `JNI DETECTED ERROR IN APPLICATION: mid == null` inside
+  `expo.modules.gl.cpp.EXGL.EXGLContextPrepare`.
+- Cause: expo-gl's C++ bridge resolves `GLContext.flush` **by name** at runtime
+  (`node_modules/expo-gl/android/src/main/cpp/EXGLJniApi.cpp:29`:
+  `GetMethodID(GLContextClass, "flush", "()V")`). R8 had renamed the method, the lookup
+  returned a null jmethodID, and the JNI call aborted the process.
+- Fix: `-keepclassmembers class expo.modules.gl.GLContext { void flush(); }`; confirmed in
+  `mapping.txt` (`void flush():116:116 -> flush`).
+- Lesson: a constructor keep rule is not enough for expo modules whose C++ looks members up
+  by string — those need `-keepclassmembers` too.
+- Durability: `android/` is fully gitignored (prebuild output) — both rules would vanish on
+  the next `expo prebuild`. Added `plugins/proguardRules.js` (a `withDangerousMod` plugin
+  wired in `app.config.js`) that re-appends the custom keep block when missing.
+- On-device verification of the feature: zero FATALs, `[PlayerBackground] context
+  1080x2520`, palette extracted from the local cover, animation confirmed by frame-diff,
+  player + queue screenshots correct. User verdict: "tutto perfetto".
+
+### 2026-10-18 (cont.) — "gold artifact": frozen top strip in the player background
+- The user kept pointing at a gold/gold-ish band at the top of the player. Frame-diff proof:
+  that strip is pixel-identical across screenshots 1.4 s apart (0.0 delta) while bands below
+  animate — i.e. it is *never repainted*, and shows pixels from an older palette (gold).
+- Root cause: expo-gl creates the EGL surface **once**, from the size at mount time, and
+  ignores all later surface-size changes (`GLView.kt` re-initializes only when the initial
+  size was 0). Mounts that happen while the window is in another mode / mid-layout capture a
+  bogus size (seen: `1313x2028` on a 1080x2520 display); every draw then lands in that
+  buffer and the uncovered strip keeps whatever was drawn before — a *stale* region, not a
+  shader artifact.
+- Fix in `PlayerBackground.native.js`: self-measure (`onLayout`: dp → px via PixelRatio)
+  and remount the `GLView` while `gl.drawingBufferWidth/Height` don't match the measured
+  size (capped at 5 attempts, ≥500 ms apart, each logged); `context WxH (view VxV)` at
+  every context creation. Suspected same root for "the background stops working" reports
+  (a context created mid-layout draws only part of the view).
+- Status: verified on device 2026-10-18 — 3/3 mounts `context 1080x2520 (view 1080x2520)`,
+  top strip animates in frame-diff (was 0.0), player screenshot clean. Cause of the good
+  result: the GLView now mounts only *after* the wrapper's first `onLayout` (the surface is
+  created at the settled size); the capped remount stays as the fallback for mid-layout or
+  cross-window cases.

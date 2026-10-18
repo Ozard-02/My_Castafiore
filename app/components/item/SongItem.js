@@ -68,12 +68,15 @@ const Cached = ({ song }) => {
 // from onPress's return value, so a handler returning a Promise (always truthy) made
 // SongItem fire a second playSong on top of it: two loads of one track plus a setQueue
 // that wiped upNext/originalQueue/radioMode and reset actionEndOfSong to 'next'.
-const SongItem = ({ song, queue, index, isIndex = false, isPlaying = false, setIndexOptions = () => { }, onPress = () => { }, playsOnPress = true, style = {}, handle = null }) => {
+const SongItem = ({ song, queue, index, isIndex = false, isPlaying = false, setIndexOptions = () => { }, onPress = () => { }, playsOnPress = true, style = {}, handle = null, overlay = false }) => {
 	const songDispatch = useSongDispatch()
 	const theme = useTheme()
 	const config = useConfig()
 	const settings = useSettings()
 	const [isHover, setIsHover] = React.useState(false)
+	// Queue-over-background mode (spec §3.3): a subtle shadow under the texts so they
+	// stay legible over the animated background. Row opacity is applied by the queue.
+	const overlayText = overlay ? styles.overlayText : null
 
 	return (
 		<Pressable
@@ -108,16 +111,16 @@ const SongItem = ({ song, queue, index, isIndex = false, isPlaying = false, setI
 				/>
 			</View>
 			<View style={{ flex: 1, flexDirection: 'column' }}>
-				<Text numberOfLines={1} style={[mainStyles.mediumText(isPlaying ? theme.primaryTouch : theme.primaryText), { marginBottom: 2 }]}>
+				<Text numberOfLines={1} style={[mainStyles.mediumText(isPlaying ? theme.primaryTouch : theme.primaryText), { marginBottom: 2 }, overlayText]}>
 					{(isIndex && song.track !== undefined) ? `${song.track}. ` : null}{song.title}
 				</Text>
-				<Text numberOfLines={1} style={mainStyles.smallText(theme.secondaryText)}>
+				<Text numberOfLines={1} style={[mainStyles.smallText(theme.secondaryText), overlayText]}>
 					{song.artist}
 				</Text>
 			</View>
 			{
 				settings.isDesktop ? (
-					<Text style={[mainStyles.smallText(theme.secondaryText), { marginHorizontal: 10 }]}>
+					<Text style={[mainStyles.smallText(theme.secondaryText), { marginHorizontal: 10 }, overlayText]}>
 						{song.duration ? `${Math.floor(song.duration / 60)}:${(song.duration % 60).toString().padStart(2, '0')}` : '0:00'}
 					</Text>
 				) : null}
@@ -140,6 +143,11 @@ const styles = StyleSheet.create({
 		height: size.image.small,
 		marginBottom: 10,
 		borderRadius: size.radius.standard,
+	},
+	overlayText: {
+		textShadowColor: 'rgba(0, 0, 0, 0.35)',
+		textShadowOffset: { width: 0, height: 1 },
+		textShadowRadius: 2,
 	},
 })
 

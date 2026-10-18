@@ -65,7 +65,11 @@
         "Stream format Description": "Specifica il formato dello streaming da riprodurre.",
         "Max bitrate": "Bitrate massimo",
         "Max bitrate Description": "Specifica il bitrate massimo in kilobit al secondo per lo streaming. Bitrate inferiori consumano meno dati ma possono ridurre la qualità audio.",
-        "Play seed first": "Prima il brano di riferimento"
+        "Play seed first": "Prima il brano di riferimento",
+        "Appearance": "Aspetto",
+        "Animated background": "Sfondo animato",
+        "Animated background Description": "Mostra un campo di colore animato lento dietro al player a schermo intero, ricavato dalla copertina dell'album. Rispetta l'impostazione di sistema 'Riduci movimento'. Se disattivato, le copertine vengono comunque scaricate per l'uso offline.",
+        "Reduce transparency": "Riduci trasparenza"
       },
       "theme": {
         "Player Theme": "Tema del lettore"

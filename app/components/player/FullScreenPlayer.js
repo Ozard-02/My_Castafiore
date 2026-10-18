@@ -5,6 +5,7 @@ import { useNavigation } from '@react-navigation/native'
 import { useTranslation } from 'react-i18next'
 
 import { useConfig } from '~/contexts/config'
+import { useSettings } from '~/contexts/settings'
 import { useSong, useSongDispatch } from '~/contexts/song'
 import { useTheme } from '~/contexts/theme'
 import { useCachedFirst } from '~/utils/api'
@@ -14,12 +15,14 @@ import IconButton from '~/components/button/IconButton'
 import Icon from 'react-native-vector-icons/FontAwesome'
 import ImageError from '~/components/ImageError'
 import Lyric from '~/components/player/Lyric'
+import PlayerBackground from '~/components/player/PlayerBackground'
 import mainStyles from '~/styles/main'
 import OptionsMultiArtists from '~/components/options/OptionsMultiArtists'
 import OptionsPlayer from '~/components/options/OptionsPlayer'
 import QueueSheet from '~/components/player/QueueSheet'
 import PlayButton from '~/components/button/PlayButton'
 import Player from '~/utils/player'
+import { themedPalette, usePlayerPalette } from '~/utils/playerPalette'
 import size from '~/styles/size'
 import SlideBar from '~/components/button/SlideBar'
 import SlideControl from '~/components/button/SlideControl'
@@ -30,13 +33,20 @@ const preview = {
 	LYRICS: 2
 }
 
+// Cover/lyrics pane (spec §3.2): large-radius rounded rectangle, 18px inner padding.
+// The size formula subtracts the padding from the width budget and reserves extra
+// height for the control pill's own padding, so the stack keeps the footprint the
+// flat layout had.
+const PANE_PADDING = 18
+const PANE_RADIUS = 24
+
 const CoverItem = ({ isPreview, song, onToggleLyrics }) => {
 	const config = useConfig()
 	const theme = useTheme()
 	const { width, height } = useWindowDimensions()
 
 	const albumImage = React.useMemo(() => {
-		const size = Math.min(width - 50, 450, Math.max(110, height - 420))
+		const size = Math.min(width - 50 - PANE_PADDING * 2, 450, Math.max(110, height - 480))
 		return {
 			maxWidth: size,
 			width: size,
@@ -224,6 +234,26 @@ const FullScreenPlayer = ({ setFullScreen }) => {
 		setData(json?.starred2?.song || [])
 	}, [song.songInfo?.id])
 
+	// --- animated fBM background (spec 2026-10-18) -----------------------------
+	// Native only for now: the web stub renders nothing (flat background as before).
+	// Palette extraction is skipped entirely when the background is off, so the cost
+	// only exists where the visuals do.
+	const settings = useSettings()
+	const background = Platform.OS !== 'web' && settings.playerBackground !== false
+	const palette = usePlayerPalette(config, song.songInfo, background)
+	const paletteColors = React.useMemo(() => palette || themedPalette(theme), [palette, theme])
+	// Flat alpha compositing only, no blur. Reduce transparency swaps the translucent
+	// fills for the opaque theme surface (spec §4.3 accessibility fallback).
+	const opaquePanels = settings.reduceTransparency === true
+	const panelFill = opaquePanels ? theme.primaryBack : (background ? 'rgba(0, 0, 0, 0.35)' : 'transparent')
+	// While the animated background runs, the player content (top bar + cover pane +
+	// control pill) fades out as the queue sheet rises, so behind the queue's
+	// translucent rows there is only the fBM background (user feedback 2026-10-18).
+	// With the background off the sheet is opaque and covers the player anyway.
+	const playerOpacity = background
+		? queueY.interpolate({ inputRange: [0, height], outputRange: [0, 1], extrapolate: 'clamp' })
+		: 1
+
 	return (
 		<Modal
 			statusBarTranslucent={true}
@@ -243,7 +273,9 @@ const FullScreenPlayer = ({ setFullScreen }) => {
 				style={[mainStyles.contentMainContainer(insets), styles.mainContainer(insets, theme)]}
 				{...openPan.panHandlers}
 			>
-				<View style={{ width: '100%', flexDirection: 'row' }}>
+				{background && <PlayerBackground palette={paletteColors} dim={opaquePanels ? 0.3 : 0.15} />}
+				{/* top bar and controls share playerOpacity so they vanish with the queue up */}
+				<Animated.View style={{ width: '100%', flexDirection: 'row', opacity: playerOpacity }}>
 					<OptionsPlayer
 						song={song.songInfo}
 						isOpen={isOpt}
@@ -283,112 +315,115 @@ const FullScreenPlayer = ({ setFullScreen }) => {
 						color={theme.primaryText}
 						onPress={() => setIsOpt(true)}
 					/>
-				</View>
-				<View
-					style={styles.playerContainer}
+				</Animated.View>
+				<Animated.View
+					style={[styles.playerContainer, { opacity: playerOpacity }]}
 					onStartShouldSetResponder={neverTake}
 				>
-					{/* the cover takes all the slack and centres in it. Previously playerContainer
-					    used justifyContent: 'space-between', which smeared the leftover into
-					    four equal gaps — so tightening the controls below just pushed the cluster
-					    further from the cover instead of freeing space. Cover size is unchanged. */}
+					{/* two independent translucent containers (spec §3.2): cover/lyrics pane on
+					    top, control pill below. The cover slot still takes all the slack and
+					    centres the pane in it — cover size already accounts for pane padding. */}
 					<View
 						style={styles.coverSlot}
 						onLayout={onPaneLayout}
 						onStartShouldSetResponder={neverTake}
 					>
-						<CoverItem isPreview={isPreview} song={song} onToggleLyrics={toggleLyrics} />
+						<View style={[styles.coverPane, { backgroundColor: panelFill }]}>
+							<CoverItem isPreview={isPreview} song={song} onToggleLyrics={toggleLyrics} />
+						</View>
 					</View>
-					<View onStartShouldSetResponder={neverTake} style={{ flexDirection: 'row', marginTop: 26, width: '100%', alignItems: 'center', justifyContent: 'space-between' }}>
-						<View style={{ flex: 1 }}>
-							<Pressable
-								style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}
-								onPress={() => {
-									navigation.navigate('Album', { id: song.songInfo.albumId, name: song.songInfo.album, artist: song.songInfo.artist, artistId: song.songInfo.artistId })
-									closeFull()
-								}}
-							>
-								<Text numberOfLines={1} style={{ color: theme.primaryText, fontSize: size.title.small, textAlign: 'left', fontWeight: '700', letterSpacing: -0.5 }}>{song.songInfo.title}</Text>
-							</Pressable>
-							<Pressable
-								style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}
-								onPress={() => {
-									if (song.songInfo.artists?.length > 1) {
-										setIsOptArtists(true)
-									} else {
-										navigation.navigate('Artist', { id: song.songInfo.artistId, name: song.songInfo.artist })
+					<View style={[styles.controlPill, { backgroundColor: panelFill }]}>
+						<View onStartShouldSetResponder={neverTake} style={{ flexDirection: 'row', width: '100%', alignItems: 'center', justifyContent: 'space-between' }}>
+							<View style={{ flex: 1 }}>
+								<Pressable
+									style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}
+									onPress={() => {
+										navigation.navigate('Album', { id: song.songInfo.albumId, name: song.songInfo.album, artist: song.songInfo.artist, artistId: song.songInfo.artistId })
 										closeFull()
-									}
-								}}
-							>
-								<Text numberOfLines={1} style={mainStyles.largeText(theme.secondaryText)}>{song.songInfo.artist}</Text>
-							</Pressable>
-							<OptionsMultiArtists
-								albumArtists={song.songInfo.albumArtists || []}
-								artists={song.songInfo.artists || []}
-								close={() => setIsOptArtists(false)}
-								visible={isOptArtists}
-								setFullScreen={setFullScreen}
+									}}
+								>
+									<Text numberOfLines={1} style={{ color: theme.primaryText, fontSize: size.title.small, textAlign: 'left', fontWeight: '700', letterSpacing: -0.5 }}>{song.songInfo.title}</Text>
+								</Pressable>
+								<Pressable
+									style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}
+									onPress={() => {
+										if (song.songInfo.artists?.length > 1) {
+											setIsOptArtists(true)
+										} else {
+											navigation.navigate('Artist', { id: song.songInfo.artistId, name: song.songInfo.artist })
+											closeFull()
+										}
+									}}
+								>
+									<Text numberOfLines={1} style={mainStyles.largeText(theme.secondaryText)}>{song.songInfo.artist}</Text>
+								</Pressable>
+								<OptionsMultiArtists
+									albumArtists={song.songInfo.albumArtists || []}
+									artists={song.songInfo.artists || []}
+									close={() => setIsOptArtists(false)}
+									visible={isOptArtists}
+									setFullScreen={setFullScreen}
+								/>
+							</View>
+							<PlaylistButton
+								id={song.songInfo.id}
+								isFavorited={stars.some(s => s.id === song.songInfo.id)}
+								rating={song.songInfo?.userRating ?? song.songInfo?.rating ?? 0}
+								style={{ padding: compact ? 12 : 20, paddingEnd: 0 }}
 							/>
 						</View>
-						<PlaylistButton
-							id={song.songInfo.id}
-							isFavorited={stars.some(s => s.id === song.songInfo.id)}
-							rating={song.songInfo?.userRating ?? song.songInfo?.rating ?? 0}
-							style={{ padding: compact ? 12 : 20, paddingEnd: 0 }}
-						/>
-					</View>
-					<TimeBar />
-					<View onStartShouldSetResponder={neverTake} style={{ flexDirection: 'row', width: '100%', marginVertical: compact ? 21 : 27, alignItems: 'center', justifyContent: 'space-between' }}>
-						<View style={{ flexDirection: 'row', alignItems: 'center' }}>
+						<TimeBar />
+						<View onStartShouldSetResponder={neverTake} style={{ flexDirection: 'row', width: '100%', marginTop: compact ? 2 : 6, alignItems: 'center', justifyContent: 'space-between' }}>
+							<View style={{ flexDirection: 'row', alignItems: 'center' }}>
+								<IconButton
+									icon="random"
+									size={compact ? 18 : 20}
+									color={song.actionEndOfSong == 'random' ? theme.primaryTouch : theme.secondaryText}
+									style={{ padding: 10 }}
+									onPress={() => Player.setRepeat(songDispatch, song.actionEndOfSong === 'random' ? 'next' : 'random')}
+								/>
+							</View>
 							<IconButton
-								icon="random"
-								size={compact ? 18 : 20}
-								color={song.actionEndOfSong == 'random' ? theme.primaryTouch : theme.secondaryText}
+								icon="step-backward"
+								size={compact ? 22 : size.icon.large}
+								color={theme.primaryText}
 								style={{ padding: 10 }}
-								onPress={() => Player.setRepeat(songDispatch, song.actionEndOfSong === 'random' ? 'next' : 'random')}
+								onPress={() => Player.previousSong(config, song, songDispatch)}
+							/>
+							<PlayButton
+								size={compact ? 36 : 54}
+								color={theme.primaryText}
+								style={{
+									paddingHorizontal: 10,
+									minWidth: compact ? 48 : 70,
+									minHeight: compact ? 48 : 66,
+									justifyContent: 'center',
+									alignItems: 'center',
+								}}
+							/>
+							<IconButton
+								icon="step-forward"
+								size={compact ? 22 : size.icon.large}
+								color={theme.primaryText}
+								style={{ padding: 10 }}
+								onPress={() => Player.nextSong(config, song, songDispatch)}
+							/>
+							<IconButton
+								icon="repeat"
+								size={compact ? 18 : 20}
+								color={song.actionEndOfSong == 'repeat' ? theme.primaryTouch : theme.secondaryText}
+								style={{ padding: 10 }}
+								onPress={() => Player.setRepeat(songDispatch, song.actionEndOfSong === 'repeat' ? 'next' : 'repeat')}
 							/>
 						</View>
-						<IconButton
-							icon="step-backward"
-							size={compact ? 22 : size.icon.large}
-							color={theme.primaryText}
-							style={{ padding: 10 }}
-							onPress={() => Player.previousSong(config, song, songDispatch)}
-						/>
-						<PlayButton
-							size={compact ? 36 : 54}
-							color={theme.primaryText}
-							style={{
-								paddingHorizontal: 10,
-								minWidth: compact ? 48 : 70,
-								minHeight: compact ? 48 : 66,
-								justifyContent: 'center',
-								alignItems: 'center',
-							}}
-						/>
-						<IconButton
-							icon="step-forward"
-							size={compact ? 22 : size.icon.large}
-							color={theme.primaryText}
-							style={{ padding: 10 }}
-							onPress={() => Player.nextSong(config, song, songDispatch)}
-						/>
-						<IconButton
-							icon="repeat"
-							size={compact ? 18 : 20}
-							color={song.actionEndOfSong == 'repeat' ? theme.primaryTouch : theme.secondaryText}
-							style={{ padding: 10 }}
-							onPress={() => Player.setRepeat(songDispatch, song.actionEndOfSong === 'repeat' ? 'next' : 'repeat')}
-						/>
 					</View>
 					<Animated.View {...stripPan.panHandlers} style={styles.queueDragStrip} />
-				</View>
+				</Animated.View>
 				{/* queue: a sheet that slides over the WHOLE window, controls included. translateY
 				    starts one window-height below the viewport and tracks the finger 1:1. */}
 				<Animated.View
 					pointerEvents={isQueueOpen ? 'auto' : 'none'}
-					style={[styles.queueOverlay, { backgroundColor: theme.primaryBack, transform: [{ translateY: queueY }] }]}
+					style={[styles.queueOverlay, { backgroundColor: background ? 'rgba(0, 0, 0, 0.35)' : theme.primaryBack, transform: [{ translateY: queueY }] }]}
 				>
 					<View style={[styles.queueHeader, { paddingTop: insets.top + 10 }]} {...closePan.panHandlers}>
 						<Icon name="angle-double-down" size={20} color={theme.secondaryText} style={{ marginEnd: 10 }} />
@@ -435,13 +470,29 @@ const styles = StyleSheet.create({
 		alignItems: 'center',
 		justifyContent: 'center',
 	},
-	// covers the whole window (the controls included), driven by translateY
+	// covers the whole window (the controls included), driven by translateY. While the
+	// animated background runs (and transparency is on) it is just a scrim: the queue
+	// shows the same background, content over it without further containers (spec §3.3).
 	queueOverlay: {
 		position: 'absolute',
 		top: 0,
 		left: 0,
 		right: 0,
 		bottom: 0,
+	},
+	// the two translucent containers (spec §3.2). Both use the same 24px rounded
+	// corners (user feedback 2026-10-18: the stadium-shaped control pill read as
+	// "too round").
+	coverPane: {
+		padding: PANE_PADDING,
+		borderRadius: PANE_RADIUS,
+	},
+	controlPill: {
+		width: '100%',
+		marginTop: 26,
+		borderRadius: PANE_RADIUS,
+		paddingHorizontal: 22,
+		paddingVertical: 14,
 	},
 	// The empty band under the transport row (playerContainer's paddingBottom). Absolute, so it
 	// overlays only that padding and never the controls.

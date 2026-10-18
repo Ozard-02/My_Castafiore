@@ -108,6 +108,22 @@ const PlayerSettings = () => {
 					/>
 				</View>
 				<Text style={settingStyles.description(theme)}>{t('settings.player.Save last queue Description')}</Text>
+
+				<Text style={settingStyles.titleContainer(theme)}>{t('settings.player.Appearance')}</Text>
+				<View style={settingStyles.optionsContainer(theme, true)}>
+					<ButtonSwitch
+						title={t('settings.player.Animated background')}
+						value={settings.playerBackground !== false}
+						onPress={() => setSettings({ ...settings, playerBackground: settings.playerBackground === false })}
+					/>
+					<ButtonSwitch
+						title={t('settings.player.Reduce transparency')}
+						value={settings.reduceTransparency === true}
+						onPress={() => setSettings({ ...settings, reduceTransparency: settings.reduceTransparency !== true })}
+						isLast
+					/>
+				</View>
+				<Text style={settingStyles.description(theme)}>{t('settings.player.Animated background Description')}</Text>
 			</View>
 		</ScrollView>
 	)

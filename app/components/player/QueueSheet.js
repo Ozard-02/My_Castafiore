@@ -1,5 +1,5 @@
 import React from 'react'
-import { View, Text, FlatList } from 'react-native'
+import { View, Text, FlatList, StyleSheet } from 'react-native'
 import { useTranslation } from 'react-i18next'
 
 import { useConfig } from '~/contexts/config'
@@ -29,9 +29,9 @@ const QueueSheet = ({ song, stars, setFullScreen }) => {
 		<>
 			<View style={{ width: '100%', flex: 1 }}>
 				<QueueDragProvider lists={lists} rowHeight={rowHeight} onMove={handleMove}>
-					<Text style={{ color: theme.secondaryText, fontSize: size.text.small, textTransform: 'uppercase', marginBottom: 5 }}>{t('Now playing')}</Text>
+					<Text style={[styles.label, { color: theme.secondaryText, fontSize: size.text.small, textTransform: 'uppercase', marginBottom: 5 }]}>{t('Now playing')}</Text>
 					{song.songInfo && (
-						<View style={{ marginBottom: 10 }}>
+						<View style={[styles.row, { marginBottom: 10 }]}>
 							<SongItem
 								song={{ ...song.songInfo, starred: stars.some(s => s.id === song.songInfo.id) }}
 								queue={song.queue}
@@ -40,12 +40,13 @@ const QueueSheet = ({ song, stars, setFullScreen }) => {
 								onPress={() => { }}
 								playsOnPress={false}
 								isPlaying
+								overlay
 							/>
 						</View>
 					)}
 					{song.upNext?.length > 0 && (
 						<>
-							<Text style={{ color: theme.secondaryText, fontSize: size.text.small, textTransform: 'uppercase', marginBottom: 5 }}>{t('Up next')}</Text>
+							<Text style={[styles.label, { color: theme.secondaryText, fontSize: size.text.small, textTransform: 'uppercase', marginBottom: 5 }]}>{t('Up next')}</Text>
 							<View onLayout={(e) => { upNextBoxY.current = e.nativeEvent.layout.y; upNextBoxH.current = e.nativeEvent.layout.height }} style={{ maxHeight: Math.min(song.upNext.length, 3) * rowHeight }}>
 								<FlatList
 									ref={upNextScroll}
@@ -58,22 +59,25 @@ const QueueSheet = ({ song, stars, setFullScreen }) => {
 									onLayout={(e) => { upNextViewport.current = e.nativeEvent.layout.height }}
 									renderItem={({ item, index }) => (
 										<QueueDragRow list="up" index={index}>
-											<SongItem
-												song={{ ...item, starred: stars.some(s => s.id === item.id) }}
-												queue={song.upNext}
-												index={index}
-												setIndexOptions={setUpNextOptions}
-												onPress={() => { }}
-												playsOnPress={false}
-												isPlaying={false}
-											/>
+											<View style={styles.row}>
+												<SongItem
+													song={{ ...item, starred: stars.some(s => s.id === item.id) }}
+													queue={song.upNext}
+													index={index}
+													setIndexOptions={setUpNextOptions}
+													onPress={() => { }}
+													playsOnPress={false}
+													isPlaying={false}
+													overlay
+												/>
+											</View>
 										</QueueDragRow>
 									)}
 								/>
 							</View>
 						</>
 					)}
-					<Text style={{ color: theme.secondaryText, fontSize: size.text.small, textTransform: 'uppercase', marginVertical: 5 }}>{t('Queue')}</Text>
+					<Text style={[styles.label, { color: theme.secondaryText, fontSize: size.text.small, textTransform: 'uppercase', marginVertical: 5 }]}>{t('Queue')}</Text>
 					<View onLayout={(e) => { queueBoxY.current = e.nativeEvent.layout.y; queueBoxH.current = e.nativeEvent.layout.height }} style={{ flex: 1 }}>
 						<FlatList
 							ref={scroll}
@@ -91,18 +95,21 @@ const QueueSheet = ({ song, stars, setFullScreen }) => {
 								const realIndex = queueRealIndex(index)
 								return (
 									<QueueDragRow list="queue" index={index}>
-										<SongItem
-											song={{ ...item, starred: stars.some(s => s.id === item.id) }}
-											queue={song.queue}
-											index={realIndex}
-											setIndexOptions={setIndexOptions}
-											onPress={(_track, queue, index) => {
-												// explicit user jump: drop up next + radio, like starting a new queue
-												Player.setIndex(config, songDispatch, queue, index, { clearUpNext: true, clearRadio: true }).catch(() => { })
-											}}
-											playsOnPress={false}
-											isPlaying={false}
-										/>
+										<View style={styles.row}>
+											<SongItem
+												song={{ ...item, starred: stars.some(s => s.id === item.id) }}
+												queue={song.queue}
+												index={realIndex}
+												setIndexOptions={setIndexOptions}
+												onPress={(_track, queue, index) => {
+													// explicit user jump: drop up next + radio, like starting a new queue
+													Player.setIndex(config, songDispatch, queue, index, { clearUpNext: true, clearRadio: true }).catch(() => { })
+												}}
+												playsOnPress={false}
+												isPlaying={false}
+												overlay
+											/>
+										</View>
 									</QueueDragRow>
 								)
 							}}
@@ -115,5 +122,16 @@ const QueueSheet = ({ song, stars, setFullScreen }) => {
 		</>
 	)
 }
+
+// Queue over the animated background (spec §3.3): no containers of its own, rows sit
+// directly on the background at reduced opacity with a subtle black text shadow.
+const styles = StyleSheet.create({
+	row: { opacity: 0.9 },
+	label: {
+		textShadowColor: 'rgba(0, 0, 0, 0.35)',
+		textShadowOffset: { width: 0, height: 1 },
+		textShadowRadius: 2,
+	},
+})
 
 export default QueueSheet
