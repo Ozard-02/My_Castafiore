@@ -1072,3 +1072,42 @@ flips between them automatically. Found three distinct mechanisms:
   result: the GLView now mounts only *after* the wrapper's first `onLayout` (the surface is
   created at the settled size); the capped remount stays as the fallback for mid-layout or
   cross-window cases.
+
+### 2026-10-19 — Mini player ("pill"): optional fBM background
+- User request: same fBM field behind the mini player. Decisions (asked, not assumed):
+  setting in **Settings → Theme**, **off by default**, **user-chosen FPS** (10/15/20/30,
+  default 15), animation keeps running while the music is paused.
+- Key enabler found while planning: expo-gl's Android `GLView` extends **`TextureView`**
+  (`node_modules/expo-gl/android/src/main/java/expo/modules/gl/GLView.kt:18`), not a
+  `SurfaceView`. So the pill's `borderRadius` + `overflow: hidden` clips the GL output and
+  the card's translate gestures move it like a normal view — no z-order/rounding hacks.
+- Implementation: `PlayerBackground` gained `fps` (frame gate `1000/fps`), `paused`
+  (stops the rAF loop while the component stays mounted behind `display:none`) and
+  `noiseScale` (`u_scale` uniform; default 1 leaves the full-screen shader unchanged, the
+  short pill uses 1.6). `BoxPlayer` renders it behind a 0.18 theme scrim (dim 0.25) only
+  when `miniPlayerBackground` is on and Reduce transparency is off; `paused` = dismissed
+  or keyboard open. Theme screen: switch + FPS list; new defaults
+  `miniPlayerBackground:false`, `miniPlayerFps:15` (merged over defaults at load, no
+  settingsVersion bump needed).
+- Contrast: palette is already luminance-clamped for white text (feature 3); dim + theme
+  scrim on top. Verify ≥ 4.5:1 on bright covers during the device pass.
+- State: eslint + release build green. On-device verification pending — USB devices were
+  unplugged mid-session (both phone and tablet disappeared from `lsusb`).
+
+### 2026-10-18/19 — Idle CPU burn investigation (still open, see TODO #43)
+- Symptom: ~20-35% CPU at idle on Home; main thread ~19%, `mqt_js` ~10%;
+  `Choreographer#doFrame` ~120/s with ~0 HWUI `DrawFrame` → a per-vsync loop that paints
+  nothing. Same on Settings/Music tabs, online and offline, after dismissing the pill.
+- Ruled out by reading + measuring: Home-only cause, the mini player, `useKeyboardIsOpen`,
+  `updateApi` churn (plain state), UPnP polling (starts only on cast connect), `useProgress`
+  / Cast `useStreamPosition` (player screens are not mounted; `Player.js` swaps the pill for
+  the full-screen player), LegendList (its rAF paths are scroll/event-driven and no
+  LegendList is mounted on the tested screens), `Animated` loops (no `Animated.loop` in app
+  code; the 8 Animated users are event-driven/native-driver).
+- `simpleperf` is blocked (app not profileable, no root). Perfetto is available but needs a
+  different angle. Next step: instrumented build — patch saved at
+  `/tmp/opencode/temp-debug-raf-hunt.patch` (wraps global `requestAnimationFrame`,
+  `setTimeout`/`setInterval` and the `Animated` factories, logs counts + a stack every
+  3 s and needs `metro.config.js` `minifierConfig {mangle:false}` for readable names).
+  Diagnostic APK was built and ready when the devices were unplugged; rebuild from the
+  patch to resume.

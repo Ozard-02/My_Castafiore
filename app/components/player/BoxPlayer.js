@@ -6,9 +6,12 @@ import Icon from 'react-native-vector-icons/FontAwesome'
 import { useSong, useSongDispatch } from '~/contexts/song'
 import { useConfig } from '~/contexts/config'
 import { useTheme } from '~/contexts/theme'
+import { useSettings } from '~/contexts/settings'
 import { urlCover } from '~/utils/url'
+import { themedPalette, usePlayerPalette } from '~/utils/playerPalette'
 import PlayButton from '~/components/button/PlayButton'
 import Player from '~/utils/player'
+import PlayerBackground from '~/components/player/PlayerBackground'
 import ImageError from '~/components/ImageError'
 import PlaylistButton from '~/components/button/PlaylistButton'
 import size from '~/styles/size'
@@ -21,9 +24,15 @@ const BoxPlayer = ({ setFullScreen }) => {
 	const config = useConfig()
 	const insets = useSafeAreaInsets()
 	const theme = useTheme()
+	const settings = useSettings()
 	const starredIds = useStarredIds()
 	const isKeyboardOpen = useKeyboardIsOpen()
 	const { width } = useWindowDimensions()
+	// Mini player fBM (spec 2026-10-19): opt-in from Settings → Theme. Reduce transparency
+	// keeps the pill solid — same accessibility fallback as the full-screen player.
+	const pillBackground = settings.miniPlayerBackground === true && settings.reduceTransparency !== true
+	const palette = usePlayerPalette(config, song?.songInfo, pillBackground)
+	const paletteColors = React.useMemo(() => palette || themedPalette(theme), [palette, theme])
 	// keep in sync with BottomBar's compact threshold: shorter bar -> smaller offset
 	const compactBar = width < 380
 	const [isDismissed, setIsDismissed] = React.useState(false)
@@ -117,13 +126,26 @@ const BoxPlayer = ({ setFullScreen }) => {
 				style={{
 					flexDirection: 'row',
 					alignItems: 'center',
-					backgroundColor: theme.playerBackground,
+					backgroundColor: pillBackground ? 'transparent' : theme.playerBackground,
 					padding: 10,
 					margin: 10,
 					borderRadius: 10,
 					borderWidth: 0.5,
 					borderColor: 'rgba(255,255,255,0.10)',
+					overflow: 'hidden',
 				}}>
+				{pillBackground && (
+					<>
+						<PlayerBackground
+							palette={paletteColors}
+							dim={0.25}
+							fps={settings.miniPlayerFps || 15}
+							noiseScale={1.6}
+							paused={isDismissed || isKeyboardOpen}
+						/>
+						<View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: theme.playerBackground, opacity: 0.18 }]} />
+					</>
+				)}
 				<Animated.View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', overflow: 'hidden', transform: [{ translateX }] }}>
 					<ImageError
 						source={{ uri: urlCover(config, song?.songInfo, 100) }}

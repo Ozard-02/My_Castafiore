@@ -72,7 +72,11 @@
         "Reduce transparency": "Riduci trasparenza"
       },
       "theme": {
-        "Player Theme": "Tema del lettore"
+        "Player Theme": "Tema del lettore",
+        "Mini player": "Mini player",
+        "Animated background": "Sfondo animato",
+        "Animated background Description": "Mostra lo stesso campo di colore animato lento dietro al mini player, ricavato dalla copertina dell'album. Resta visibile su ogni schermata: un frame rate più basso risparmia batteria. Con 'Riduci trasparenza' resta pieno.",
+        "Frames per second": "Fotogrammi al secondo"
       },
       "cache": {
         "Song caching": "Caching brani",

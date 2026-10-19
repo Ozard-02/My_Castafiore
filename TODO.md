@@ -774,6 +774,34 @@
       don't match; logs `context WxH (view VxV)` + remount lines. Same mechanism suspected
       behind "background stops working" reports (context created mid-layout → partial draw).
 
+42. **Mini player: animated fBM background ("pill"), configurable** 🚧 implemented 2026-10-19 (on-device verify pending)
+    - User request: same fBM behind the mini player; setting in the Theme screen.
+      Decisions: off by default, user-chosen FPS (10/15/20/30, default 15), keeps animating
+      while paused, follows the Reduce transparency fallback.
+    - Implementation: `PlayerBackground` gained `fps`/`paused`/`noiseScale`; `BoxPlayer`
+      renders it behind a theme scrim when `settings.miniPlayerBackground`; Theme screen has
+      the switch + FPS list; defaults `miniPlayerBackground:false`, `miniPlayerFps:15`.
+    - Note: expo-gl's GLView is a `TextureView` (not a SurfaceView), so the pill's radius and
+      translate animations clip/follow correctly.
+    - Plan: `plans/mini-player-fbm.md`.
+    - Pending: on-device visual check (rounded clipping, gestures, contrast, crossfade) and
+      idle CPU delta pill-on vs pill-off.
+
+43. **Idle CPU burn (~20–35% foreground, main + JS) — investigation** 🚧 open
+    - Observed 2026-10-18 with a loaded (paused) session on Home: main thread ~19%, `mqt_js`
+      ~10%, `Choreographer#doFrame` at ~120/s with ~0 HWUI draws → a per-vsync loop that
+      renders nothing. Persists across tabs (Settings/Music), online and offline, and after
+      dismissing the mini player. No `Animated.loop`/rAF loop in app code (only
+      `PlayerBackground`, unmounted there); legend-list rAF paths are scroll/event-driven.
+    - Ruled out: Home-only, mini player, `useKeyboardIsOpen`, `updateApi` churn, UPnP polling
+      (starts only when casting), `useProgress` / Cast `useStreamPosition` (player screens not
+      mounted), LegendList (not mounted on the tested screens).
+    - Next: install the instrumented build — the probe patch is saved outside the repo at
+      `/tmp/opencode/temp-debug-raf-hunt.patch` (counts rAF/timers/Animated starts + stacks;
+      the bundle needs `minifierConfig {mangle:false}` to keep names readable) and read the
+      `[HUNT]` logs.
+    - Blocked: USB devices were unplugged mid-investigation.
+
 ## Build & Release (local APK)
 
 Release APK output:

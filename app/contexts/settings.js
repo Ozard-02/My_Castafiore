@@ -123,6 +123,11 @@ export const defaultSettings = {
 	// for opaque surfaces (accessibility fallback).
 	playerBackground: true,
 	reduceTransparency: false,
+	// Mini player ("pill") animated background (spec 2026-10-19): same fBM field as the
+	// full-screen player, opt-in — the pill is visible on every screen, so the cost is
+	// permanent. FPS is user-chosen (10 is the battery floor, 30 matches the player).
+	miniPlayerBackground: false,
+	miniPlayerFps: 15,
 	// Repeat the whole queue when it runs out. Off by default: a queue that silently
 	// wrapped forever was indistinguishable from "the playlist loops" (endless-radio
 	// sessions set song.radioMode and keep sampling instead).

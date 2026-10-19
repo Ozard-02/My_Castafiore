@@ -83,7 +83,11 @@
         "Reduce transparency": "Reduce transparency"
       },
       "theme": {
-        "Player Theme": "Player Theme"
+        "Player Theme": "Player Theme",
+        "Mini player": "Mini player",
+        "Animated background": "Animated background",
+        "Animated background Description": "Show the same slow animated colour field behind the mini player, taken from the album cover. It stays visible on every screen, so choose a lower frame rate to save battery. Reduce transparency keeps it solid.",
+        "Frames per second": "Frames per second"
       },
       "cache": {
         "Song caching": "Song caching",

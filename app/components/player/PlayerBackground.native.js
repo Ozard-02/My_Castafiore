@@ -11,8 +11,7 @@ import logger from '~/utils/logger'
 // interpolates and dims.
 //
 // Tuning lives here (spec "open parameters"):
-const TARGET_FPS = 30          // 30-60; slow noise doesn't read 60 and this is pure battery
-const FRAME_MS = 1000 / TARGET_FPS
+const TARGET_FPS = 30          // full-screen default; the mini player picks its own (10-30)
 const Z_SPEED = 0.05           // time-axis speed: full palette sweep takes ~20s
 const TRANSITION_MS = 450      // palette crossfade on track change
 const OCTAVES = 5
@@ -45,6 +44,7 @@ precision highp float;
 uniform vec2 u_resolution;
 uniform float u_time;
 uniform float u_dim;
+uniform float u_scale;
 uniform vec3 u_palette[6];
 
 vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
@@ -146,7 +146,7 @@ vec3 paletteColor(float n) {
 void main() {
 	vec2 uv = gl_FragCoord.xy / u_resolution;
 	uv.x *= u_resolution.x / u_resolution.y;
-	float n = fbm(vec3(uv * ${glslFloat(FREQUENCY)}, u_time));
+	float n = fbm(vec3(uv * ${glslFloat(FREQUENCY)} * u_scale, u_time));
 	vec3 color = paletteColor(n);
 	color = mix(color, vec3(0.0), u_dim);
 	gl_FragColor = vec4(color, 1.0);
@@ -175,11 +175,17 @@ const compile = (gl, type, source) => {
 	return shader
 }
 
-const PlayerBackground = ({ palette, dim = 0.15 }) => {
+const PlayerBackground = ({ palette, dim = 0.15, fps = TARGET_FPS, paused = false, noiseScale = 1 }) => {
 	const glRef = React.useRef(null)
 	const uniformsRef = React.useRef(null)
 	const dimRef = React.useRef(dim)
 	dimRef.current = dim
+	const fpsRef = React.useRef(fps)
+	fpsRef.current = fps
+	const pausedRef = React.useRef(paused)
+	pausedRef.current = paused
+	const noiseScaleRef = React.useRef(noiseScale)
+	noiseScaleRef.current = noiseScale
 	const paletteRef = React.useRef(palette)
 	paletteRef.current = palette
 	const reducedRef = React.useRef(false)
@@ -266,9 +272,10 @@ const PlayerBackground = ({ palette, dim = 0.15 }) => {
 			const gl = glRef.current
 			const u = uniformsRef.current
 			if (!gl || !u) return
+			const frameMs = 1000 / Math.max(1, fpsRef.current)
 			const now = Date.now()
-			if (a.last && now - a.last < FRAME_MS - 1) return
-			const dt = a.last ? Math.min(0.25, (now - a.last) / 1000) : FRAME_MS / 1000
+			if (a.last && now - a.last < frameMs - 1) return
+			const dt = a.last ? Math.min(0.25, (now - a.last) / 1000) : frameMs / 1000
 			a.last = now
 
 			let needs = a.dirty
@@ -313,6 +320,7 @@ const PlayerBackground = ({ palette, dim = 0.15 }) => {
 			if (!needs) return
 			gl.uniform1f(u.time, a.time)
 			gl.uniform1f(u.dim, dimRef.current)
+			gl.uniform1f(u.scale, noiseScaleRef.current)
 			gl.uniform3fv(u.palette, a.current)
 			gl.drawArrays(gl.TRIANGLES, 0, 3)
 			gl.endFrameEXP()
@@ -330,7 +338,7 @@ const PlayerBackground = ({ palette, dim = 0.15 }) => {
 	// Pause entirely when the app is backgrounded; resume on return.
 	React.useEffect(() => {
 		const sub = AppState.addEventListener('change', (state) => {
-			if (state === 'active') startLoop()
+			if (state === 'active' && !pausedRef.current) startLoop()
 			else stopLoop()
 		})
 		return () => {
@@ -340,6 +348,13 @@ const PlayerBackground = ({ palette, dim = 0.15 }) => {
 			uniformsRef.current = null
 		}
 	}, [startLoop, stopLoop])
+
+	// External pause (mini player behind display:none / keyboard open): keep the GL context
+	// alive and only stop scheduling frames.
+	React.useEffect(() => {
+		if (paused) stopLoop()
+		else if (AppState.currentState === 'active') startLoop()
+	}, [paused, startLoop, stopLoop])
 
 	const onContextCreate = (gl) => {
 		try {
@@ -363,6 +378,7 @@ const PlayerBackground = ({ palette, dim = 0.15 }) => {
 				resolution: gl.getUniformLocation(program, 'u_resolution'),
 				time: gl.getUniformLocation(program, 'u_time'),
 				dim: gl.getUniformLocation(program, 'u_dim'),
+				scale: gl.getUniformLocation(program, 'u_scale'),
 				palette: gl.getUniformLocation(program, 'u_palette'),
 			}
 			glRef.current = gl
@@ -377,7 +393,7 @@ const PlayerBackground = ({ palette, dim = 0.15 }) => {
 			a.dirty = true
 			const exp0 = layoutPxRef.current
 			logger.info('PlayerBackground', `context ${gl.drawingBufferWidth}x${gl.drawingBufferHeight} (view ${exp0?.w}x${exp0?.h})`)
-			startLoop()
+			if (!pausedRef.current) startLoop()
 		} catch (error) {
 			logger.error('PlayerBackground', `${error?.message || error}`)
 		}
