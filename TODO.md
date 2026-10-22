@@ -774,7 +774,7 @@
       don't match; logs `context WxH (view VxV)` + remount lines. Same mechanism suspected
       behind "background stops working" reports (context created mid-layout → partial draw).
 
-42. **Mini player: animated fBM background ("pill"), configurable** 🚧 implemented 2026-10-19 (on-device verify pending)
+42. **Mini player: animated fBM background ("pill"), configurable** ✅ done 2026-10-19 (user verified on device)
     - User request: same fBM behind the mini player; setting in the Theme screen.
       Decisions: off by default, user-chosen FPS (10/15/20/30, default 15), keeps animating
       while paused, follows the Reduce transparency fallback.
@@ -784,8 +784,8 @@
     - Note: expo-gl's GLView is a `TextureView` (not a SurfaceView), so the pill's radius and
       translate animations clip/follow correctly.
     - Plan: `plans/mini-player-fbm.md`.
-    - Pending: on-device visual check (rounded clipping, gestures, contrast, crossfade) and
-      idle CPU delta pill-on vs pill-off.
+    - On device: user tested it (pill animation, open/close player, track change) — OK.
+      Left to measure only if the idle-burn work (#43) resumes: CPU delta pill-on/off.
 
 43. **Idle CPU burn (~20–35% foreground, main + JS) — investigation** 🚧 open
     - Observed 2026-10-18 with a loaded (paused) session on Home: main thread ~19%, `mqt_js`
@@ -832,3 +832,13 @@ adb install -r android/app/build/outputs/apk/release/app-release.apk
 
 ### For real Play Store distribution (later)
 - Generate a real keystore and use a signed release config (current release uses `signingConfigs.debug`).
+
+---
+
+35. **Desktop full-screen player: fBM background parity** ✅ done (2026-10-22)
+    - Ported the mobile fBM animated background (`PlayerBackground` + cover-derived palette)
+      to `FullScreenHorizontalPlayer.js`: conditional render (on when `settings.playerBackground`,
+      off keeps the blurred cover + scrim fallback), translucent `panelFill` on the queue column.
+    - `PlaylistButton` circle already wired (size 26, opens `PlaylistSelectPopup`, long-press rating).
+    - Scope: fullscreen only; web keeps flat fallback; queue stays inline on the right.
+    - Plan: `plans/desktop-player-background.md`.

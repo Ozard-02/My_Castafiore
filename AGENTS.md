@@ -29,10 +29,16 @@
 - **JDK for Android builds**: the system Java (26.0.2) crashes Gradle 8.13's embedded Kotlin with
   `IllegalArgumentException: 26.0.2`. Always build with JDK 17:
   `JAVA_HOME=/usr/lib/jvm/java-17-openjdk ./android/gradlew -p android app:assembleRelease -x lint -x test`
+- **Parallelize builds**: add `--parallel` (and optionally `--max-workers=8`) to speed up; safe for this
+  project since modules are independent. Example:
+  `JAVA_HOME=/usr/lib/jvm/java-17-openjdk ./android/gradlew -p android app:assembleRelease -x lint -x test --parallel --max-workers=8`
+  Also enable in `android/gradle.properties` with `org.gradle.parallel=true` and
+  `org.gradle.configureondemand=true` for persistent speedup.
 
 # remember
 
 - Security is a priority — don't destroy it with shortcuts.
 - Use git for versioning, but don't fill history with tiny commits.
+- **Use git often**: check `git status`/`git log` before and after work, commit after each meaningful change (not tiny tweaks), and prefer meaningful commit messages. Never leave uncommitted work across sessions without noting it.
 - Follow best practices.
 - Instruct me about best practices when you see me slip.

@@ -7,7 +7,10 @@ import Icon from 'react-native-vector-icons/FontAwesome'
 import { useConfig } from '~/contexts/config'
 import { useSong, useSongDispatch } from '~/contexts/song'
 import { useTheme } from '~/contexts/theme'
+import { useSettings } from '~/contexts/settings'
 import { useCachedFirst } from '~/utils/api'
+import PlayerBackground from '~/components/player/PlayerBackground'
+import { themedPalette, usePlayerPalette } from '~/utils/playerPalette'
 import { urlCover } from '~/utils/url'
 import PlaylistButton from '~/components/button/PlaylistButton'
 import IconButton from '~/components/button/IconButton'
@@ -120,7 +123,13 @@ const FullScreenHorizontalPlayer = ({ setFullScreen }) => {
 	const song = useSong()
 	const songDispatch = useSongDispatch()
 	const theme = useTheme()
+	const settings = useSettings()
 	const volume = Player.updateVolume()
+
+	// animated fBM background (parity with mobile FullScreenPlayer)
+	const background = Platform.OS !== 'web' && settings.playerBackground !== false
+	const palette = usePlayerPalette(config, song?.songInfo, background)
+	const paletteColors = React.useMemo(() => palette || themedPalette(theme), [palette, theme])
 	const { height } = useWindowDimensions()
 	const { scroll, upNextScroll, queueOffset, queueViewport, upNextOffset, upNextViewport, queueBoxY, queueBoxH, upNextBoxY, upNextBoxH, rowHeight, isCurrentInQueue, queueItems, queueKeys, upNextKeys, queueRealIndex, lists, handleMove } = useQueueDnD(song, songDispatch, { bottomAligned: true })
 
@@ -134,16 +143,20 @@ const FullScreenHorizontalPlayer = ({ setFullScreen }) => {
 			navigationBarTranslucent={Platform.OS === 'android' && parseInt(Platform.Version, 10) > 34 ? false : true}
 			onRequestClose={() => setFullScreen(false)}
 		>
-			<Image
-				source={{ uri: urlCover(config, song?.songInfo) }}
-				style={styles.backgroundImage}
-				blurRadius={5}
-			/>
+			{background ? (
+				<PlayerBackground palette={paletteColors} dim={settings.reduceTransparency ? 0.3 : 0.15} />
+			) : (
+				<Image
+					source={{ uri: urlCover(config, song?.songInfo) }}
+					style={styles.backgroundImage}
+					blurRadius={5}
+				/>
+			)}
 			<View style={{
 				flex: 1,
 				width: '100%',
 				height: '100%',
-				backgroundColor: 'rgba(0, 0, 0, 0.6)',
+				backgroundColor: background ? 'transparent' : 'rgba(0, 0, 0, 0.6)',
 				paddingTop: insets.top + 10 < 50 ? 50 : insets.top + 10,
 				paddingBottom: insets.bottom + 10 < 50 ? 50 : insets.bottom + 10,
 				paddingStart: insets.left + 10 < 50 ? 50 : insets.left + 10,
@@ -174,27 +187,30 @@ const FullScreenHorizontalPlayer = ({ setFullScreen }) => {
 						flexDirection: 'row',
 					}}
 				>
-					<SlideControl
-						style={{
-							flex: 2,
-							justifyContent: 'flex-start',
-							alignItems: 'flex-end',
-							flexDirection: 'row',
-						}}
-					>
-						<ImageError style={styles.imageCover} source={{ uri: urlCover(config, song?.songInfo) }} />
+					<View style={{ flex: 2, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+						<SlideControl
+							style={{
+								justifyContent: 'flex-start',
+								alignItems: 'flex-end',
+							}}
+						>
+							<ImageError style={styles.imageCover} source={{ uri: urlCover(config, song?.songInfo) }} />
+						</SlideControl>
 						<View style={{ flex: 1, flexDirection: 'column', justifyContent: 'center' }}>
-							<PlaylistButton
-								id={song?.songInfo?.id}
-								isFavorited={stars.some(s => s.id === song.songInfo.id)}
-								rating={song.songInfo?.userRating ?? song.songInfo?.rating ?? 0}
-								size={26}
-								style={{ padding: 0, paddingBottom: 10, marginStart: 20, width: 'min-content' }}
-							/>
-							<Text numberOfLines={1} style={styles.title}>{song?.songInfo?.title}</Text>
-							<Text numberOfLines={1} style={styles.artist}>{song?.songInfo?.artist}</Text>
+							<View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+								<View style={{ flex: 1 }}>
+									<Text numberOfLines={1} style={styles.title}>{song?.songInfo?.title}</Text>
+									<Text numberOfLines={1} style={styles.artist}>{song?.songInfo?.artist}</Text>
+								</View>
+								<PlaylistButton
+									id={song?.songInfo?.id}
+									isFavorited={stars.some(s => s.id === song.songInfo.id)}
+									rating={song.songInfo?.userRating ?? song.songInfo?.rating ?? 0}
+									size={26}
+								/>
+							</View>
 						</View>
-					</SlideControl>
+					</View>
 					{
 						isPreview == preview.QUEUE &&
 						<View style={{ flex: 1, maxWidth: '50%', justifyContent: 'flex-end' }}>
@@ -423,7 +439,7 @@ const styles = StyleSheet.create({
 		maxHeight: '100%',
 		width: 'auto',
 		aspectRatio: 1,
-		borderRadius: 5,
+		borderRadius: 8,
 		backgroundColor: 'rgba(0, 0, 0, 0.5)',
 	},
 })
