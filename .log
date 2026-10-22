@@ -1111,3 +1111,7 @@ flips between them automatically. Found three distinct mechanisms:
   3 s and needs `metro.config.js` `minifierConfig {mangle:false}` for readable names).
   Diagnostic APK was built and ready when the devices were unplugged; rebuild from the
   patch to resume.
+- On-device result: user ran the feature themselves (install `bb9fc10` via USB, then the cable
+  dropped again). Pill animation, open/close player, track change: all OK. Logs had already
+  confirmed the pill GL surface (`context 1024x158`) and palette re-extraction per player mount.
+  Status: verified.

@@ -1,7 +1,9 @@
 # Feature — Animated fBM background on the mini player ("pill")
 
-Status: implemented 2026-10-19; release build green; on-device verification pending (USB
-devices were disconnected).
+Status: implemented 2026-10-19; release build green; user verified it on the phone during
+their own session (pill animation, player open/close, track change). The GL context logs
+confirmed the pill surface (1024x158). Remaining, only if #43 resumes: measure the idle CPU
+delta with the pill on vs off.
 
 ## Goal (user request, 2026-10-19)
 
@@ -61,6 +63,6 @@ Configurable. User decisions:
 
 ## Pending
 
-- On-device visual check (rounded clipping, gestures, contrast, palette crossfade) and CPU
-  delta — blocked on USB reconnect.
-- Interaction with TODO #43 (unexplained idle burn): measure with the pill off/on.
+- On-device visual check: user tested it directly on the phone — OK (no USB needed: the
+  install had already happened before the cable dropped again).
+- CPU delta pill on/off: only worth it if the idle-burn work (#43) resumes.
