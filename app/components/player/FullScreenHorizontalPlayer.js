@@ -187,7 +187,7 @@ const FullScreenHorizontalPlayer = ({ setFullScreen }) => {
 						flexDirection: 'row',
 					}}
 				>
-					<View style={{ flex: 2, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+					<View style={{ flex: 2, flexDirection: 'row', alignItems: 'center', gap: 0 }}>
 						<SlideControl
 							style={{
 								justifyContent: 'flex-start',
@@ -197,18 +197,15 @@ const FullScreenHorizontalPlayer = ({ setFullScreen }) => {
 							<ImageError style={styles.imageCover} source={{ uri: urlCover(config, song?.songInfo) }} />
 						</SlideControl>
 						<View style={{ flex: 1, flexDirection: 'column', justifyContent: 'center' }}>
-							<View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-								<View style={{ flex: 1 }}>
-									<Text numberOfLines={1} style={styles.title}>{song?.songInfo?.title}</Text>
-									<Text numberOfLines={1} style={styles.artist}>{song?.songInfo?.artist}</Text>
-								</View>
-								<PlaylistButton
-									id={song?.songInfo?.id}
-									isFavorited={stars.some(s => s.id === song.songInfo.id)}
-									rating={song.songInfo?.userRating ?? song.songInfo?.rating ?? 0}
-									size={26}
-								/>
-							</View>
+							<PlaylistButton
+								id={song?.songInfo?.id}
+								isFavorited={stars.some(s => s.id === song.songInfo.id)}
+								rating={song.songInfo?.userRating ?? song.songInfo?.rating ?? 0}
+								size={26}
+								style={{ padding: 0, paddingBottom: 10, marginStart: 20, width: 'min-content' }}
+							/>
+							<Text numberOfLines={1} style={styles.title}>{song?.songInfo?.title}</Text>
+							<Text numberOfLines={1} style={styles.artist}>{song?.songInfo?.artist}</Text>
 						</View>
 					</View>
 					{
