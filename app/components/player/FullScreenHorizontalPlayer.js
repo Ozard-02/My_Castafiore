@@ -180,9 +180,10 @@ const FullScreenHorizontalPlayer = ({ setFullScreen }) => {
 						/>
 					</View>
 				}
+				{isPreview !== preview.LYRICS && <View style={{ flex: 1 }} />}
 				<View
 					style={{
-						flex: isPreview === preview.LYRICS ? undefined : 1,
+						flex: isPreview === preview.LYRICS ? undefined : undefined,
 						display: isPreview === preview.LYRICS && height < 800 ? 'none' : 'flex',
 						flexDirection: 'row',
 					}}
