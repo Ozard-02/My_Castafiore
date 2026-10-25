@@ -106,8 +106,9 @@ const BottomBar = ({ state, descriptors, navigation }) => {
             bottom: 6,
             width: tabW - 8,
             borderRadius: glassTokens.radius.pill,
+            left: 4,
             backgroundColor: isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.08)',
-            transform: [{ translateX: Animated.add(indicatorX, new Animated.Value(4)) }],
+            transform: [{ translateX: indicatorX }],
           }}
         />
         <View style={{ flexDirection: 'row', alignItems: 'stretch' }}>

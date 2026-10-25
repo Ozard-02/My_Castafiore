@@ -1,30 +1,46 @@
 import React from 'react'
 import { Text, View, StyleSheet } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Icon from 'react-native-vector-icons/FontAwesome'
 import { useTranslation } from 'react-i18next'
 
 import { useTheme } from '~/contexts/theme'
+import { useSong } from '~/contexts/song'
 import { hairlineColorFor } from '~/styles/glass'
 import { useOffline } from '~/utils/offline'
+import { INSET } from '~/utils/useBottomInset'
+import { useDownloads } from '~/utils/downloadManager'
 
 // Thin strip above the bottom bar: the app silently swaps to downloaded content when the
 // connection drops, and this is the only signal that the smaller catalog is not a bug.
 const OfflineBanner = () => {
 	const { t } = useTranslation()
 	const theme = useTheme()
+	const insets = useSafeAreaInsets()
+	const song = useSong()
 	const offline = useOffline()
+	const { queue } = useDownloads()
+
+	const downloadVisible = queue.some((q) => !q.silent && ['downloading', 'queued', 'paused', 'error'].includes(q.status))
+	const safeBottom = insets.bottom > 0 ? insets.bottom : 10
+	const miniVisible = !!song?.songInfo?.id
+	const bottom = safeBottom + INSET.tabBar + INSET.gap
+		+ (miniVisible ? INSET.miniPlayer + INSET.gap : 0)
+		+ (downloadVisible ? INSET.banner + INSET.gap : 0)
 
 	if (!offline) return null
 
 	return (
 		<View style={{
+			position: 'absolute',
+			left: 12,
+			right: 12,
+			bottom,
 			flexDirection: 'row',
 			alignItems: 'center',
 			backgroundColor: theme.secondaryBack,
 			paddingHorizontal: 12,
 			height: 36,
-			marginHorizontal: 12,
-			marginBottom: 4,
 			borderRadius: 16,
 			borderWidth: StyleSheet.hairlineWidth,
 			borderColor: hairlineColorFor(theme.primaryBack),

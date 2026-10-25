@@ -5,6 +5,10 @@
 Play/pause crossfade, enter/exit banner animation (LayoutAnimation only), scrim gradient
 (expo-linear-gradient not installed — Scrim uses View fallback), parallax on PresHeader.
 
+Font: Roboto Mono installed (`expo-font` + `@expo-google-fonts/roboto-mono`), loaded in
+`App.js` with `useFonts`, wired through `FONT` tokens in `tokens.js` and applied in
+`mainStyles`/`presStyles`. Plugin `expo-font` in `app.config.js`.
+
 ## Context
 Castafiore UI is flat, monochrome dark, system font bold everywhere, inconsistent radii,
 no depth (zero shadows/blur/gradients), pinned solid bars. Goal: "Soft Glass" — glass only

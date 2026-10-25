@@ -939,5 +939,11 @@ adb install -r android/app/build/outputs/apk/release/app-release.apk
     - Fase 5 — Player motion ✅ fatto: Modal animationType fade, cover fade-in 300ms su cambio
       traccia, drag-to-dismiss gia' presente (misurare jank su build release). newUI flag
       rimosso: useTokens restituisce sempre newTokens. Play/pause crossfade rimandato.
+    - Font: Roboto Mono installato (`expo-font` + `@expo-google-fonts/roboto-mono`), caricato in
+      `App.js` via `useFonts`, applicato a `mainStyles`/`presStyles` tramite i token `FONT`
+      (`tokens.js`). Plugin `expo-font` aggiunto a `app.config.js`.
+    - Chrome fix: banner Download/Offline resi `position: absolute` con bottom calcolato
+      (safe area + tab bar + mini player + eventuale altro banner); `BoxPlayer` bottom +70
+      per allinearsi alla pill della tab bar. Build release verificata (BUILD SUCCESSFUL, 2m33s).
 
     Plan file: `plans/ui-soft-glass.md`.

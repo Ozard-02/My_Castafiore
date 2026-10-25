@@ -1,5 +1,6 @@
 import { StyleSheet } from "react-native"
 import size from "~/styles/size"
+import { FONT } from "~/styles/tokens"
 
 export default StyleSheet.create({
 	mainContainer: (theme) => ({
@@ -16,6 +17,7 @@ export default StyleSheet.create({
 		color: theme.primaryText,
 		fontSize: size.title.medium,
 		fontWeight: 'bold',
+		fontFamily: FONT.bold,
 		margin: 20,
 		marginTop: 30
 	}),
@@ -23,11 +25,13 @@ export default StyleSheet.create({
 		color: theme.primaryText,
 		fontSize: size.title.small,
 		fontWeight: 'bold',
+		fontFamily: FONT.bold,
 	}),
 	titleSection: theme => ({
 		color: theme.primaryText,
 		fontSize: size.title.small,
 		fontWeight: 'bold',
+		fontFamily: FONT.bold,
 		marginHorizontal: 20,
 		marginTop: 25,
 		marginBottom: 12
@@ -59,16 +63,19 @@ export default StyleSheet.create({
 	smallText: color => ({
 		color: color,
 		fontSize: size.text.small,
+		fontFamily: FONT.regular,
 		textAlign: 'left',
 	}),
 	mediumText: color => ({
 		color: color,
 		fontSize: size.text.medium,
+		fontFamily: FONT.regular,
 		textAlign: 'left',
 	}),
 	largeText: color => ({
 		color: color,
 		fontSize: size.text.large,
+		fontFamily: FONT.regular,
 		textAlign: 'left',
 	}),
 	hairline: {

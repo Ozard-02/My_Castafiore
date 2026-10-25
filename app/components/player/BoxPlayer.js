@@ -1,5 +1,5 @@
 import React from 'react'
-import { Text, View, Pressable, StyleSheet, Animated, PanResponder, Platform, useWindowDimensions } from 'react-native'
+import { Text, View, Pressable, StyleSheet, Animated, PanResponder, Platform } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Icon from 'react-native-vector-icons/FontAwesome'
 
@@ -28,14 +28,11 @@ const BoxPlayer = ({ setFullScreen }) => {
 	const settings = useSettings()
 	const starredIds = useStarredIds()
 	const isKeyboardOpen = useKeyboardIsOpen()
-	const { width } = useWindowDimensions()
 	// Mini player fBM (spec 2026-10-19): opt-in from Settings → Theme. Reduce transparency
 	// keeps the pill solid — same accessibility fallback as the full-screen player.
 	const pillBackground = settings.miniPlayerBackground === true && settings.reduceTransparency !== true
 	const palette = usePlayerPalette(config, song?.songInfo, pillBackground)
 	const paletteColors = React.useMemo(() => palette || themedPalette(theme), [palette, theme])
-	// keep in sync with BottomBar's compact threshold: shorter bar -> smaller offset
-	const compactBar = width < 380
 	const [isDismissed, setIsDismissed] = React.useState(false)
 	const translateY = React.useRef(new Animated.Value(0)).current
 	const translateX = React.useRef(new Animated.Value(0)).current
@@ -112,7 +109,7 @@ const BoxPlayer = ({ setFullScreen }) => {
 			<Animated.View
 			style={{
 				position: 'absolute',
-				bottom: (insets.bottom ? insets.bottom : 10) + (compactBar ? 45 : 59),
+				bottom: (insets.bottom ? insets.bottom : 10) + 70,
 				left: insets.left,
 				right: insets.right,
 

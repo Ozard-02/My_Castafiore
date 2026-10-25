@@ -1,20 +1,28 @@
 import React from 'react'
 import { Pressable, Text, View, StyleSheet, LayoutAnimation } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Icon from 'react-native-vector-icons/FontAwesome'
 import { useTranslation } from 'react-i18next'
 
 import { useTheme } from '~/contexts/theme'
+import { useSong } from '~/contexts/song'
 import { hairlineColorFor } from '~/styles/glass'
+import { INSET } from '~/utils/useBottomInset'
 import { useDownloads, formatBytes } from '~/utils/downloadManager'
 
 const DownloadBanner = ({ navigation }) => {
 	const { t } = useTranslation()
 	const theme = useTheme()
+	const insets = useSafeAreaInsets()
+	const song = useSong()
 	const { queue } = useDownloads()
 
 	const activeItems = queue.filter((q) => !q.silent && ['downloading', 'queued', 'paused', 'error'].includes(q.status))
 	const visible = activeItems.length > 0
 	const active = activeItems.find((q) => q.status === 'downloading')
+	const safeBottom = insets.bottom > 0 ? insets.bottom : 10
+	const miniVisible = !!song?.songInfo?.id
+	const bottom = safeBottom + INSET.tabBar + INSET.gap + (miniVisible ? INSET.miniPlayer + INSET.gap : 0)
 
 	React.useEffect(() => {
 		if (visible) LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut)
@@ -29,7 +37,7 @@ const DownloadBanner = ({ navigation }) => {
 	return (
 		<Pressable
 			onPress={() => navigation.navigate('SettingsStack', { screen: 'Settings/Downloads' })}
-			style={({ pressed }) => [styles.container, { backgroundColor: theme.secondaryBack, borderColor: hairlineColorFor(theme.primaryBack) }, pressed && styles.pressed]}
+			style={({ pressed }) => [styles.container, { bottom, backgroundColor: theme.secondaryBack, borderColor: hairlineColorFor(theme.primaryBack) }, pressed && styles.pressed]}
 		>
 			<View style={[styles.progressTrack, { backgroundColor: theme.primaryBack }]}>
 				<View style={[styles.progressFill, { backgroundColor: theme.primaryTouch, width: `${Math.round(progress * 100)}%` }]} />
@@ -46,9 +54,10 @@ const DownloadBanner = ({ navigation }) => {
 
 const styles = StyleSheet.create({
 	container: {
+		position: 'absolute',
+		left: 12,
+		right: 12,
 		overflow: 'hidden',
-		marginHorizontal: 12,
-		marginBottom: 4,
 		borderRadius: 16,
 		borderWidth: StyleSheet.hairlineWidth,
 		elevation: 4,

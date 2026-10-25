@@ -50,6 +50,7 @@ module.exports = ({ config }) => {
 				baseUrl: process.env.PLATFORM === "web" ? "./" : undefined
 			},
 			plugins: [
+				"expo-font",
 				[
 					"expo-build-properties",
 					{
