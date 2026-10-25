@@ -842,3 +842,20 @@ adb install -r android/app/build/outputs/apk/release/app-release.apk
     - `PlaylistButton` circle already wired (size 26, opens `PlaylistSelectPopup`, long-press rating).
     - Scope: fullscreen only; web keeps flat fallback; queue stays inline on the right.
     - Plan: `plans/desktop-player-background.md`.
+
+---
+
+36. **Offline library: one index, collection sync, favourites** ✅ done (2026-10-25)
+    - Auto-cache removed: a song is on disk only if explicitly downloaded. One-time
+      purge deletes legacy auto-cached files (keeps downloads + paused `.part`).
+    - `downloadManager` is the single source of truth (`isSongLocal`, local-library
+      selectors, `file` on index entries). `cache.js` is API-cache only.
+    - Downloaded albums/playlists can be **synced**: `DownloadButton` shows an update
+      state when the server list changed; `syncCollection` adds/removes only the delta
+      and keeps files shared by another downloaded collection.
+    - Favourite state is stored in download metadata and refreshed from `getStarred2`;
+      `PlaylistButton` is read-only offline. Favorited collection has "Sync download".
+    - Offline playlist order follows the stored `songIds`.
+    - Plan: `plans/offline-unification.md`, `plans/downloaded-collection-sync.md`.
+    - Manual verification owed: edit a downloaded playlist online → sync icon → delta
+      downloads; star a downloaded song → offline circle updates.

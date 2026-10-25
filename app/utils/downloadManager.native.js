@@ -6,6 +6,7 @@ import { urlStream, urlCover } from '~/utils/url'
 import { coverIdFromUrl } from '~/utils/coverId'
 import { getPathSong, getSongsDir, parseSongFileName, songCacheKey } from '~/utils/songFiles'
 import { offlineCollections, offlineCollectionSongs, offlineSongs } from '~/utils/offlineContent'
+import { collectionDiff } from '~/utils/collectionDiff'
 import { getIsOffline } from '~/utils/offline'
 import logger from '~/utils/logger'
 
@@ -309,6 +310,9 @@ const buildMeta = (song) => ({
 	artistId: song.artistId,
 	coverArt: song.coverArt,
 	track: song.track,
+	// favourite state is local metadata too, so offline rows/players can render the circle
+	starred: !!song.starred,
+	userRating: song.userRating ?? song.rating ?? 0,
 	// provenance: which address the bytes came from. Both addresses are the same library, so
 	// this never invalidates the cache — it exists so a mismatch is visible instead of silent,
 	// and so meta.cover can be re-pointed at the active server (see coverForCurrentServer).
@@ -675,20 +679,79 @@ export const removeSong = async (songId) => {
 	await saveDownloads()
 }
 
-export const removeSource = async (source) => {
-	await cancelCollection(source)
-	const index = {}
-	for (const [songId, entry] of Object.entries(state.index)) {
-		const sources = entry.sources.filter((s) => !(s.type === source.type && s.id === source.id))
-		if (sources.length > 0) {
-			index[songId] = { ...entry, sources }
-		} else {
+// Detach one source from a set of songs. The file is deleted only when no source is left,
+// so a song shared by two downloaded collections survives the removal of one of them.
+const buildDetachedIndex = async (source, songIds) => {
+	const ids = songIds instanceof Set ? songIds : new Set(songIds)
+	const nextIndex = { ...state.index }
+	let changed = false
+	for (const songId of ids) {
+		const entry = nextIndex[songId]
+		if (!entry) continue
+		const sources = (entry.sources || []).filter((s) => !(s.type === source.type && s.id === source.id))
+		if (sources.length === (entry.sources || []).length) continue
+		changed = true
+		if (sources.length === 0) {
 			await FileSystem.deleteAsync(entryFileUri(songId, entry), { idempotent: true }).catch(() => { })
+			delete nextIndex[songId]
+		} else {
+			nextIndex[songId] = { ...entry, sources }
 		}
 	}
+	return { index: nextIndex, changed }
+}
+
+export const removeSource = async (source) => {
+	await cancelCollection(source)
+	const ids = Object.entries(state.index)
+		.filter(([, entry]) => (entry.sources || []).some((s) => s.type === source.type && s.id === source.id))
+		.map(([songId]) => songId)
+	const { index } = await buildDetachedIndex(source, ids)
 	const restCollections = { ...state.collections }
 	delete restCollections[sourceKey(source)]
 	setState({ ...state, index, collections: restCollections })
+	await saveDownloads()
+}
+
+// Bring a downloaded collection in line with its current server list: add missing songs,
+// detach removed ones (files survive while another source references them), and rewrite
+// the stored order/metadata. Manual only; never called from a background loop.
+export const syncCollection = async ({ type, id, name, artist = '', cover = null, songs = [] }) => {
+	const key = `${type}:${id}`
+	const existing = state.collections[key]
+	if (!existing) {
+		await enqueueCollection({ type, id, name, artist, cover, songs })
+		return
+	}
+
+	const { toAdd, toRemove, ids } = collectionDiff(songs, existing)
+	if (toAdd.length > 0) await enqueueCollection({ type, id, name, artist, cover, songs: toAdd })
+
+	// A removed song may still be waiting in the download queue; cancel it only when this
+	// collection owns the queue item (a shared queue item belongs to another source).
+	for (const songId of toRemove) {
+		const item = queueById.get(songId)
+		if (item?.source?.type === type && item.source.id === id) await cancelDownload(songId)
+	}
+
+	const index = toRemove.length > 0
+		? (await buildDetachedIndex({ type, id, name }, toRemove)).index
+		: state.index
+
+	const collections = { ...state.collections }
+	const current = collections[key] || existing
+	if (ids.length === 0) {
+		delete collections[key]
+	} else {
+		collections[key] = {
+			...current,
+			songIds: ids,
+			name: name || current.name,
+			artist: artist || current.artist,
+			cover: cover || current.cover,
+		}
+	}
+	setState({ ...state, index, collections })
 	await saveDownloads()
 }
 
@@ -713,21 +776,33 @@ export const clearAllDownloads = async () => {
 // ---------------------------------------------------------------------------
 // Derived state
 // ---------------------------------------------------------------------------
-export const getCollectionState = (source) => {
-	if (!source) return { status: 'none', progress: 0, completedSongs: 0, totalSongs: 0 }
+// expectedIds (optional) is the fresh server list: when it differs from the stored
+// snapshot the caller can offer a sync. `changed` is false without it (offline fallback).
+export const getCollectionState = (source, expectedIds = null) => {
+	if (!source) return { status: 'none', progress: 0, completedSongs: 0, totalSongs: 0, changed: false }
+	const key = `${source.type}:${source.id}`
 	const queueItems = state.queue.filter((q) => q.source && q.source.type === source.type && q.source.id === source.id)
-	const totalSongs = state.collections[`${source.type}:${source.id}`]?.songIds?.length || queueItems.length
-	let completedSongs = 0
-	for (const entry of Object.values(state.index)) {
-		if (entry.sources.some((s) => s.type === source.type && s.id === source.id)) completedSongs++
+	const collection = state.collections[key]
+	const totalSongs = collection?.songIds?.length || queueItems.length
+	const completedSongs = songIdsBySource.get(key)?.size || 0
+
+	// An empty expected list is indistinguishable from "still loading" (screens start with
+	// []), so it never triggers a sync — syncing on it would detach every song.
+	let changed = false
+	if (expectedIds?.length && collection) {
+		const expected = new Set(expectedIds)
+		const stored = new Set(collection.songIds || [])
+		changed = expected.size !== stored.size || [...expected].some((id) => !stored.has(id))
 	}
-	if (queueItems.some((q) => q.status === 'downloading')) return { status: 'downloading', progress: queueItems.reduce((a, q) => a + q.progress, 0) / (queueItems.length || 1), completedSongs, totalSongs }
-	if (queueItems.some((q) => q.status === 'paused')) return { status: 'paused', progress: 0, completedSongs, totalSongs }
-	if (queueItems.some((q) => q.status === 'queued')) return { status: 'queued', progress: 0, completedSongs, totalSongs }
-	if (queueItems.some((q) => q.status === 'error')) return { status: 'error', progress: 0, completedSongs, totalSongs }
-	if (completedSongs > 0 && totalSongs > 0 && completedSongs < totalSongs) return { status: 'partial', progress: completedSongs / totalSongs, completedSongs, totalSongs }
-	if (completedSongs > 0) return { status: 'done', progress: 1, completedSongs, totalSongs }
-	return { status: 'none', progress: 0, completedSongs: 0, totalSongs }
+
+	const base = { progress: 0, completedSongs, totalSongs, changed }
+	if (queueItems.some((q) => q.status === 'downloading')) return { ...base, status: 'downloading', progress: queueItems.reduce((a, q) => a + q.progress, 0) / (queueItems.length || 1) }
+	if (queueItems.some((q) => q.status === 'paused')) return { ...base, status: 'paused' }
+	if (queueItems.some((q) => q.status === 'queued')) return { ...base, status: 'queued' }
+	if (queueItems.some((q) => q.status === 'error')) return { ...base, status: 'error' }
+	if (completedSongs > 0 && totalSongs > 0 && completedSongs < totalSongs) return { ...base, status: 'partial', progress: completedSongs / totalSongs }
+	if (completedSongs > 0) return { ...base, status: 'done', progress: 1 }
+	return { ...base, status: 'none', progress: 0, completedSongs: 0, totalSongs }
 }
 
 export const getDownloadedSongs = () => {
@@ -755,6 +830,24 @@ export const getSongState = (songId) => {
 // ---------------------------------------------------------------------------
 // Offline library selectors (single source of truth for "on this device")
 // ---------------------------------------------------------------------------
+// Keep downloaded songs' favourite flag in step with the getStarred2 cache. Only entries
+// whose value actually changed are rewritten.
+export const syncLocalStarred = (starredIds) => {
+	const starred = starredIds instanceof Set ? starredIds : new Set(starredIds || [])
+	const index = { ...state.index }
+	let changed = false
+	for (const [songId, entry] of Object.entries(index)) {
+		const next = starred.has(songId)
+		if (!!entry.meta?.starred !== next) {
+			index[songId] = { ...entry, meta: { ...entry.meta, starred: next } }
+			changed = true
+		}
+	}
+	if (!changed) return
+	setState({ ...state, index })
+	return saveDownloads()
+}
+
 export const isSongLocal = (songId) => !!(state.index[songId]?.size > 0)
 
 export const getLocalSongUri = (songId) => {

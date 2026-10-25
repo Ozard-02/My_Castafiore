@@ -30,6 +30,8 @@ export const initDownloads = async () => { }
 export const saveDownloads = async () => { }
 export const enqueueSong = async () => { }
 export const enqueueCollection = async () => { }
+export const syncCollection = async () => { }
+export const syncLocalStarred = () => { }
 export const pauseDownload = async () => { }
 export const resumeDownload = async () => { }
 export const retryDownload = async () => { }

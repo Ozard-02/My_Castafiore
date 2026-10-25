@@ -5,7 +5,8 @@ import Icon from 'react-native-vector-icons/FontAwesome'
 import { useTheme } from '~/contexts/theme'
 import { useTranslation } from 'react-i18next'
 import { confirmAlert } from '~/utils/alert'
-import { useDownloads, getCollectionState, enqueueCollection, cancelCollection, resumeCollection, removeSource } from '~/utils/downloadManager'
+import { useOffline } from '~/utils/offline'
+import { useDownloads, getCollectionState, enqueueCollection, syncCollection, cancelCollection, resumeCollection, removeSource } from '~/utils/downloadManager'
 
 const Ring = ({ size, strokeWidth, progress, color, trackColor, children }) => {
 	const deg = Math.max(0, Math.min(1, progress)) * 360
@@ -60,14 +61,21 @@ const DownloadedIcon = ({ size, circleColor, arrowColor }) => (
 const DownloadButton = ({ type, id, name, artist = '', cover = null, songs = [], size = 24, style = {} }) => {
 	const { t } = useTranslation()
 	const theme = useTheme()
+	const offline = useOffline()
 	useDownloads()
 	// Downloads are native-only; the web player has no download manager.
 	if (Platform.OS === 'web' || !id) return null
 	const source = { type, id, name }
-	const { status, progress } = getCollectionState(source)
+	const expectedIds = (songs || []).map((song) => song.id).filter(Boolean)
+	const { status, progress, changed } = getCollectionState(source, expectedIds)
+	// The stored snapshot differs from the fresh server list: offer a sync instead of the
+	// usual done/remove action. Offline the list is the local fallback, so `changed` is false.
+	const canSync = changed && !offline
 
 	const onPress = () => {
-		if (status === 'done') {
+		if (canSync) {
+			syncCollection({ type, id, name, artist, cover, songs })
+		} else if (status === 'done') {
 			confirmAlert(
 				t('settings.downloads.Remove download'),
 				t('settings.downloads.Remove download alert', { name }),
@@ -95,6 +103,7 @@ const DownloadButton = ({ type, id, name, artist = '', cover = null, songs = [],
 		if (status === 'queued') return <ActivityIndicator size={size} color={theme.primaryTouch} />
 		if (status === 'paused') return <Icon name="pause-circle" size={size} color={theme.primaryTouch} />
 		if (status === 'error') return <Icon name="exclamation-circle" size={size} color="#e33" />
+		if (canSync) return <Icon name="cloud-upload" size={size} color={theme.primaryTouch} />
 		if (status === 'done') return <DownloadedIcon size={size} circleColor={theme.primaryTouch} arrowColor="#fff" />
 		if (status === 'partial') return <DownloadedIcon size={size} circleColor={theme.secondaryText} arrowColor="#fff" />
 		return <Icon name="cloud-download" size={size} color={theme.primaryText} />

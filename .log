@@ -1,5 +1,58 @@
 # Castafiore - Session Log
 
+## 2026-10-25 — Offline unification (no auto-cache) + downloaded collection sync
+
+### One download index; auto-cache removed
+- Two stores wrote into `cache/songs/`: the stream cache (`global.listCacheSong`,
+  `isSongCached`, `initCacheSong`, `downloadNextSong`) and the download manager
+  (`state.index`). They disagreed on identity (the removal paths used
+  `${id}.${format}` while `songCacheKey` appends `-<bitrate>`), and every screen
+  re-implemented "offline" (Home/Tracks/Playlists/Album/Playlist/Favorited).
+- Downloads are now the only local songs. Deleted `isSongCaching`/`cacheNextSong`/
+  `showCache` (settings + globals), `downloadNextSong` from all four player backends
+  and `servicePlayback`, `isSongCached`/`getSongCachedInfo`/`deleteSongCache`/
+  `getListCacheSong`/`initCacheSong` from `cache.*` (API cache only now).
+- New `songFiles.js` (key/path/parse), `coverId.js`, `collectionDiff.js`,
+  `useLocalLibrary.js`. `downloadManager` gained `isSongLocal`, `getLocalSongUri`,
+  `getLocalSongs`, `getLocalCollections`, `getLocalCollectionSongs`, `getLocalStats`,
+  a derived `songIdsBySource` map, and `file` on index entries (a format change no
+  longer orphans a download).
+- One-time purge: consolidates old per-server folders, deletes files not referenced
+  by the index (keeps paused `.part`), guarded by a successful state load + the
+  `localFilesMigration` flag. **User decision: delete old auto-cached files**, not
+  adopt them.
+- Offline selectors are O(N+C) (was O(collections × index) per progress tick);
+  `useCachedAndApi`/`getApiCacheFirst`/`getApiNetworkFirst` read cache-only when
+  offline (no more timeout hangs on a dead LAN server).
+- Web now hides download/offline UI (DownloadButton, Downloads row, offline swap);
+  the no-op stub no longer lies. Dead `clearCache`/`clearAllCaches` removed from
+  `serviceWorkerRegistration.web.js`.
+- Trade-off: `playerLocal.switchServer` can only skip the reload for downloaded
+  tracks now (auto-cached streamed tracks are gone).
+- Commit `f1dbc8d`; eslint clean; release APK built + installed on R5CY71GYKWF,
+  launch verified (album screen, download icon, favourite circle).
+
+### Downloaded collections stay in sync + favourite metadata
+- `collectionDiff(expected, collection)` + `downloadManager.syncCollection`:
+  adds missing songs, cancels queued items owned by the collection, detaches removed
+  ones (file deleted only when no source remains), rewrites `songIds` order/metadata.
+- `getCollectionState(source, expectedIds)` exposes `changed` (never on an empty
+  expected list, which is indistinguishable from "still loading") and uses
+  `songIdsBySource` instead of an index scan.
+- `DownloadButton` shows `cloud-upload` when the fresh list differs; tapping syncs.
+- `buildMeta` stores `starred`/`userRating`; `entryToSong` projects them;
+  `syncLocalStarred` refreshes downloads from the `getStarred2` cache (wired in
+  `useStarredIds`). `PlaylistButton` is now read-only offline instead of hidden.
+- `OptionsFavorited` gained "Sync download" for the Favorited collection.
+- Offline playlist order follows `collection.songIds` (filtered by source), falling
+  back to index order for old records.
+- Node harness: diff (add/remove/unchanged/reorder/empty) + offline order/fallback;
+  eslint clean; release APK built + installed on R5CY71GYKWF, launch verified.
+- **Manual verification owed** (the phone is connected but the active server
+  `casa` was unreachable from its network): edit a downloaded playlist, reopen while
+  online -> sync icon -> only the delta downloads; star a downloaded song -> offline
+  circle updates; Favorited sync entry appears when the starred set changed.
+
 ## 2026-09-28 — Multi-select playlist sheet, read-only playlists, player layout
 Three user-reported items, plus one that turned out to be a server policy.
 

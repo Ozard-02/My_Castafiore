@@ -18,6 +18,8 @@ const entryToSong = (songId, entry) => ({
 	artistId: entry?.meta?.artistId,
 	coverArt: entry?.meta?.coverArt || coverIdFromUrl(entry?.meta?.cover) || undefined,
 	track: entry?.meta?.track,
+	starred: !!entry?.meta?.starred,
+	userRating: entry?.meta?.userRating ?? 0,
 	mediaType: 'song',
 })
 
@@ -61,9 +63,20 @@ export const offlineCollections = (downloads, type) => {
 }
 
 // Song list for one collection without any API/cache: used by the Album/Playlist screens
-// when offline and the fetched cache has nothing for them.
+// when offline and the fetched cache has nothing for them. The collection's stored
+// `songIds` preserve the server order at download/sync time; fall back to the index order
+// for old records that predate it.
 export const offlineCollectionSongs = (downloads, type, id) => {
 	const index = downloads?.index || {}
+	const collection = downloads?.collections?.[`${type}:${id}`]
+	if (collection?.songIds?.length) {
+		return collection.songIds
+			.filter((songId) => (
+				isDownloaded(index[songId]) &&
+				(index[songId].sources || []).some((source) => source.type === type && source.id === id)
+			))
+			.map((songId) => entryToSong(songId, index[songId]))
+	}
 	const ids = songsBySource(index).get(`${type}:${id}`) || []
 	return ids.map((songId) => entryToSong(songId, index[songId]))
 }

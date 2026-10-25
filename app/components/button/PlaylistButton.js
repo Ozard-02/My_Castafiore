@@ -45,21 +45,19 @@ const PlaylistButton = ({ id, isFavorited = false, rating: initialRating = undef
 			.catch((e) => logger.error('PlaylistButton', e.message))
 	}
 
-	// offline the sheet can't load membership and star/unstar writes would fail: the
-	// button would only be a dead end, so it disappears from rows and players
-	if (offline) return null
-
+	// offline, membership/star writes are impossible, so the button becomes read-only: it
+	// still shows the locally stored favourite state, but tapping does nothing.
 	return (
 		<>
 			<Pressable
 				style={({ pressed }) => ([mainStyles.opacity({ pressed }), styles.button, StyleSheet.flatten(style)])}
-				onPress={() => { if (id) setIsPlaylistOpen(true) }}
-				onLongPress={() => initialRating !== undefined ? setIsRatingOpen(true) : null}
+				onPress={() => { if (!offline && id) setIsPlaylistOpen(true) }}
+				onLongPress={() => { if (!offline && initialRating !== undefined) setIsRatingOpen(true) }}
 				delayLongPress={200}
 				onContextMenu={(ev) => {
 					ev.stopPropagation()
 					ev.preventDefault()
-					if (initialRating !== undefined) setIsRatingOpen(true)
+					if (!offline && initialRating !== undefined) setIsRatingOpen(true)
 				}}
 			>
 				<View style={{
