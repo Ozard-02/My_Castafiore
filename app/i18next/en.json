@@ -19,7 +19,27 @@
       "Most Played": "Most Played",
       "Recently Played": "Recently Played",
       "Random": "Random",
-      "Highest": "Highest"
+      "Highest": "Highest",
+      "Daily Mixes": "Daily Mixes",
+      "Weekly Mixes": "Weekly Mixes"
+    },
+    "moodTheme": {
+      "chill": "Chill",
+      "energy": "Energy",
+      "focus": "Focus",
+      "party": "Party",
+      "melancholy": "Melancholy",
+      "romantic": "Romantic",
+      "workout": "Workout",
+      "sleep": "Sleep",
+      "acoustic": "Acoustic",
+      "electronic": "Electronic",
+      "throwback": "Throwback",
+      "discovery": "Discovery",
+      "upbeat": "Upbeat",
+      "ambient": "Ambient",
+      "jazz": "Jazz",
+      "rock": "Rock"
     },
     "settings": {
       "connect": {

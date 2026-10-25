@@ -17,7 +17,27 @@
       "Most Played": "Più ascoltati",
       "Recently Played": "Ascoltati di recente",
       "Random": "Casuale",
-      "Highest": "Top brani"
+      "Highest": "Top brani",
+      "Daily Mixes": "Mix giornalieri",
+      "Weekly Mixes": "Mix settimanali"
+    },
+    "moodTheme": {
+      "chill": "Chill",
+      "energy": "Energia",
+      "focus": "Concentrazione",
+      "party": "Festa",
+      "melancholy": "Malinconia",
+      "romantic": "Romantico",
+      "workout": "Allenamento",
+      "sleep": "Sonno",
+      "acoustic": "Acustico",
+      "electronic": "Elettronica",
+      "throwback": "Revival",
+      "discovery": "Scoperte",
+      "upbeat": "Allegria",
+      "ambient": "Ambient",
+      "jazz": "Jazz",
+      "rock": "Rock"
     },
     "settings": {
       "connect": {

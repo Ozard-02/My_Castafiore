@@ -17,6 +17,8 @@ import HorizontalArtists from '~/components/lists/HorizontalArtists'
 import HorizontalGenres from '~/components/lists/HorizontalGenres'
 import HorizontalLBStat from '~/components/lists/HorizontalLBStat'
 import HorizontalPlaylists from '~/components/lists/HorizontalPlaylists'
+import HorizontalMoodMixes from '~/components/lists/HorizontalMoodMixes'
+import { getMoodMixes, msUntilNextPeriod } from '~/utils/moodPlaylists'
 import mainStyles from '~/styles/main'
 import RadioList from '~/components/lists/RadioList'
 import size from '~/styles/size'
@@ -60,6 +62,7 @@ const HorizontalList = ({ refresh, id, enable }) => {
 	React.useEffect(() => {
 		if (!enable) return
 		if (!section) return
+		if (section.type === 'mood') return
 		let nquery = section.query || ''
 
 		if (section.type == 'album') nquery += '&size=' + settings.sizeOfList
@@ -73,7 +76,34 @@ const HorizontalList = ({ refresh, id, enable }) => {
 		}
 	}, [updateApi])
 
+	// The daily/weekly key changes at midnight / Monday 00:00. Scheduling the next refresh
+	// here keeps a Home screen that stays mounted across the boundary from showing yesterday's
+	// mixes until the user happens to press refresh.
+	React.useEffect(() => {
+		if (!enable || section?.type !== 'mood') return
+		let timer
+		const schedule = () => {
+			timer = setTimeout(() => {
+				getMoodMixes(config, section.period)
+					.then(setList)
+					.catch(() => { })
+				schedule()
+			}, msUntilNextPeriod(section.period))
+		}
+		schedule()
+		return () => clearTimeout(timer)
+	}, [config, enable, section])
+
 	const getList = async () => {
+		if (!section) return
+
+		if (section.type === 'mood') {
+			getMoodMixes(config, section.period)
+				.then(setList)
+				.catch(() => setList([]))
+			return
+		}
+
 		let nquery = section.query ? section.query : ''
 
 		if (section.type == 'album') nquery += '&size=' + settings.sizeOfList
@@ -132,6 +162,7 @@ const HorizontalList = ({ refresh, id, enable }) => {
 			{section.type === 'radio' && <RadioList radios={list} />}
 			{section.type === 'listenbrainz' && <HorizontalLBStat stats={list} />}
 			{section.type === 'playlist' && <HorizontalPlaylists playlists={list} />}
+			{section.type === 'mood' && <HorizontalMoodMixes mixes={list} />}
 		</>
 	)
 }

@@ -2,6 +2,20 @@
 
 ## Planned Features
 
+### Mood mixes (daily / weekly) ✅ done
+- Two optional Home sections, `mood-daily` and `mood-weekly`; each renders five generated
+  mixes of 50 tracks.
+- Themes come from a 16-entry catalog (`chill`, `energy`, `focus`, `party`, `melancholy`,
+  `romantic`, `workout`, `sleep`, `acoustic`, `electronic`, `throwback`, `discovery`,
+  `upbeat`, `ambient`, `jazz`, `rock`) and are chosen randomly when the group expires
+  (local day for daily, ISO week for weekly).
+- One shared `getRandomSongs(size=500)` pool per server; seeded shuffle keeps a mix stable
+  inside its period. Cached in AsyncStorage per server + group.
+- Settings only exposes the two group toggles/order rows; no per-theme controls.
+- Offline: both sections are absent. Plan/details: `plans/mood-mixes.md`.
+- ✅ Implemented 2026-10-25. `npm run eslint` and `expo export -p web` pass; not yet
+  device-tested.
+
 1. **Different Queue Management** ✅ done
    - Add queue reordering via drag-and-drop
    - Show queue as a modal/list with move-to-top, move-to-bottom, remove options
