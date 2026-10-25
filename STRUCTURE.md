@@ -298,7 +298,7 @@ Playback state enum: `Playing`, `Paused`, `Stopped`, `Loading`, `Error`, `None`.
 | BackButton.js | Back navigation button (white chevron with dark text-shadow halo so it reads over any cover/theme). |
 | RotateIconButton.js | Icon button with optional rotation animation on press. |
 | RandomButton.js | Shuffle play button. |
-| DownloadButton.js | Spotify-style download toggle for an album/playlist/favorited: idle → enqueue, queued spinner, downloading ring with %, paused/error states, done/partial filled circle (tap removes with confirm), **`cloud-upload` when the fresh server list differs from the stored snapshot** (tap → `syncCollection`, online only). Uses `getCollectionState(source, expectedIds)`. Hidden on web. |
+| DownloadButton.js | Spotify-style download toggle for an album/playlist/favorited: idle → enqueue, queued spinner, downloading ring with %, paused/error states, done/partial filled circle (tap removes with confirm), **`cloud-upload` when the fresh server list differs from the stored snapshot** (tap → `syncCollection`, online only, and only when the list came from a successful API fetch — `fresh` prop, never from the API cache or offline fallback). Uses `getCollectionState(source, expectedIds)`. Hidden on web. |
 | SlideBar.js | Progress/slider bar component. |
 | SlideControl.js | Wrapper for controlled sliding interaction: horizontal drag = next/prev. Optional `onTap` — when supplied, a single tap calls it and double-tap play/pause is disabled (the portrait player uses it for lyrics; the landscape player omits it and keeps double-tap). Also forwards `onLayout`. |
 | SidebarLetter.js | Letter index sidebar for artist navigation. |

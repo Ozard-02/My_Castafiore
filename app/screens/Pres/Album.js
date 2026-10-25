@@ -25,11 +25,13 @@ const Album = ({ navigation, route: { params } }) => {
 	const theme = useTheme()
 	const [isStarred, setStarred] = React.useState(params.starred || false)
 	const [album, setAlbum] = React.useState(null)
+	const [fresh, setFresh] = React.useState(false)
 	const [isOptArtists, setIsOptArtists] = React.useState(false)
 	const [isOptAlbum, setIsOptAlbum] = React.useState(false)
 	const offline = useOffline() && Platform.OS !== 'web'
 
-	const [songs] = useCachedAndApi([], 'getAlbum', { id: params.id }, (json, setData) => {
+	const [songs] = useCachedAndApi([], 'getAlbum', { id: params.id }, (json, setData, mode) => {
+		setFresh(mode !== 'cache')
 		setStarred(json?.album?.starred)
 		setAlbum(json?.album)
 		setData(json?.album?.song.sort((a, b) => {
@@ -71,6 +73,7 @@ const Album = ({ navigation, route: { params } }) => {
 					artist={album?.artist || params.artist || '-'}
 					cover={urlCover(config, album || params)}
 					songs={list}
+					fresh={fresh}
 					size={size.icon.medium}
 					style={presStyles.button}
 				/>

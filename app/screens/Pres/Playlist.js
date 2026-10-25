@@ -45,6 +45,7 @@ const Playlist = ({ route: { params } }) => {
 	const settings = useSettings()
 	const setSettings = useSetSettings()
 	const [info, setInfo] = React.useState(null)
+	const [fresh, setFresh] = React.useState(false)
 	const [indexOptions, setIndexOptions] = React.useState(-1)
 	const [isOption, setIsOption] = React.useState(false)
 	const [searchQuery, setSearchQuery] = React.useState('')
@@ -54,7 +55,8 @@ const Playlist = ({ route: { params } }) => {
 	const songDispatch = useSongDispatch()
 	const offline = useOffline() && Platform.OS !== 'web'
 
-	const [songs, refresh] = useCachedAndApi([], 'getPlaylist', `id=${params.playlist.id}`, (json, setData) => {
+	const [songs, refresh] = useCachedAndApi([], 'getPlaylist', `id=${params.playlist.id}`, (json, setData, mode) => {
+		setFresh(mode !== 'cache')
 		setInfo(json?.playlist)
 		if (settings.reversePlaylist) setData(json?.playlist?.entry?.map((item, index) => ({ ...item, index })).reverse() || [])
 		else setData(json?.playlist?.entry?.map((item, index) => ({ ...item, index })) || [])
@@ -157,6 +159,7 @@ const Playlist = ({ route: { params } }) => {
 								name={info?.name || params.playlist.name}
 								cover={urlCover(config, params.playlist)}
 								songs={list}
+								fresh={fresh}
 								style={presStyles.button}
 							/>
 						</PresHeader>

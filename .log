@@ -40,6 +40,9 @@
   expected list, which is indistinguishable from "still loading") and uses
   `songIdsBySource` instead of an index scan.
 - `DownloadButton` shows `cloud-upload` when the fresh list differs; tapping syncs.
+  `fresh` (from `useCachedAndApi`'s new `mode` arg) must be true, so a cache-only or
+  offline list can never trigger a destructive sync. `OptionsFavorited` re-fetches
+  `getStarred2` before syncing for the same reason.
 - `buildMeta` stores `starred`/`userRating`; `entryToSong` projects them;
   `syncLocalStarred` refreshes downloads from the `getStarred2` cache (wired in
   `useStarredIds`). `PlaylistButton` is now read-only offline instead of hidden.

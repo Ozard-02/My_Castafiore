@@ -14,7 +14,10 @@ Full research/options: `/home/espo/.opencode/plan/downloaded-collection-sync.md`
 - `getCollectionState(source, expectedIds)` — exposes `changed`, uses the
   `songIdsBySource` map (O(1)) and ignores an empty expected list (still loading).
 - `DownloadButton` — shows a `cloud-upload` icon when the collection is stale and
-  syncs on tap (online only); unchanged otherwise.
+  syncs on tap; requires `fresh` (the list came from a successful API fetch) and
+  online, so syncing from the API cache or the offline fallback can never delete
+  songs. `useCachedAndApi` now passes the `mode` ('cache' | 'api') to `setFunc`;
+  Album/Playlist track `fresh` from it.
 - Favourite metadata: `buildMeta` stores `starred`/`userRating`, `entryToSong`
   projects them, `syncLocalStarred(starredIds)` refreshes downloaded entries from the
   `getStarred2` cache (called from `useStarredIds`).

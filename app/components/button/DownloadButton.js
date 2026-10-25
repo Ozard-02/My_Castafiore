@@ -58,7 +58,7 @@ const DownloadedIcon = ({ size, circleColor, arrowColor }) => (
 	</View>
 )
 
-const DownloadButton = ({ type, id, name, artist = '', cover = null, songs = [], size = 24, style = {} }) => {
+const DownloadButton = ({ type, id, name, artist = '', cover = null, songs = [], fresh = false, size = 24, style = {} }) => {
 	const { t } = useTranslation()
 	const theme = useTheme()
 	const offline = useOffline()
@@ -69,8 +69,9 @@ const DownloadButton = ({ type, id, name, artist = '', cover = null, songs = [],
 	const expectedIds = (songs || []).map((song) => song.id).filter(Boolean)
 	const { status, progress, changed } = getCollectionState(source, expectedIds)
 	// The stored snapshot differs from the fresh server list: offer a sync instead of the
-	// usual done/remove action. Offline the list is the local fallback, so `changed` is false.
-	const canSync = changed && !offline
+	// usual done/remove action. `fresh` is false when the list came from the API cache or
+	// the offline fallback — syncing from stale data could delete songs.
+	const canSync = changed && fresh && !offline
 
 	const onPress = () => {
 		if (canSync) {

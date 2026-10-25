@@ -200,14 +200,14 @@ export const useCachedAndApi = (initialState, path, query = '', setFunc = () => 
 		refreshApi(config, path, query)
 			.then((json) => {
 				setUpdateApi({ path, query, uid: uid.current })
-				setFunc(json, setData)
+				setFunc(json, setData, 'api')
 			})
 	}, [config, path, query, setFunc, setUpdateApi])
 
 	React.useEffect(() => {
 		if (!config?.url || !config?.query) return
 		getCachedAndApi(config, path, query, (json, mode) => {
-			setFunc(json, setData)
+			setFunc(json, setData, mode)
 			if (mode === 'api') setUpdateApi({ path, query, uid: uid.current })
 		})
 	}, [config, ...deps])
