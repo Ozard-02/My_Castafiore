@@ -4,6 +4,7 @@ import Icon from 'react-native-vector-icons/FontAwesome'
 import { useTranslation } from 'react-i18next'
 
 import { useTheme } from '~/contexts/theme'
+import { hairlineColorFor } from '~/styles/glass'
 import { useDownloads, formatBytes } from '~/utils/downloadManager'
 
 const DownloadBanner = ({ navigation }) => {
@@ -28,7 +29,7 @@ const DownloadBanner = ({ navigation }) => {
 	return (
 		<Pressable
 			onPress={() => navigation.navigate('SettingsStack', { screen: 'Settings/Downloads' })}
-			style={({ pressed }) => [styles.container, { backgroundColor: theme.secondaryBack }, pressed && styles.pressed]}
+			style={({ pressed }) => [styles.container, { backgroundColor: theme.secondaryBack, borderColor: hairlineColorFor(theme.primaryBack) }, pressed && styles.pressed]}
 		>
 			<View style={[styles.progressTrack, { backgroundColor: theme.primaryBack }]}>
 				<View style={[styles.progressFill, { backgroundColor: theme.primaryTouch, width: `${Math.round(progress * 100)}%` }]} />
@@ -46,6 +47,15 @@ const DownloadBanner = ({ navigation }) => {
 const styles = StyleSheet.create({
 	container: {
 		overflow: 'hidden',
+		marginHorizontal: 12,
+		marginBottom: 4,
+		borderRadius: 16,
+		borderWidth: StyleSheet.hairlineWidth,
+		elevation: 4,
+		shadowColor: '#000',
+		shadowOffset: { width: 0, height: 2 },
+		shadowOpacity: 0.15,
+		shadowRadius: 6,
 	},
 	content: {
 		flexDirection: 'row',

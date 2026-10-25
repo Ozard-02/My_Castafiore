@@ -8,7 +8,7 @@ export default StyleSheet.create({
 	}),
 	contentMainContainer: (insets, statusBar = true) => ({
 		paddingTop: statusBar ? insets.top : 0,
-		paddingBottom: 120,
+		paddingBottom: 170,
 		paddingStart: insets.left,
 		paddingEnd: insets.right,
 	}),

@@ -923,10 +923,11 @@ adb install -r android/app/build/outputs/apk/release/app-release.apk
 
     ### Fasi
     - Fase 0 — Token (1 giorno, zero impatto visivo) ✅ fatto: tokens.js, glass.js, motion.js.
-    - Fase 1 — Glass primitive (2-3 giorni): GlassSurface (solid + hairline + tinta + ombra),
-      scrim helper, schermata dev-only per i fallback.
-    - Fase 2 — Chrome (2-3 giorni): useBottomInset, tab bar flottante pill + indicatore,
-      mini player (solid), banner (solid + animazione ingresso/uscita).
+    - Fase 1 — Glass primitive ✅ fatto: GlassSurface (solid + hairline + tinta + ombra),
+      Scrim helper, DevGlass showcase, route dev-only in SettingsStack.
+    - Fase 2 — Chrome ✅ fatto: useBottomInset hook, BottomBar floating pill + sliding indicator,
+      BoxPlayer floating pill + hairline/shadow, banners floating pills, contentMainContainer
+      paddingBottom 120->170. (enter/exit banner via LayoutAnimation gia' presente.)
     - Fase 3 — Motion core (2 giorni): press feedback globale, tab indicator spring, banner
       animazione, useReduceMotion. Dipendenza: expo-haptics.
     - Fase 4 — Detail pages (2 giorni): PresHeader artwork-wash + parallax + header sticky glass,

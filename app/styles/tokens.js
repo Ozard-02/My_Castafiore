@@ -3,7 +3,7 @@
 // Il flag `settings.newUI` decide a LIVELLO DI TOKEN (non di componente) se usare
 // i valori nuovi o quelli legacy. Verra' rimosso a fine Fase 5.
 
-import { useSettings } from '../contexts/settings';
+import { useSettings } from '../contexts/settings'
 
 // --- Legacy: approssima lo stato attuale (radii/typography ad-hoc) ---
 export const legacyTokens = {
@@ -16,7 +16,7 @@ export const legacyTokens = {
   },
   radius: { art: 4, card: 8, sheet: 20, pill: 999, thumb: 4, floating: 10 },
   spacing: { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 24, xxxl: 32 },
-};
+}
 
 // --- New: "Soft Glass" ---
 export const newTokens = {
@@ -29,14 +29,14 @@ export const newTokens = {
   },
   radius: { art: 8, card: 16, sheet: 28, pill: 999, thumb: 10, floating: 28 },
   spacing: { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 24, xxxl: 32 },
-};
+}
 
 export function useTokens() {
-  const { settings } = useSettings();
-  return settings?.newUI ? newTokens : legacyTokens;
+  const { settings } = useSettings()
+  return settings?.newUI ? newTokens : legacyTokens
 }
 
 // Raggio interno = raggio esterno - padding (concentricita').
 export function innerRadius(outer, padding) {
-  return Math.max(0, outer - padding);
+  return Math.max(0, outer - padding)
 }

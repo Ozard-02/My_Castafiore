@@ -16,6 +16,7 @@ import ImageError from '~/components/ImageError'
 import PlaylistButton from '~/components/button/PlaylistButton'
 import size from '~/styles/size'
 import useKeyboardIsOpen from '~/utils/useKeyboardIsOpen'
+import { hairlineColorFor } from '~/styles/glass'
 import { useStarredIds } from '~/utils/starred'
 
 const BoxPlayer = ({ setFullScreen }) => {
@@ -129,10 +130,15 @@ const BoxPlayer = ({ setFullScreen }) => {
 					backgroundColor: pillBackground ? 'transparent' : theme.playerBackground,
 					padding: 10,
 					margin: 10,
-					borderRadius: 10,
-					borderWidth: 0.5,
-					borderColor: 'rgba(255,255,255,0.10)',
+					borderRadius: 16,
+					borderWidth: StyleSheet.hairlineWidth,
+					borderColor: hairlineColorFor(theme.playerBackground),
 					overflow: 'hidden',
+					elevation: 6,
+					shadowColor: '#000',
+					shadowOffset: { width: 0, height: 4 },
+					shadowOpacity: 0.2,
+					shadowRadius: 10,
 				}}>
 				{pillBackground && (
 					<>
