@@ -878,7 +878,7 @@ adb install -r android/app/build/outputs/apk/release/app-release.apk
 
 ---
 
-44. **UI restyling — "Soft Glass"** 🚧 in progress (Fase 0 done)
+44. **UI restyling — "Soft Glass"** ✅ done (Fase 0-5) 2026-10-25
     - Direzione: "Soft Glass" (accenno di Liquid Glass, non imitazione). Principio:
       il vetro e' solo per il chrome flottante, mai per il contenuto. Contenuto opaco
       e piatto sotto, chrome traslucido sopra. Mantiene la performance delle LegendList

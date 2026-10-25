@@ -1,7 +1,9 @@
 # Plan: UI restyling "Soft Glass"
 
 ## Status
-Fase 0 done (token files created). iOS and web out of scope. Android only.
+✅ Done (Fase 0-5). iOS and web out of scope. Android only. Deferred items: skeleton loaders,
+Play/pause crossfade, enter/exit banner animation (LayoutAnimation only), scrim gradient
+(expo-linear-gradient not installed — Scrim uses View fallback), parallax on PresHeader.
 
 ## Context
 Castafiore UI is flat, monochrome dark, system font bold everywhere, inconsistent radii,
