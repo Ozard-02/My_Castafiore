@@ -12,6 +12,8 @@
 - One shared `getRandomSongs(size=500)` pool per server; seeded shuffle keeps a mix stable
   inside its period. Cached in AsyncStorage per server + group.
 - Settings only exposes the two group toggles/order rows; no per-theme controls.
+- Each mix is one square card (cover mosaic + theme + count) in a horizontal row, like
+  the genre section; tapping opens the normal song list with the 50 tracks.
 - Offline: both sections are absent. Plan/details: `plans/mood-mixes.md`.
 - ✅ Implemented 2026-10-25. `npm run eslint` and `expo export -p web` pass; not yet
   device-tested.

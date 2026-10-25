@@ -23,7 +23,10 @@ Offline: both sections are absent (Home already renders its offline branch inste
   - when a group expires, pick five themes from the catalog (avoiding themes currently used
     by the other group when possible).
 - `app/components/lists/HorizontalMoodMixes.js`
-  - renders the five mixes as sub-rows with `HorizontalSongs`.
+  - renders the five mixes as square cards in a `CustomFlat`, exactly like the genre row.
+- `app/components/item/MoodMixItem.js`
+  - square card with a 2×2 cover mosaic, theme name and track count; taps open the
+    standard `Songs` screen with that mix.
 - `app/components/lists/HorizontalList.js`
   - handles `type: 'mood'` without API path/query; renders `HorizontalMoodMixes`.
 - `app/contexts/settings.js`
@@ -33,6 +36,8 @@ Offline: both sections are absent (Home already renders its offline branch inste
 
 ## Decisions
 - 5 + 5 playlists, 50 tracks each (10 total).
+- Each mix is one square card in the section's horizontal list (cover mosaic + theme +
+  count), not a full song row. Tapping a card opens the normal `Songs` list.
 - One shared pool, not one request per mix.
 - Cache stores song objects so each mix stays stable for its period.
 - Stale cache is used as a fallback if the server request fails while online.

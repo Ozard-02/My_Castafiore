@@ -267,7 +267,7 @@ Playback state enum: `Playing`, `Paused`, `Stopped`, `Loading`, `Error`, `None`.
 | File | Description |
 |---|---|
 | HorizontalList.js | Dynamic list that renders the correct horizontal sub-list based on `homeSections` type. `type: 'mood'` bypasses the API and calls `getMoodMixes()`; the section's period timer refreshes it at the day/week boundary. |
-| HorizontalMoodMixes.js | Renders the five generated mixes of a `mood` Home section as titled `HorizontalSongs` rows. |
+| HorizontalMoodMixes.js | Renders the five generated mixes of a `mood` Home section as square cards in a horizontal list. |
 | HorizontalQueue.js | Horizontal list of queue entries. |
 | HorizontalAlbums.js | Horizontal album cover list with LazyLoad. |
 | HorizontalArtists.js | Horizontal artist list with LazyLoad. |
@@ -289,6 +289,7 @@ Playback state enum: `Playing`, `Paused`, `Stopped`, `Loading`, `Error`, `None`.
 | PlaylistItem.js | Playlist item for vertical playlist list. |
 | HistoryItem.js | Search history item with delete action. |
 | GenreItem.js | Genre item for horizontal genre list. |
+| MoodMixItem.js | Square card for a generated daily/weekly mood mix: 2×2 cover mosaic, theme name, track count. Opens the standard `Songs` screen with the mix tracks. |
 
 ### Button Components (app/components/button/)
 | File | Description |
