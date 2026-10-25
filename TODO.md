@@ -936,7 +936,8 @@ adb install -r android/app/build/outputs/apk/release/app-release.apk
       track numbers su album detail (SongItem sostituisce cover con numero quando isIndex),
       useCoverPalette aggiunto (palette da cover id, LRU cache). Skeleton loaders rimandati.
       expo-linear-gradient non installato: Scrim usa fallback View sovrapposte.
-    - Fase 5 — Player motion (3-4 giorni): mini->full semplificata, drag-to-dismiss misurato,
-      cambio traccia crossfade, play/pause icon. Rimuovere il flag newUI a fine fase.
+    - Fase 5 — Player motion ✅ fatto: Modal animationType fade, cover fade-in 300ms su cambio
+      traccia, drag-to-dismiss gia' presente (misurare jank su build release). newUI flag
+      rimosso: useTokens restituisce sempre newTokens. Play/pause crossfade rimandato.
 
     Plan file: `plans/ui-soft-glass.md`.

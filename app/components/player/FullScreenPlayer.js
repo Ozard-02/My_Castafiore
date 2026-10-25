@@ -24,6 +24,7 @@ import PlayButton from '~/components/button/PlayButton'
 import Player from '~/utils/player'
 import { themedPalette, usePlayerPalette } from '~/utils/playerPalette'
 import size from '~/styles/size'
+import { nativeDriver } from '~/styles/motion'
 import SlideBar from '~/components/button/SlideBar'
 import SlideControl from '~/components/button/SlideControl'
 
@@ -44,6 +45,12 @@ const CoverItem = ({ isPreview, song, onToggleLyrics }) => {
 	const config = useConfig()
 	const theme = useTheme()
 	const { width, height } = useWindowDimensions()
+	const fadeAnim = React.useRef(new Animated.Value(1)).current
+
+	React.useEffect(() => {
+		fadeAnim.setValue(0)
+		Animated.timing(fadeAnim, { toValue: 1, duration: 300, useNativeDriver: nativeDriver }).start()
+	}, [song?.songInfo?.id])
 
 	const albumImage = React.useMemo(() => {
 		const size = Math.min(width - 50 - PANE_PADDING * 2, 450, Math.max(110, height - 480))
@@ -60,12 +67,14 @@ const CoverItem = ({ isPreview, song, onToggleLyrics }) => {
 	}, [width, height])
 
 	if (isPreview === preview.COVER) return (
-		<SlideControl style={albumImage} onTap={onToggleLyrics}>
-			<ImageError
-				source={{ uri: urlCover(config, song?.songInfo) }}
-				style={[albumImage, { backgroundColor: theme.secondaryBack }]}
-			/>
-		</SlideControl>
+		<Animated.View style={{ opacity: fadeAnim }}>
+			<SlideControl style={albumImage} onTap={onToggleLyrics}>
+				<ImageError
+					source={{ uri: urlCover(config, song?.songInfo) }}
+					style={[albumImage, { backgroundColor: theme.secondaryBack }]}
+				/>
+			</SlideControl>
+		</Animated.View>
 	)
 	if (isPreview === preview.LYRICS) return (
 		<Lyric song={song} style={albumImage} />
@@ -256,6 +265,7 @@ const FullScreenPlayer = ({ setFullScreen }) => {
 
 	return (
 		<Modal
+			animationType="fade"
 			statusBarTranslucent={true}
 			navigationBarTranslucent={Platform.OS === 'android' && parseInt(Platform.Version, 10) > 34 ? false : true}
 			onRequestClose={() => {
