@@ -29,11 +29,15 @@
 - **JDK for Android builds**: the system Java (26.0.2) crashes Gradle 8.13's embedded Kotlin with
   `IllegalArgumentException: 26.0.2`. Always build with JDK 17:
   `JAVA_HOME=/usr/lib/jvm/java-17-openjdk ./android/gradlew -p android app:assembleRelease -x lint -x test`
-- **Parallelize builds**: add `--parallel` (and optionally `--max-workers=8`) to speed up; safe for this
-  project since modules are independent. Example:
-  `JAVA_HOME=/usr/lib/jvm/java-17-openjdk ./android/gradlew -p android app:assembleRelease -x lint -x test --parallel --max-workers=8`
-  Also enable in `android/gradle.properties` with `org.gradle.parallel=true` and
-  `org.gradle.configureondemand=true` for persistent speedup.
+- **Parallelize builds**: `org.gradle.parallel=true` and `org.gradle.configureondemand=true` are
+  enabled in `android/gradle.properties`. Add `--parallel --max-workers=8` to speed up CLI builds;
+  safe for this project since modules are independent. Working command:
+  `JAVA_HOME=/usr/lib/jvm/java-17-openjdk ./android/gradlew -p android app:assembleRelease -x lint -x test --parallel --max-workers=8 --no-daemon`
+- **Gradle daemon / spawn failure**: if the build fails at settings evaluation with
+  `A problem occurred starting process 'command 'node''` or `Failed to exec spawn helper`,
+  stop the old daemon and retry without it:
+  `./android/gradlew -p android --stop` then add `--no-daemon` to the build command above.
+  This is an environment/daemon issue, not a project error.
 
 # remember
 
