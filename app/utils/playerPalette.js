@@ -140,9 +140,9 @@ export const themedPalette = (theme) => {
 // muddy greys that flatten the ramp.
 const SWATCH_KEYS = ['darkVibrant', 'vibrant', 'darkMuted', 'muted', 'lightVibrant', 'lightMuted', 'dominant', 'average']
 
-const extractPalette = async (config, song, coverId) => {
+const extractPalette = async (config, coverId) => {
 	const local = getLocalCoverUri(coverId)
-	const source = local || (getIsOffline() ? null : urlCover(config, song, 150))
+	const source = local || (getIsOffline() ? null : urlCover(config, coverId, 150))
 	if (!source) return null
 	const result = await getColors(source, {
 		fallback: '#000000',
@@ -181,7 +181,7 @@ export const usePlayerPalette = (config, songInfo, enabled = true) => {
 				logger.error('playerPalette', `cache read: ${error?.message || error}`)
 			}
 			try {
-				const fresh = await extractPalette(config, songInfo, coverId)
+				const fresh = await extractPalette(config, coverId)
 				if (fresh && !cancelled) {
 					setPalette(fresh)
 					AsyncStorage.setItem(CACHE_PREFIX + coverId, JSON.stringify(fresh)).catch(() => { })
@@ -196,6 +196,45 @@ export const usePlayerPalette = (config, songInfo, enabled = true) => {
 		// songInfo is captured by reference on purpose: the effect re-runs per cover, not
 		// per render of the player.
 	}, [coverId])
+
+	return palette
+}
+
+export const useCoverPalette = (config, coverId, enabled = true) => {
+	const [palette, setPalette] = React.useState(null)
+	const id = enabled && coverId ? (typeof coverId === 'string' ? coverId : coverIdOf(config, coverId)) : null
+
+	React.useEffect(() => {
+		if (!id) {
+			setPalette(null)
+			return
+		}
+		let cancelled = false
+
+		const run = async () => {
+			try {
+				const raw = await AsyncStorage.getItem(CACHE_PREFIX + id)
+				if (raw) {
+					const cached = JSON.parse(raw)
+					if (!cancelled && Array.isArray(cached) && cached.length === PALETTE_SLOTS) setPalette(cached)
+				}
+			} catch (error) {
+				logger.error('playerPalette', `cache read: ${error?.message || error}`)
+			}
+			try {
+				const fresh = await extractPalette(config, id)
+				if (fresh && !cancelled) {
+					setPalette(fresh)
+					AsyncStorage.setItem(CACHE_PREFIX + id, JSON.stringify(fresh)).catch(() => { })
+				}
+			} catch (error) {
+				logger.error('playerPalette', `extract: ${error?.message || error}`)
+			}
+		}
+
+		run()
+		return () => { cancelled = true }
+	}, [id])
 
 	return palette
 }

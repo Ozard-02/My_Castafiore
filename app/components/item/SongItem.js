@@ -82,7 +82,7 @@ const SongItem = ({ song, queue, index, isIndex = false, isPlaying = false, setI
 				return setIndexOptions(index)
 			}}
 		>
-			<View style={[mainStyles.coverSmall(theme), { overflow: 'hidden', marginRight: 10, borderWidth: 0.5, borderColor: 'rgba(255,255,255,0.10)' }]}>
+			<View style={[mainStyles.coverSmall(theme), { overflow: 'hidden', marginRight: 10, borderWidth: 0.5, borderColor: 'rgba(255,255,255,0.10)', justifyContent: 'center', alignItems: 'center' }]}>
 				{isPlaying && (
 					<View style={{
 						position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1,
@@ -93,14 +93,18 @@ const SongItem = ({ song, queue, index, isIndex = false, isPlaying = false, setI
 						<Icon name="align-center" size={19} color={'white'} style={{ height: 19, transform: [{ rotate: '90deg' }] }} />
 					</View>
 				)}
-				<ImageError
-					style={[mainStyles.coverSmall(theme)]}
-					source={{ uri: urlCover(config, song, 100) }}
-				/>
+				{isIndex && song.track !== undefined ? (
+					<Text style={{ color: theme.secondaryText, fontSize: size.text.large, fontWeight: '600' }}>{song.track}</Text>
+				) : (
+					<ImageError
+						style={[mainStyles.coverSmall(theme)]}
+						source={{ uri: urlCover(config, song, 100) }}
+					/>
+				)}
 			</View>
 			<View style={{ flex: 1, flexDirection: 'column' }}>
 				<Text numberOfLines={1} style={[mainStyles.mediumText(isPlaying ? theme.primaryTouch : theme.primaryText), { marginBottom: 2 }, overlayText]}>
-					{(isIndex && song.track !== undefined) ? `${song.track}. ` : null}{song.title}
+					{song.title}
 				</Text>
 				<Text numberOfLines={1} style={[mainStyles.smallText(theme.secondaryText), overlayText]}>
 					{song.artist}

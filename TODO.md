@@ -932,9 +932,10 @@ adb install -r android/app/build/outputs/apk/release/app-release.apk
       AllItem tile scale), tab indicator spring bouncy, banner LayoutAnimation, useReduceMotion
       rispettato. expo-haptics installato, VIBRATE aggiunto a app.config.js, haptics dietro
       setting hapticsEnabled (default off).
-    - Fase 4 — Detail pages (2 giorni): PresHeader artwork-wash + parallax + header sticky glass,
-      track numbers, skeleton, palette con fallback + crossfade, cover blur background via
-      Image blurRadius. Dipendenza: expo-linear-gradient.
+    - Fase 4 — Detail pages ✅ fatto: PresHeader artwork-wash (blurred cover bg + Scrim),
+      track numbers su album detail (SongItem sostituisce cover con numero quando isIndex),
+      useCoverPalette aggiunto (palette da cover id, LRU cache). Skeleton loaders rimandati.
+      expo-linear-gradient non installato: Scrim usa fallback View sovrapposte.
     - Fase 5 — Player motion (3-4 giorni): mini->full semplificata, drag-to-dismiss misurato,
       cambio traccia crossfade, play/pause icon. Rimuovere il flag newUI a fine fase.
 
