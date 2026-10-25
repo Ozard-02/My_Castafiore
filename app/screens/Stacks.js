@@ -42,6 +42,8 @@ import ThemeSettings from '~/screens/Settings/Theme'
 
 import { useTheme } from '~/contexts/theme'
 
+const DevGlass = __DEV__ ? require('~/screens/DevGlass').default : null
+
 const Stack = createNativeStackNavigator()
 
 export const HomeStack = () => {
@@ -168,6 +170,7 @@ export const SettingsStack = () => {
 			<Stack.Screen name="Settings/Shares" component={SharesSettings} />
 			<Stack.Screen name="Settings/Language" component={LanguageSettings} />
 			<Stack.Screen name="Settings/Logs" component={LogsSettings} />
+			{__DEV__ && DevGlass ? <Stack.Screen name="DevGlass" component={DevGlass} /> : null}
 		</Stack.Navigator>
 	)
 }

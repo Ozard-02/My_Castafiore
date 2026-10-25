@@ -16,7 +16,7 @@ export default [
   },
   {
     files: ["app/**/*.js", "index.js", "App.js"],
-    languageOptions: { globals: globals.browser },
+    languageOptions: { globals: { ...globals.browser, __DEV__: "readonly" } },
     settings: {
       react: {
         version: "detect"

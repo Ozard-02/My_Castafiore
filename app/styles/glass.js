@@ -8,35 +8,47 @@ export const glassTokens = {
   tintOpacity: { accent: 0.06, artwork: 0.08 },
   borderAlpha: { dark: 0.12, light: 0.06, topHighlight: 0.20 },
   radius: { floating: 28, card: 16, thumb: 10 },
-};
+}
 
 // Luminanza relativa WCAG (0..1) da hex. Usata per derivare isLight dal background
 // del tema, cosi' i temi futuri funzionano senza ritocchi.
 export function relativeLuminance(hex) {
-  const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex || '');
-  if (!m) return 0;
+  const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex || '')
+  if (!m) return 0
   const [r, g, b] = [m[1], m[2], m[3]].map((h) => {
-    const c = parseInt(h, 16) / 255;
-    return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
-  });
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    const c = parseInt(h, 16) / 255
+    return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4)
+  })
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b
 }
 
 export function isLightTheme(bgHex) {
-  return relativeLuminance(bgHex) > 0.4;
+  return relativeLuminance(bgHex) > 0.4
 }
 
 export function fillAlphaFor(bgHex) {
-  return isLightTheme(bgHex) ? glassTokens.fillAlpha.light : glassTokens.fillAlpha.dark;
+  return isLightTheme(bgHex) ? glassTokens.fillAlpha.light : glassTokens.fillAlpha.dark
 }
 
 export function hairlineColorFor(bgHex) {
-  const a = isLightTheme(bgHex) ? glassTokens.borderAlpha.light : glassTokens.borderAlpha.dark;
-  return isLightTheme(bgHex) ? `rgba(0,0,0,${a})` : `rgba(255,255,255,${a})`;
+  const a = isLightTheme(bgHex) ? glassTokens.borderAlpha.light : glassTokens.borderAlpha.dark
+  return isLightTheme(bgHex) ? `rgba(0,0,0,${a})` : `rgba(255,255,255,${a})`
 }
 
 // Lato superiore del hairline leggermente piu' chiaro (riflesso speculare).
 // Per ora usato come alpha target; l'implementazione gradient del bordo e' rimandata.
-export function hairlineTopAlphaFor(bgHex) {
-  return glassTokens.borderAlpha.topHighlight;
+export function hairlineTopAlphaFor(_bgHex) {
+  return glassTokens.borderAlpha.topHighlight
+}
+
+// Hex (#rgb / #rrggbb) -> rgba string.
+export function hexToRgba(hex, alpha) {
+  const m = /^#?([a-f\d]{3}|[a-f\d]{6})$/i.exec(hex || '')
+  if (!m) return `rgba(0,0,0,${alpha})`
+  let h = m[1]
+  if (h.length === 3) h = h.split('').map((c) => c + c).join('')
+  const r = parseInt(h.slice(0, 2), 16)
+  const g = parseInt(h.slice(2, 4), 16)
+  const b = parseInt(h.slice(4, 6), 16)
+  return `rgba(${r},${g},${b},${alpha})`
 }

@@ -132,6 +132,14 @@ const Settings = ({ navigation }) => {
 						onPress={() => navigation.navigate('Settings/Informations')}
 						isLast
 					/>
+					{__DEV__ ? (
+						<ButtonMenu
+							title="Dev: Glass showcase"
+							icon="flask"
+							onPress={() => navigation.navigate('DevGlass')}
+							isLast
+						/>
+					) : null}
 				</View>
 			)}
 
