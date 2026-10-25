@@ -28,6 +28,7 @@
     "expo-dev-client": "~5.2.4",
     "expo-file-system": "~18.1.11",
     "expo-gl": "~15.1.7",
+    "expo-haptics": "~14.1.4",
     "fast-xml-parser": "^5.3.3",
     "i18next": "^25.3.1",
     "md5": "^2.3.0",

@@ -928,8 +928,10 @@ adb install -r android/app/build/outputs/apk/release/app-release.apk
     - Fase 2 — Chrome ✅ fatto: useBottomInset hook, BottomBar floating pill + sliding indicator,
       BoxPlayer floating pill + hairline/shadow, banners floating pills, contentMainContainer
       paddingBottom 120->170. (enter/exit banner via LayoutAnimation gia' presente.)
-    - Fase 3 — Motion core (2 giorni): press feedback globale, tab indicator spring, banner
-      animazione, useReduceMotion. Dipendenza: expo-haptics.
+    - Fase 3 — Motion core ✅ fatto: press feedback globale (IconButton scale+opacity spring,
+      AllItem tile scale), tab indicator spring bouncy, banner LayoutAnimation, useReduceMotion
+      rispettato. expo-haptics installato, VIBRATE aggiunto a app.config.js, haptics dietro
+      setting hapticsEnabled (default off).
     - Fase 4 — Detail pages (2 giorni): PresHeader artwork-wash + parallax + header sticky glass,
       track numbers, skeleton, palette con fallback + crossfade, cover blur background via
       Image blurRadius. Dipendenza: expo-linear-gradient.

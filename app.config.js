@@ -22,6 +22,7 @@ module.exports = ({ config }) => {
 				edgeToEdgeEnabled: true,
 				permissions: [
 					"CHANGE_WIFI_MULTICAST_STATE",
+					"VIBRATE",
 				],
 				adaptiveIcon: {
 					foregroundImage: "./assets/foreground-icon.png",

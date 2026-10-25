@@ -1,5 +1,6 @@
 import React from 'react'
-import { Pressable, Text, StyleSheet } from 'react-native'
+import { Pressable, Text, StyleSheet, Animated } from 'react-native'
+import { nativeDriver, springs } from '~/styles/motion'
 
 import { useConfig } from '~/contexts/config'
 import { useTheme } from '~/contexts/theme'
@@ -11,10 +12,16 @@ import size from '~/styles/size'
 const AllItem = ({ item, type, onPress, onLongPress = () => { } }) => {
 	const config = useConfig()
 	const theme = useTheme()
+	const scale = React.useRef(new Animated.Value(1)).current
+	const animateIn = () => Animated.spring(scale, { toValue: 0.97, stiffness: springs.snappy.stiffness, damping: springs.snappy.damping, useNativeDriver: nativeDriver }).start()
+	const animateOut = () => Animated.spring(scale, { toValue: 1, stiffness: springs.snappy.stiffness, damping: springs.snappy.damping, useNativeDriver: nativeDriver }).start()
 
 	return (
+		<Animated.View style={{ transform: [{ scale }] }}>
 		<Pressable
 			style={({ pressed }) => ([mainStyles.opacity({ pressed }), styles.item])}
+			onPressIn={animateIn}
+			onPressOut={animateOut}
 			onPress={() => onPress(item)}
 			delayLongPress={200}
 			onLongPress={() => onLongPress(item)}>
@@ -26,6 +33,7 @@ const AllItem = ({ item, type, onPress, onLongPress = () => { } }) => {
 			<Text numberOfLines={1} style={styles.title(theme, type)}>{item.title || item.name}</Text>
 			<Text numberOfLines={1} style={styles.subTitle(theme)}>{item.artist}</Text>
 		</Pressable>
+		</Animated.View>
 	)
 }
 

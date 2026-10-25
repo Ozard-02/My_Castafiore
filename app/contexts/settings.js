@@ -140,6 +140,10 @@ export const defaultSettings = {
 	swipeRightAction: 'queue',
 	swipeLeftAction: 'next',
 	language: null,
+	// UI restyling "Soft Glass" (Fase 0+): flag a livello di token. Default off.
+	newUI: false,
+	reduceMotionOverride: false,
+	hapticsEnabled: false,
 }
 
 export const homeSections = [
