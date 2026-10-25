@@ -875,3 +875,64 @@ adb install -r android/app/build/outputs/apk/release/app-release.apk
     - Plan: `plans/offline-unification.md`, `plans/downloaded-collection-sync.md`.
     - Manual verification owed: edit a downloaded playlist online → sync icon → delta
       downloads; star a downloaded song → offline circle updates.
+
+---
+
+44. **UI restyling — "Soft Glass"** 🚧 in progress (Fase 0 done)
+    - Direzione: "Soft Glass" (accenno di Liquid Glass, non imitazione). Principio:
+      il vetro e' solo per il chrome flottante, mai per il contenuto. Contenuto opaco
+      e piatto sotto, chrome traslucido sopra. Mantiene la performance delle LegendList
+      e crea la gerarchia visiva che oggi manca.
+    - **iOS fuori scope**: niente blur reale. "Glass" = fill semitrasparente + hairline
+      luminoso + tinta accent/artwork + ombra morbida. expo-blur non serve.
+    - **Web fuori scope**: niente fallback backdrop-filter. Solo Android.
+    - **Android**: blur sempre solid (no blur reale). Elevation minima per ombra.
+    - Ingredienti (tutti come token in `app/styles/`):
+      1. Superficie vetro: fill semitrasparente derivato dal tema + tinta accent/cover 6-10%.
+      2. Bordo hairline luminoso: 1px `StyleSheet.hairlineWidth`, bianco ~12% dark / nero ~6% light;
+         lato superiore leggermente piu' chiaro (~20%) — gradient bordo rimandato.
+      3. Ombra morbida e diffusa sotto gli elementi flottanti.
+      4. Raggi concentrici: flottanti 28, card 16-20, thumb 8-10; raggio interno = esterno - padding.
+      5. Sfondi tinti dall'artwork: gradient scrim dal colore dominante (palette gia' nel player)
+         nelle detail page e nel full-screen player.
+      6. Tab bar flottante: pill staccata dai bordi (margine ~12-16px, max-width ~520px centrata).
+    - Motion: `app/styles/motion.js` (durate 100/160/240/360/500, easing cubic-bezier,
+      spring snappy/smooth/bouncy, helper `nativeDriver = Platform.OS !== 'web'`,
+      hook `useReduceMotion` che rispetta il sistema — vince sempre — + override per spegnere).
+      Regole: animare SOLO transform e opacity, useNativeDriver true; nessuna animazione
+      sulle righe virtualizzate al riciclo (solo primo mount schermata); rispettare Reduce Motion.
+    - Token: `app/styles/tokens.js` (typography, radius, spacing, useTokens legato a
+      `settings.newUI`), `app/styles/glass.js` (fillAlpha, tintOpacity, borderAlpha, radius,
+      isLight derivato dalla luminanza del bg del tema, hairlineColorFor).
+    - Feature flag `settings.newUI` a LIVELLO DI TOKEN (non di componente), rimosso a fine Fase 5.
+    - Palette artwork: cache key = solo cover id; estrai da 64-100px; LRU AsyncStorage cap ~300;
+      flag enabled separato player vs detail; crossfade 300ms solo su arrivo asincrono
+      (se in cache, colore subito giusto); tinta iniziale = accent del tema; due layer +
+      opacity (mai backgroundColor animato).
+    - Inset hook `useBottomInset`: layout-aware via `settings.isDesktop`; sempre safe area
+      inferiore; somma banner + mini player solo se visibili.
+    - Dipendenze: `expo-haptics` in Fase 3 (aggiungere `VIBRATE` a `app.config.js` permissions —
+      la lista esplicita sovrascrive l'auto-inferito), `expo-linear-gradient` in Fase 4.
+      Installare con `npx expo install`; nuova build nativa richiesta.
+    - native-stack: su Android provare `animation: 'fade_from_bottom'` (fallback `fade`);
+      su web nessuna transizione per l'MVP.
+    - Transizione mini->full: semplificata (fade+scale cover, scrim 0->0.4), senza shared element.
+    - Drag-to-dismiss con PanResponder: misurare jank con fBM attivo in Fase 5 su build release
+      (riferimento: 2-3 GB RAM, SoC entry Snapdragon 4xx/Helio G3x).
+    - Stima: 13-16 giorni-uomo cross-platform (Android).
+
+    ### Fasi
+    - Fase 0 — Token (1 giorno, zero impatto visivo) ✅ fatto: tokens.js, glass.js, motion.js.
+    - Fase 1 — Glass primitive (2-3 giorni): GlassSurface (solid + hairline + tinta + ombra),
+      scrim helper, schermata dev-only per i fallback.
+    - Fase 2 — Chrome (2-3 giorni): useBottomInset, tab bar flottante pill + indicatore,
+      mini player (solid), banner (solid + animazione ingresso/uscita).
+    - Fase 3 — Motion core (2 giorni): press feedback globale, tab indicator spring, banner
+      animazione, useReduceMotion. Dipendenza: expo-haptics.
+    - Fase 4 — Detail pages (2 giorni): PresHeader artwork-wash + parallax + header sticky glass,
+      track numbers, skeleton, palette con fallback + crossfade, cover blur background via
+      Image blurRadius. Dipendenza: expo-linear-gradient.
+    - Fase 5 — Player motion (3-4 giorni): mini->full semplificata, drag-to-dismiss misurato,
+      cambio traccia crossfade, play/pause icon. Rimuovere il flag newUI a fine fase.
+
+    Plan file: `plans/ui-soft-glass.md`.
