@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next'
 import { useConfig } from '~/contexts/config'
 import { getApi, getApiNetworkFirst } from '~/utils/api'
 import { urlStream } from '~/utils/url'
-import { isSongCached } from '~/utils/cache'
+import { useDownloads, isSongLocal } from '~/utils/downloadManager'
 import { playSong, addToQueue, addToUpNext } from '~/utils/player'
 import { useSettings } from '~/contexts/settings'
 import { useSong, useSongDispatch } from '~/contexts/song'
@@ -25,15 +25,8 @@ const OptionsSongsList = ({ songs, indexOptions, setIndexOptions, onUpdate = () 
 	const settings = useSettings()
 	const refOption = React.useRef()
 	const [playlistVisible, setPlaylistVisible] = React.useState(false)
-	const [isCached, setIsCached] = React.useState(false)
-
-	React.useEffect(() => {
-		if (indexOptions < 0) return
-		isSongCached(config, songs[indexOptions]?.id, settings.streamFormat, settings.maxBitRate)
-			.then((cached) => {
-				setIsCached(cached ? true : false)
-			})
-	}, [indexOptions])
+	useDownloads()
+	const isCached = isSongLocal(songs[indexOptions]?.id)
 
 	const playSimilarSongs = () => {
 		getApiNetworkFirst(config, 'getSimilarSongs', { id: songs[indexOptions].id, count: 50 })
@@ -140,16 +133,16 @@ const OptionsSongsList = ({ songs, indexOptions, setIndexOptions, onUpdate = () 
 		refOption.current.close()
 	}
 
-	const playOnlyCached = async () => {
-		const cachedList = []
+	const playOnlyDownloaded = () => {
+		const localList = []
 		let indexPlay = 0
 
 		for (let index = 0; index < songs.length; index++) {
-			const cached = await isSongCached(config, songs[index].id, settings.streamFormat, settings.maxBitRate)
-			if (index === indexOptions) indexPlay = cachedList.length
-			if (cached) cachedList.push(songs[index])
+			const local = isSongLocal(songs[index].id)
+			if (index === indexOptions) indexPlay = localList.length
+			if (local) localList.push(songs[index])
 		}
-		playSong(config, songDispatch, cachedList, indexPlay)
+		playSong(config, songDispatch, localList, indexPlay)
 		refOption.current.close()
 	}
 
@@ -171,9 +164,9 @@ const OptionsSongsList = ({ songs, indexOptions, setIndexOptions, onUpdate = () 
 					onPress: playSimilarSongs
 				},
 				{
-					name: t('Play only cached songs'),
+					name: t('Play only downloaded'),
 					icon: 'cloud-download',
-					onPress: playOnlyCached,
+					onPress: playOnlyDownloaded,
 					hidden: !isCached
 				},
 				{

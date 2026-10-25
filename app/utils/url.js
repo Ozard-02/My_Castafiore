@@ -1,5 +1,8 @@
 import { getLocalCoverUri } from '~/utils/downloadManager'
 import { getIsOffline } from '~/utils/offline'
+import { coverIdFromUrl } from '~/utils/coverId'
+
+export { coverIdFromUrl }
 
 const getUrl = (config, path, query = '') => {
 	const encodedQuery = Object.keys(query).map((key) => `${key}=${encodeURIComponent(query[key])}`).join('&')
@@ -12,14 +15,6 @@ const realCover = (config, id, size = null) => {
 		return getUrl(config, 'getCoverArt', { id })
 	}
 	return getUrl(config, 'getCoverArt', { id, size })
-}
-
-// The `id` carried by a getCoverArt URL. The download manager names cached cover files after
-// it, so an offline lookup can find the artwork without re-deriving the id from the item.
-export const coverIdFromUrl = (url) => {
-	if (typeof url !== 'string') return null
-	const match = /[?&]id=([^&]+)/.exec(url)
-	return match ? decodeURIComponent(match[1]) : null
 }
 
 // Offline there is no server to ask: prefer the cover file downloaded alongside the songs

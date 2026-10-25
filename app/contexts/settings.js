@@ -20,12 +20,10 @@ export const SettingsProvider = ({ children }) => {
 	// headless service, the download engine). These used to live in updateGlobalSettings(),
 	// a plain async function calling seven useEffects during render — it only worked
 	// because the call order happened to be stable, and it was invisible to the hooks lint.
-	const { streamFormat, maxBitRate, cacheNextSong, parallelDownloads, isSongCaching, saveQueue: saveQueueEnabled, repeatQueue } = settings
+	const { streamFormat, maxBitRate, parallelDownloads, saveQueue: saveQueueEnabled, repeatQueue } = settings
 	React.useEffect(() => { global.streamFormat = streamFormat }, [streamFormat])
 	React.useEffect(() => { global.maxBitRate = maxBitRate }, [maxBitRate])
-	React.useEffect(() => { global.cacheNextSong = cacheNextSong }, [cacheNextSong])
 	React.useEffect(() => { global.parallelDownloads = parallelDownloads }, [parallelDownloads])
-	React.useEffect(() => { global.isSongCaching = isSongCaching }, [isSongCaching])
 	React.useEffect(() => { global.saveQueue = saveQueueEnabled }, [saveQueueEnabled])
 	React.useEffect(() => { global.repeatQueue = repeatQueue }, [repeatQueue])
 
@@ -108,11 +106,8 @@ export const defaultSettings = {
 	// Theme settings
 	theme: 'castafiore',
 	themePlayer: 'default',
-	// Cache settings
-	isSongCaching: false,
-	cacheNextSong: 5,
+	// Download settings
 	parallelDownloads: 3,
-	showCache: true,
 	// Player settings
 	saveQueue: false,
 	streamFormat: 'raw',

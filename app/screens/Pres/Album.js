@@ -1,5 +1,5 @@
 import React from 'react'
-import { ScrollView } from 'react-native'
+import { Platform, ScrollView } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { useConfig } from '~/contexts/config'
@@ -7,8 +7,7 @@ import { useCachedAndApi } from '~/utils/api'
 import { useTheme } from '~/contexts/theme'
 import { urlCover } from '~/utils/url'
 import { useOffline } from '~/utils/offline'
-import { useDownloads } from '~/utils/downloadManager'
-import { offlineCollectionSongs } from '~/utils/offlineContent'
+import { useCollectionSongs } from '~/utils/useLocalLibrary'
 import FavoritedButton from '~/components/button/FavoritedButton'
 import mainStyles from '~/styles/main'
 import presStyles from '~/styles/pres'
@@ -28,8 +27,7 @@ const Album = ({ navigation, route: { params } }) => {
 	const [album, setAlbum] = React.useState(null)
 	const [isOptArtists, setIsOptArtists] = React.useState(false)
 	const [isOptAlbum, setIsOptAlbum] = React.useState(false)
-	const offline = useOffline()
-	const downloads = useDownloads()
+	const offline = useOffline() && Platform.OS !== 'web'
 
 	const [songs] = useCachedAndApi([], 'getAlbum', { id: params.id }, (json, setData) => {
 		setStarred(json?.album?.starred)
@@ -46,10 +44,7 @@ const Album = ({ navigation, route: { params } }) => {
 
 	// offline, a downloaded album that was never fetched (long-press download, cache
 	// evicted) would open empty: rebuild its songs from the download index instead
-	const list = React.useMemo(() => {
-		if (songs.length || !offline) return songs
-		return offlineCollectionSongs(downloads, 'album', params.id)
-	}, [songs, offline, downloads, params.id])
+	const list = useCollectionSongs('album', params.id, songs, offline)
 
 	return (
 		<ScrollView

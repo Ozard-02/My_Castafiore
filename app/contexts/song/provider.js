@@ -77,7 +77,7 @@ const convertTrack = (track) => {
 		index: track.index,
 		mediaType: track.mediaType,
 		// radio: convertToTrack derives isLiveStream from track.type, but the stored queue
-		// track is what downloadNextSong / TimeBar / OptionsQueue actually read — dropping
+		// track is what the downloader / TimeBar / OptionsQueue actually read — dropping
 		// it here made the downloader try to cache live streams and showed a finite
 		// duration for them.
 		isLiveStream: track.isLiveStream ?? track.type === 'radio',

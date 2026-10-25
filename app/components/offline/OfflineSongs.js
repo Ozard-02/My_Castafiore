@@ -8,8 +8,7 @@ import { useConfig } from '~/contexts/config'
 import { useSong, useSongDispatch } from '~/contexts/song'
 import { useTheme } from '~/contexts/theme'
 import { playSong, addToQueue, addToUpNext } from '~/utils/player'
-import { useDownloads } from '~/utils/downloadManager'
-import { offlineSongs } from '~/utils/offlineContent'
+import { useLocalSongs } from '~/utils/useLocalLibrary'
 import SongItem from '~/components/item/SongItem'
 import AllItem from '~/components/item/AllItem'
 import PlaylistSwipeRow from '~/components/item/PlaylistSwipeRow'
@@ -27,9 +26,8 @@ const OfflineSongs = ({ layout = 'list' }) => {
 	const config = useConfig()
 	const song = useSong()
 	const songDispatch = useSongDispatch()
-	const downloads = useDownloads()
 	const [indexOptions, setIndexOptions] = React.useState(-1)
-	const songs = React.useMemo(() => offlineSongs(downloads), [downloads])
+	const songs = useLocalSongs()
 
 	const addQueue = React.useCallback((track) => {
 		if (song.queue) addToQueue(songDispatch, track)

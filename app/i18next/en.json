@@ -90,18 +90,11 @@
         "Frames per second": "Frames per second"
       },
       "cache": {
-        "Song caching": "Song caching",
-        "Enable song caching": "Enable song caching",
-        "Show cached songs": "Show cached songs",
-        "Cache next song": "Cache next song",
-        "Cache next song description": "Auto download upcoming songs (default: 5)",
         "Parallel downloads": "Parallel downloads",
         "Parallel downloads description": "Number of simultaneous downloads (default: 3)",
         "Clear API cache": "Clear API cache",
-        "Clear song cache": "Clear song cache",
         "Clear cache alert message": "Are you sure you want to clear the cache?",
-        "Cache stats": "Cache stats",
-        "No cache": "No cache"
+        "Cache stats": "Cache stats"
       },
       "downloads": {
         "Active downloads": "Active downloads",
@@ -207,6 +200,7 @@
     "Pin playlist": "Pin playlist",
     "Play next": "Play next",
     "Play similar songs": "Play similar songs",
+    "Play only downloaded": "Play only downloaded",
     "Play top songs": "Play top songs",
     "Player": "Player",
     "Playlist": "Playlist",

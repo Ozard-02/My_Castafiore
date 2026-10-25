@@ -79,16 +79,11 @@
         "Frames per second": "Fotogrammi al secondo"
       },
       "cache": {
-        "Song caching": "Caching brani",
-        "Enable song caching": "Abilita caching brani",
-        "Show cached songs": "Mostra i brani in cache",
-        "Cache next song": "Precarica il brano successivo",
-        "Cache next song description": "Scarica automaticamente i prossimi brani (predefinito: 5)",
+        "Parallel downloads": "Download paralleli",
+        "Parallel downloads description": "Numero di download simultanei (predefinito: 3)",
         "Clear API cache": "Svuota cache API",
-        "Clear song cache": "Svuota cache brani",
         "Clear cache alert message": "Sei sicuro di voler svuotare la cache?",
-        "Cache stats": "Statistiche cache",
-        "No cache": "Nessuna cache"
+        "Cache stats": "Statistiche cache"
       },
       "shares": {
         "No shares found": "Nessuna condivisione trovata",
@@ -170,6 +165,7 @@
     "Pin playlist": "Fissa playlist",
     "Play next": "Riproduci successivo",
     "Play similar songs": "Riproduci brani simili",
+    "Play only downloaded": "Riproduci solo i brani scaricati",
     "Play top songs": "Riproduci i brani migliori",
     "Player": "Lettore",
     "Playlist": "Playlist",

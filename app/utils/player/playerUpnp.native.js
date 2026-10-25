@@ -55,10 +55,6 @@ const stopSong = async () => {
 	await UPNP.stop(device)
 }
 
-const downloadSong = async (_song, _source = null) => { }
-
-const downloadNextSong = async (_queue, _currentIndex) => { }
-
 const loadSong = async (config, queue, index) => {
 	const track = queue[index]
 
@@ -173,8 +169,6 @@ export default {
 	resetAudio,
 	switchServer,
 	saveState,
-	downloadNextSong,
-	downloadSong,
 	connect,
 	disconnect,
 }

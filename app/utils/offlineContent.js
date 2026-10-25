@@ -1,23 +1,16 @@
 // Offline browsing is built on the persisted download data:
-//   index[songId] = { meta, size, date, sources: [{ type, id, name }] }
+//   index[songId] = { meta, size, date, sources: [{ type, id, name }], file }
 //   collections   = { 'type:id': { type, id, name, artist, cover, songIds, createdAt } }
 // These helpers turn that into song/collection shaped objects the normal item components
 // can render. Purely local, no API involved.
 
-const isDownloaded = (entry) => !!entry && entry.size > 0
+import { coverIdFromUrl } from '~/utils/coverId'
 
-// The `id` carried by a getCoverArt URL — mirrors url.js coverIdFromUrl (kept local so this
-// module stays import-free). Entries downloaded before the meta carried albumId/coverArt
-// still have the id in their baked cover URL, and that is what the cover file is named after.
-const coverIdFromUrl = (url) => {
-	if (typeof url !== 'string') return null
-	const match = /[?&]id=([^&]+)/.exec(url)
-	return match ? decodeURIComponent(match[1]) : null
-}
+const isDownloaded = (entry) => !!entry && entry.size > 0
 
 const entryToSong = (songId, entry) => ({
 	id: songId,
-	title: entry?.meta?.title || '',
+	title: entry?.meta?.title || entry?.meta?.name || songId,
 	artist: entry?.meta?.artist || '',
 	album: entry?.meta?.album || '',
 	duration: entry?.meta?.duration,
@@ -28,9 +21,20 @@ const entryToSong = (songId, entry) => ({
 	mediaType: 'song',
 })
 
-const collectionSongs = (index, type, id) => Object.entries(index)
-	.filter(([, entry]) => isDownloaded(entry) && (entry.sources || []).some((source) => source.type === type && source.id === id))
-	.map(([songId]) => songId)
+// One pass over the index: `"type:id" → [songId]`. Building this per collection made
+// `offlineCollections` O(collections × index) on every download-progress tick.
+const songsBySource = (index) => {
+	const map = new Map()
+	for (const [songId, entry] of Object.entries(index)) {
+		if (!isDownloaded(entry)) continue
+		for (const source of entry.sources || []) {
+			const key = `${source.type}:${source.id}`
+			if (!map.has(key)) map.set(key, [])
+			map.get(key).push(songId)
+		}
+	}
+	return map
+}
 
 export const offlineSongs = (downloads) => {
 	const index = downloads?.index || {}
@@ -45,9 +49,13 @@ export const offlineSongs = (downloads) => {
 export const offlineCollections = (downloads, type) => {
 	const index = downloads?.index || {}
 	const collections = downloads?.collections || {}
+	const bySource = songsBySource(index)
 	return Object.values(collections)
 		.filter((collection) => collection.type === type)
-		.map((collection) => ({ ...collection, songCount: collectionSongs(index, type, collection.id).length }))
+		.map((collection) => ({
+			...collection,
+			songCount: (bySource.get(`${type}:${collection.id}`) || []).length,
+		}))
 		.filter((collection) => collection.songCount > 0)
 		.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
 }
@@ -56,7 +64,8 @@ export const offlineCollections = (downloads, type) => {
 // when offline and the fetched cache has nothing for them.
 export const offlineCollectionSongs = (downloads, type, id) => {
 	const index = downloads?.index || {}
-	return collectionSongs(index, type, id).map((songId) => entryToSong(songId, index[songId]))
+	const ids = songsBySource(index).get(`${type}:${id}`) || []
+	return ids.map((songId) => entryToSong(songId, index[songId]))
 }
 
 export const isSongDownloaded = (downloads, songId) => isDownloaded(downloads?.index?.[songId])

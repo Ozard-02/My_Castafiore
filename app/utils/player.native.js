@@ -65,8 +65,6 @@ export const reload = async () => withPlayer((player) => player.reload())()
 export const pauseSong = async () => withPlayer((player) => player.pauseSong())()
 export const resumeSong = async () => withPlayer((player) => player.resumeSong())()
 export const stopSong = async () => withPlayer((player) => player.stopSong())()
-export const downloadSong = async (song, source = null) => withPlayer((player) => player.downloadSong(song, source))()
-export const downloadNextSong = async (queue, currentIndex) => withPlayer((player) => player.downloadNextSong(queue, currentIndex))()
 
 export const restoreState = async (state) => {
 	if (!state) return
@@ -157,8 +155,6 @@ export default {
 	connect,
 	disconnect,
 	switchPlayer,
-	downloadSong,
-	downloadNextSong,
 	loadSong,
 	State,
 	...core,

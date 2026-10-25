@@ -44,6 +44,12 @@ export const getActiveDownloadCount = () => 0
 export const getCollectionState = () => ({ status: 'none', progress: 0, completedSongs: 0, totalSongs: 0 })
 export const getDownloadedSongs = () => []
 export const getSongState = () => ({ status: 'none', progress: 0 })
+export const isSongLocal = () => false
+export const getLocalSongUri = () => null
+export const getLocalSongs = () => []
+export const getLocalCollections = () => []
+export const getLocalCollectionSongs = () => []
+export const getLocalStats = () => ({ count: 0, size: 0 })
 // offline on web is the service worker's job; keep the exports so screens importing them build
 export const coverForCurrentServer = (meta) => meta?.cover
 export const getLocalCoverUri = () => null

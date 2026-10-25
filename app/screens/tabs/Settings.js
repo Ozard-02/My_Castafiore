@@ -1,6 +1,6 @@
 import React from 'react'
 import pkg from '~/../package.json'
-import { Text, View, Image, ScrollView, Pressable, Linking } from 'react-native'
+import { Platform, Text, View, Image, ScrollView, Pressable, Linking } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useTranslation } from 'react-i18next'
 
@@ -89,13 +89,16 @@ const Settings = ({ navigation }) => {
 					title={t("Player")}
 					icon="play"
 					onPress={() => navigation.navigate('Settings/Player')}
+					isLast={Platform.OS === 'web'}
 				/>
-				<ButtonMenu
-					title={t("Downloads")}
-					icon="cloud-download"
-					onPress={() => navigation.navigate('Settings/Downloads')}
-					isLast
-				/>
+				{Platform.OS !== 'web' && (
+					<ButtonMenu
+						title={t("Downloads")}
+						icon="cloud-download"
+						onPress={() => navigation.navigate('Settings/Downloads')}
+						isLast
+					/>
+				)}
 			</View>
 			<View style={settingStyles.optionsContainer(theme)}>
 				<ButtonMenu

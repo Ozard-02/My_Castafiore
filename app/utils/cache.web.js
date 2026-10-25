@@ -1,5 +1,5 @@
-import { urlStream } from '~/utils/url'
-
+// Web API cache. Song files / covers are owned by the download manager (a no-op stub on
+// web) and offline playback is the service worker's job.
 export const getCache = async (cacheName, key) => {
 	const caches = await window.caches.open(cacheName)
 	if (!caches) return null
@@ -40,36 +40,4 @@ export const getJsonCache = async (cacheName, url) => {
 
 export const setJsonCache = async (_cacheName, _key, _json) => {
 	// Service worker already do this
-}
-
-export const isSongCached = async (config, songId, streamFormat, maxBitrate) => {
-	return getCache('song', urlStream(config, songId, streamFormat, maxBitrate))
-}
-
-export const getSongCachedInfo = async (config, songId, streamFormat, maxBitrate) => {
-	const cache = await getCache('song', urlStream(config, songId, streamFormat, maxBitrate))
-	if (!cache) return null
-	return [
-		{ title: 'Is cached', value: 'Yes' },
-		{ title: 'Size', value: `${(cache.headers.get('content-length') / (1024 * 1024)).toFixed(2)} MB` },
-	]
-}
-
-export const deleteSongCache = async (config, songId, streamFormat, maxBitrate) => {
-	const url = urlStream(config, songId, streamFormat, maxBitrate)
-
-	await window.caches.open('song')
-		.then(cache => cache.delete(url))
-}
-
-export const getListCacheSong = async () => {
-	return []
-}
-
-export const getPathSong = (_songId, _streamFormat) => {
-	return null
-}
-
-export const initCacheSong = async () => {
-	if (global) global.listCacheSong = []
 }

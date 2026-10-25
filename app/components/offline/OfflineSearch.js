@@ -4,8 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useTranslation } from 'react-i18next'
 
 import { useTheme } from '~/contexts/theme'
-import { useDownloads } from '~/utils/downloadManager'
-import { offlineSongs, offlineCollections } from '~/utils/offlineContent'
+import { useLocalCollections, useLocalSongs } from '~/utils/useLocalLibrary'
 import { OfflineCollectionRow } from '~/components/offline/OfflineCollections'
 import SectionTitle from '~/components/SectionTitle'
 import SongsList from '~/components/lists/SongsList'
@@ -18,10 +17,9 @@ const OfflineSearch = ({ query }) => {
 	const { t } = useTranslation()
 	const insets = useSafeAreaInsets()
 	const theme = useTheme()
-	const downloads = useDownloads()
-	const songs = React.useMemo(() => offlineSongs(downloads), [downloads])
-	const albums = React.useMemo(() => offlineCollections(downloads, 'album'), [downloads])
-	const playlists = React.useMemo(() => offlineCollections(downloads, 'playlist'), [downloads])
+	const songs = useLocalSongs()
+	const albums = useLocalCollections('album')
+	const playlists = useLocalCollections('playlist')
 
 	const q = query.trim().toLowerCase()
 	const match = (...fields) => fields.some((field) => (field || '').toLowerCase().includes(q))

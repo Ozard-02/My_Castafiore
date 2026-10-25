@@ -2,8 +2,7 @@ import TrackPlayer, { AppKilledPlaybackBehavior, Capability, RepeatMode, State, 
 import AsyncStorage from '@react-native-async-storage/async-storage'
 
 import { urlCover, urlStream } from '~/utils/url'
-import { isSongCached, getPathSong } from '~/utils/cache'
-import { enqueueSong } from '~/utils/downloadManager'
+import { getLocalSongUri } from '~/utils/downloadManager'
 import MyState from '~/utils/playerState'
 import logger from '~/utils/logger'
 
@@ -123,30 +122,14 @@ const stopSong = async () => {
 	await TrackPlayer.stop()
 }
 
-const downloadSong = async (song, source = null) => {
-	await enqueueSong(song, source)
-}
-
-const downloadNextSong = async (queue, currentIndex) => {
-	if (!global.isSongCaching) return
-	const maxIndex = Math.min(global.cacheNextSong, queue.length)
-
-	for (let i = -1; i < maxIndex; i++) {
-		const index = (currentIndex + queue.length + i) % queue.length
-		const track = queue[index]
-		if (track && !track.isLiveStream && track.id.match(/^[a-zA-Z0-9-]*$/)) {
-			await enqueueSong(track, null, true)
-		}
-	}
-}
-
 const convertToTrack = async (track, config) => {
+	// Downloads are the only local files now: play the downloaded copy when there is one,
+	// otherwise stream from the server.
+	const localUri = getLocalSongUri(track.id)
 	return {
 		...track,
 		id: track.id,
-		url: (await isSongCached(null, track.id, global.streamFormat, global.maxBitRate)) ?
-			getPathSong(track.id, global.streamFormat, global.maxBitRate) :
-			urlStream(config, track.id, global.streamFormat, global.maxBitRate),
+		url: localUri || urlStream(config, track.id, global.streamFormat, global.maxBitRate),
 		artwork: urlCover(config, track),
 		artist: track.artist,
 		title: track.title,
@@ -255,10 +238,11 @@ const switchServer = async (config) => {
 	const track = song.queue[song.index]
 	if (!track) return
 
-	// Already playing from the local cache file (server-independent) → leave the player untouched.
-	if (await isSongCached(null, track.id, global.streamFormat, global.maxBitRate)) {
+	// Already playing from a downloaded file (server-independent) → leave the player untouched.
+	const localUri = getLocalSongUri(track.id)
+	if (localUri) {
 		const active = await TrackPlayer.getActiveTrack()
-		if (active && active.url === getPathSong(track.id, global.streamFormat, global.maxBitRate)) return
+		if (active && active.url === localUri) return
 	}
 
 	const state = await saveState()
@@ -308,8 +292,6 @@ export default {
 	switchServer,
 	saveState,
 	reconcileState,
-	downloadNextSong,
-	downloadSong,
 	connect,
 	disconnect,
 }

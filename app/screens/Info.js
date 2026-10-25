@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next'
 import { useConfig } from '~/contexts/config'
 import { useTheme } from '~/contexts/theme'
 import { urlCover } from '~/utils/url'
-import { isSongCached, getSongCachedInfo, deleteSongCache } from '~/utils/cache'
+import { useDownloads, removeSong, formatBytes } from '~/utils/downloadManager'
 import ButtonMenu from '~/components/settings/ButtonMenu'
 import settingStyles from '~/styles/settings'
 import TableItem from '~/components/settings/TableItem'
@@ -20,24 +20,14 @@ const Info = ({ route: { params: { info } } }) => {
 	const insets = useSafeAreaInsets()
 	const config = useConfig()
 	const theme = useTheme()
-	const [statsCache, setStatsCache] = React.useState([])
-
-	React.useEffect(() => {
-		if (!info?.id) return
-		isSongCached(config, info.id, global.streamFormat, global.maxBitRate)
-			.then((isCached) => {
-				if (!isCached) {
-					setStatsCache([])
-					return
-				}
-				getSongCachedInfo(config, info.id, global.streamFormat, global.maxBitRate)
-					.then((res) => {
-						if (res) setStatsCache(res)
-						else setStatsCache([])
-					})
-					.catch(() => setStatsCache([]))
-			})
-	}, [config, info.id])
+	const downloads = useDownloads()
+	const entry = downloads?.index?.[info?.id]
+	const statsCache = entry ? [
+		{ title: 'File', value: entry.file || '-' },
+		{ title: 'Is downloaded', value: 'Yes' },
+		{ title: 'Size', value: formatBytes(entry.size) },
+		{ title: 'Date', value: entry.date ? new Date(entry.date).toLocaleString() : '-' },
+	] : []
 
 	if (!info) return null
 	return (
@@ -76,7 +66,7 @@ const Info = ({ route: { params: { info } } }) => {
 				{
 					statsCache.length ?
 						<>
-							<Text style={settingStyles.titleContainer(theme)}>{t("Cache")}</Text>
+							<Text style={settingStyles.titleContainer(theme)}>{t("settings.downloads.Downloaded")}</Text>
 							<View style={settingStyles.optionsContainer(theme)}>
 								{
 									statsCache.map((item, index) => (
@@ -88,12 +78,9 @@ const Info = ({ route: { params: { info } } }) => {
 									))
 								}
 								<ButtonMenu
-									title={t("Delete from cache")}
+									title={t("settings.downloads.Remove download")}
 									icon="trash"
-									onPress={() => {
-										deleteSongCache(config, info.id, global.streamFormat, global.maxBitRate)
-										setStatsCache([])
-									}}
+									onPress={() => removeSong(info.id)}
 									isLast
 								/>
 							</View>

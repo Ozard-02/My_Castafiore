@@ -8,8 +8,7 @@ import { useTranslation } from 'react-i18next'
 import { useConfig } from '~/contexts/config'
 import { useTheme } from '~/contexts/theme'
 import { urlCover } from '~/utils/url'
-import { useDownloads } from '~/utils/downloadManager'
-import { offlineCollections } from '~/utils/offlineContent'
+import { useLocalCollections } from '~/utils/useLocalLibrary'
 import ImageError from '~/components/ImageError'
 import AllItem from '~/components/item/AllItem'
 import mainStyles from '~/styles/main'
@@ -59,8 +58,7 @@ const OfflineCollections = ({ type = 'album', layout = 'list', ListHeaderCompone
 	const insets = useSafeAreaInsets()
 	const theme = useTheme()
 	const navigation = useNavigation()
-	const downloads = useDownloads()
-	const collections = React.useMemo(() => offlineCollections(downloads, type), [downloads, type])
+	const collections = useLocalCollections(type)
 
 	const empty = (
 		<View style={{ paddingVertical: 30, alignItems: 'center' }}>

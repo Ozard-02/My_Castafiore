@@ -2,8 +2,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 import * as FileSystem from 'expo-file-system'
 import { useSyncExternalStore } from 'react'
 
-import { urlStream, urlCover, coverIdFromUrl } from '~/utils/url'
-import { getPathSong, songCacheKey } from '~/utils/cache'
+import { urlStream, urlCover } from '~/utils/url'
+import { coverIdFromUrl } from '~/utils/coverId'
+import { getPathSong, getSongsDir, parseSongFileName, songCacheKey } from '~/utils/songFiles'
+import { offlineCollections, offlineCollectionSongs, offlineSongs } from '~/utils/offlineContent'
 import { getIsOffline } from '~/utils/offline'
 import logger from '~/utils/logger'
 
@@ -12,6 +14,7 @@ const WINDOW_MS = 10_000
 const listeners = new Set()
 let state = { queue: [], index: {}, collections: {} }
 let queueById = new Map()
+let songIdsBySource = new Map()
 let activeDownloads = 0
 
 const maxConcurrent = () => Math.max(1, global.parallelDownloads || 3)
@@ -26,9 +29,21 @@ const notify = () => {
 	listeners.forEach((listener) => listener())
 }
 
+const rebuildDerived = () => {
+	queueById = new Map(state.queue.map((q) => [q.songId, q]))
+	songIdsBySource = new Map()
+	for (const [songId, entry] of Object.entries(state.index)) {
+		for (const source of entry.sources || []) {
+			const key = `${source.type}:${source.id}`
+			if (!songIdsBySource.has(key)) songIdsBySource.set(key, new Set())
+			songIdsBySource.get(key).add(songId)
+		}
+	}
+}
+
 const setState = (next) => {
 	state = next
-	queueById = new Map(next.queue.map((q) => [q.songId, q]))
+	rebuildDerived()
 	notify()
 }
 
@@ -158,9 +173,94 @@ const repointQueued = () => {
 	}
 }
 
+// ---------------------------------------------------------------------------
+// Local file migration (auto-cache removal)
+// ---------------------------------------------------------------------------
+// Old versions auto-cached streamed songs in the same folder as downloads. Auto-caching
+// is gone: only files referenced by the download index (and the .part of an in-flight or
+// paused download) may stay. Runs once; guarded so a failed state load is never mistaken
+// for "an empty library" and never wipes every song.
+const MIGRATION_KEY = 'localFilesMigration'
+
+const consolidateLegacyFolders = async (songsDir) => {
+	// Old versions kept one folder per server (and one accidental 'undefined' folder).
+	const cacheRoot = `${FileSystem.documentDirectory}/cache/`
+	const folders = await FileSystem.readDirectoryAsync(cacheRoot).catch(() => [])
+	for (const folder of folders) {
+		if (folder === 'songs' || folder === 'covers') continue
+		const oldSongs = `${cacheRoot}${folder}/songs/`
+		const info = await FileSystem.getInfoAsync(oldSongs)
+		if (!info.exists || !info.isDirectory) continue
+		const files = await FileSystem.readDirectoryAsync(oldSongs).catch(() => [])
+		for (const file of files) {
+			await FileSystem.moveAsync({ from: `${oldSongs}${file}`, to: `${songsDir}${file}` })
+				.catch((error) => logger.error('downloadManager', `migrate ${file}:`, error))
+		}
+		const remaining = await FileSystem.readDirectoryAsync(oldSongs).catch(() => [])
+		if (remaining.length === 0) await FileSystem.deleteAsync(oldSongs, { idempotent: true }).catch(() => { })
+	}
+}
+
+const purgeLegacyCache = async () => {
+	try {
+		if (await AsyncStorage.getItem(MIGRATION_KEY)) return
+		const songsDir = getSongsDir()
+		await FileSystem.makeDirectoryAsync(songsDir, { intermediates: true }).catch(() => { })
+		await consolidateLegacyFolders(songsDir)
+
+		const keepIds = new Set(Object.keys(state.index))
+		const activeIds = new Set(
+			state.queue
+				.filter((item) => ['queued', 'paused', 'downloading'].includes(item.status))
+				.map((item) => item.songId)
+		)
+
+		const files = await FileSystem.readDirectoryAsync(songsDir).catch(() => [])
+
+		// Backfill the file key on old index entries (written before entries carried it).
+		// Prefer the current format/bitrate when several variants of the same id exist.
+		const currentKey = (songId) => songCacheKey(songId, global.streamFormat, global.maxBitRate)
+		const fileById = new Map()
+		for (const file of files) {
+			if (file.endsWith('.part')) continue
+			const parsed = parseSongFileName(file)
+			if (!parsed) continue
+			if (!fileById.has(parsed.id) || file === currentKey(parsed.id)) fileById.set(parsed.id, file)
+		}
+		let indexChanged = false
+		const nextIndex = { ...state.index }
+		for (const [songId, entry] of Object.entries(nextIndex)) {
+			if (!entry.file && fileById.has(songId)) {
+				nextIndex[songId] = { ...entry, file: fileById.get(songId) }
+				indexChanged = true
+			}
+		}
+		if (indexChanged) {
+			setState({ ...state, index: nextIndex })
+			await saveDownloads()
+		}
+
+		let deleted = 0
+		for (const file of files) {
+			const isPart = file.endsWith('.part')
+			const parsed = parseSongFileName(isPart ? file.slice(0, -5) : file)
+			const keep = parsed ? (isPart ? activeIds.has(parsed.id) : keepIds.has(parsed.id)) : false
+			if (keep) continue
+			await FileSystem.deleteAsync(`${songsDir}${file}`, { idempotent: true }).catch(() => { })
+			deleted++
+		}
+
+		await AsyncStorage.setItem(MIGRATION_KEY, '1')
+		if (deleted) logger.info('downloadManager', `local files migration: removed ${deleted} legacy cache file(s)`)
+	} catch (error) {
+		logger.error('downloadManager', 'local files migration failed', error)
+	}
+}
+
 export const initDownloads = async () => {
 	await migrateDownloadKeys()
 	const keys = getKeys()
+	let loaded = false
 	try {
 		const stored = await AsyncStorage.multiGet([keys.queue, keys.index, keys.collections])
 		const queue = stored[0][1] ? JSON.parse(stored[0][1]) : []
@@ -172,13 +272,16 @@ export const initDownloads = async () => {
 			item.resumable = null
 		})
 		state = { queue, index, collections }
-		queueById = new Map(queue.map((q) => [q.songId, q]))
+		rebuildDerived()
 		notify()
+		loaded = true
 		repointQueued()
-		await initCovers()
 	} catch (error) {
 		logger.error('downloadManager', 'Error loading downloads', error)
 	}
+	if (!loaded) return
+	await purgeLegacyCache()
+	await initCovers()
 }
 
 // ---------------------------------------------------------------------------
@@ -327,7 +430,6 @@ const moveToQueue = (song, source, silent = false) => {
 	const item = {
 		songId: song.id,
 		url: songUrl(song),
-		partUri: `${getPathSong(song.id, global.streamFormat, global.maxBitRate)}.part`,
 		meta: buildMeta(song),
 		source,
 		silent,
@@ -398,7 +500,13 @@ const validate = (res) => {
 const runDownload = async (item) => {
 	// Derived here, not at enqueue: the stream format / bitrate can change while the item sat
 	// in the queue, and a baked partUri left an orphan .part plus a moveAsync to a stale name.
-	const partUri = `${getPathSong(item.songId, global.streamFormat, global.maxBitRate)}.part`
+	// The same key is stored on the index entry, so a later setting change cannot orphan a
+	// completed download.
+	const fileKey = songCacheKey(item.songId, global.streamFormat, global.maxBitRate)
+	const fileUri = `${getSongsDir()}${fileKey}`
+	const partUri = `${fileUri}.part`
+	// A resume token belongs to the old file name; replaying it against a new one is invalid.
+	if (item.fileKey && item.fileKey !== fileKey) item.resumeData = null
 	const resumable = FileSystem.createDownloadResumable(
 		item.url,
 		partUri,
@@ -407,6 +515,7 @@ const runDownload = async (item) => {
 		item.resumeData || undefined,
 	)
 	item.partUri = partUri
+	item.fileKey = fileKey
 	item.resumable = resumable
 	speedIds.add(item.songId)
 	lastBytes.set(item.songId, item.writtenBytes || 0)
@@ -428,7 +537,7 @@ const runDownload = async (item) => {
 			await finishError(item.songId, 'Download failed (empty file)')
 			return
 		}
-		await FileSystem.moveAsync({ from: item.partUri, to: getPathSong(item.songId, global.streamFormat, global.maxBitRate) })
+		await FileSystem.moveAsync({ from: item.partUri, to: fileUri })
 		finishSuccess(item.songId, realSize)
 	} catch (error) {
 		if (error?.code !== 'ERR_CANCELED') logger.error('downloadManager', error)
@@ -453,12 +562,9 @@ const finishSuccess = async (songId, size) => {
 		queue: state.queue.filter((q) => q.songId !== songId),
 		index: {
 			...state.index,
-			[songId]: { meta: item.meta, size, date: Date.now(), sources },
+			[songId]: { meta: item.meta, size, date: Date.now(), sources, file: item.fileKey },
 		},
 	})
-	if (global.listCacheSong && !global.listCacheSong.includes(`${songId}.${global.streamFormat}`)) {
-		global.listCacheSong.push(songCacheKey(songId, global.streamFormat, global.maxBitRate))
-	}
 	await saveDownloads()
 	activeDownloads = Math.max(0, activeDownloads - 1)
 	startNext()
@@ -553,15 +659,19 @@ export const resumeCollection = async (source) => {
 // ---------------------------------------------------------------------------
 // Removal
 // ---------------------------------------------------------------------------
+// Resolve the actual file of an index entry. New entries carry the key they were written
+// with, so changing the format/bitrate later cannot orphan them; old entries fall back to
+// today's key.
+const entryFileUri = (songId, entry) => entry?.file
+	? `${getSongsDir()}${entry.file}`
+	: getPathSong(songId, global.streamFormat, global.maxBitRate)
+
 export const removeSong = async (songId) => {
 	if (state.queue.some((q) => q.songId === songId)) await cancelDownload(songId)
-	await FileSystem.deleteAsync(getPathSong(songId, global.streamFormat, global.maxBitRate)).catch(() => { })
+	await FileSystem.deleteAsync(entryFileUri(songId, state.index[songId]), { idempotent: true }).catch(() => { })
 	const rest = { ...state.index }
 	delete rest[songId]
 	setState({ ...state, index: rest })
-	if (global.listCacheSong) {
-		global.listCacheSong = global.listCacheSong.filter((file) => file !== `${songId}.${global.streamFormat}`)
-	}
 	await saveDownloads()
 }
 
@@ -573,10 +683,7 @@ export const removeSource = async (source) => {
 		if (sources.length > 0) {
 			index[songId] = { ...entry, sources }
 		} else {
-			await FileSystem.deleteAsync(getPathSong(songId, global.streamFormat, global.maxBitRate)).catch(() => { })
-			if (global.listCacheSong) {
-				global.listCacheSong = global.listCacheSong.filter((file) => file !== `${songId}.${global.streamFormat}`)
-			}
+			await FileSystem.deleteAsync(entryFileUri(songId, entry), { idempotent: true }).catch(() => { })
 		}
 	}
 	const restCollections = { ...state.collections }
@@ -590,15 +697,14 @@ export const clearAllDownloads = async () => {
 		if (item.resumable) await item.resumable.cancelAsync().catch(() => { })
 		if (item.partUri) await FileSystem.deleteAsync(item.partUri).catch(() => { })
 	}
-	for (const songId of Object.keys(state.index)) {
-		await FileSystem.deleteAsync(getPathSong(songId, global.streamFormat, global.maxBitRate)).catch(() => { })
-	}
+	// Wipe the whole songs folder: after the auto-cache purge it only contains downloads,
+	// and this also clears any orphan left behind by a failed removal.
+	await FileSystem.deleteAsync(getSongsDir(), { idempotent: true }).catch(() => { })
 	coverQueue.length = 0
 	localCovers.clear()
 	await FileSystem.deleteAsync(COVERS_DIR, { idempotent: true }).catch(() => { })
 	speedIds.clear()
 	lastBytes.clear()
-	if (global.listCacheSong) global.listCacheSong = []
 	setState({ queue: [], index: {}, collections: {} })
 	await saveDownloads()
 	activeDownloads = 0
@@ -642,6 +748,30 @@ export const getSongState = (songId) => {
 		if (queueItem.status === 'downloading') return { status: 'downloading', progress: queueItem.progress }
 		return { status: queueItem.status, progress: 0 }
 	}
-	if (state.index[songId]) return { status: 'done', progress: 1 }
+	if (state.index[songId]?.size > 0) return { status: 'done', progress: 1 }
 	return { status: 'none', progress: 0 }
+}
+
+// ---------------------------------------------------------------------------
+// Offline library selectors (single source of truth for "on this device")
+// ---------------------------------------------------------------------------
+export const isSongLocal = (songId) => !!(state.index[songId]?.size > 0)
+
+export const getLocalSongUri = (songId) => {
+	const entry = state.index[songId]
+	return entry?.size > 0 ? entryFileUri(songId, entry) : null
+}
+
+export const getLocalSongs = () => offlineSongs(state)
+
+export const getLocalCollections = (type) => offlineCollections(state, type)
+
+export const getLocalCollectionSongs = (type, id) => offlineCollectionSongs(state, type, id)
+
+export const getLocalStats = () => {
+	const entries = Object.values(state.index)
+	return {
+		count: entries.length,
+		size: entries.reduce((total, entry) => total + (entry.size || 0), 0),
+	}
 }

@@ -1,5 +1,5 @@
 import React from 'react'
-import { Text, View, ScrollView, StyleSheet, Pressable } from 'react-native'
+import { Platform, Text, View, ScrollView, StyleSheet, Pressable } from 'react-native'
 import { useNavigation } from '@react-navigation/native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useTranslation } from 'react-i18next'
@@ -12,8 +12,7 @@ import { useSettings } from '~/contexts/settings'
 import { useSongDispatch } from '~/contexts/song'
 import { useTheme } from '~/contexts/theme'
 import { useOffline } from '~/utils/offline'
-import { useDownloads } from '~/utils/downloadManager'
-import { offlineSongs, offlineCollections } from '~/utils/offlineContent'
+import { useLocalCollections, useLocalSongs } from '~/utils/useLocalLibrary'
 import RotateIconButton from '~/components/button/RotateIconButton'
 import HorizontalList from '~/components/lists/HorizontalList'
 import HorizontalAlbums from '~/components/lists/HorizontalAlbums'
@@ -32,13 +31,12 @@ const Home = () => {
 	const config = useConfig()
 	const settings = useSettings()
 	const theme = useTheme()
-	const offline = useOffline()
-	const downloads = useDownloads()
+	const offline = useOffline() && Platform.OS !== 'web'
 	const [statusRefresh, setStatusRefresh] = React.useState()
 	const [refresh, setRefresh] = React.useState(0)
 
-	const offlineList = React.useMemo(() => offlineSongs(downloads), [downloads])
-	const offlineAlbums = React.useMemo(() => offlineCollections(downloads, 'album'), [downloads])
+	const offlineList = useLocalSongs()
+	const offlineAlbums = useLocalCollections('album')
 
 	const clickRandomSong = async () => {
 		// offline there is no server to ask: shuffle the downloaded songs (all playable)

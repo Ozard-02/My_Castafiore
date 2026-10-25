@@ -1,12 +1,10 @@
 import TrackPlayer, { Event, State } from "react-native-track-player"
 
 import Player from "~/utils/player"
-import { downloadNextSong } from "~/utils/player"
 import { endOfTrackAction, scrobbleTrack, stopAtQueueEnd } from "~/utils/playerCore"
 import { songReducer } from "~/contexts/song"
 import logger from "~/utils/logger"
 
-let lockDownload = false
 let lastScrobble = {
 	id: null,
 	time: 0,
@@ -99,21 +97,6 @@ module.exports = async () => {
 	})
 	TrackPlayer.addEventListener(Event.PlaybackActiveTrackChanged, async (event) => {
 		logger.info('Playback', `ActiveTrackChanged track=${event.track?.id} globalIdx=${global.song?.index} globalSong=${global.song?.songInfo?.id}`)
-		// global.song is null/uninitialised in a cold headless start (service booted by the
-		// notification, before React or the AsyncStorage restore ran) — the unguarded
-		// global.song.queue read below threw and took the scrobble with it.
-		if (!lockDownload && global.song?.queue?.length) {
-			lockDownload = true
-			downloadNextSong(global.song.queue, global.song.index)
-				.then(() => {
-					lockDownload = false
-				})
-				.catch((error) => {
-					lockDownload = false
-					logger.error('downloadNextSong', error)
-				})
-		}
-
 		if (event.track) {
 			const now = Date.now()
 			if (lastScrobble.id !== event.track.id || now - lastScrobble.time > 10 * 1000) {

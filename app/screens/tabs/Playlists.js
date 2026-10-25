@@ -1,5 +1,5 @@
 import React from 'react'
-import { ScrollView, Text, TextInput, View, StyleSheet, Pressable } from 'react-native'
+import { Platform, ScrollView, Text, TextInput, View, StyleSheet, Pressable } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useTranslation } from 'react-i18next'
 import { LegendList } from '@legendapp/list'
@@ -30,7 +30,7 @@ const Playlists = ({ navigation }) => {
 	const [layout, setLayout] = React.useState(settings.gridView ? 'grid' : 'list')
 	const theme = useTheme()
 	const [newPlaylist, setNewPlaylist] = React.useState(null)
-	const offline = useOffline()
+	const offline = useOffline() && Platform.OS !== 'web'
 	const downloads = useDownloads()
 
 	const [favorited, refreshFavorited] = useCachedAndApi([], 'getStarred2', null, (json, setData) => {

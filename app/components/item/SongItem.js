@@ -3,7 +3,6 @@ import { Text, View, StyleSheet, Pressable } from 'react-native'
 import Icon from 'react-native-vector-icons/FontAwesome'
 
 import { useConfig } from '~/contexts/config'
-import { isSongCached } from '~/utils/cache'
 import { playSong } from '~/utils/player'
 import { useSettings } from '~/contexts/settings'
 import { useSongDispatch } from '~/contexts/song'
@@ -16,20 +15,9 @@ import mainStyles from '~/styles/main'
 import size from '~/styles/size'
 
 const Cached = ({ song }) => {
-	const [isCached, setIsCached] = React.useState(false)
 	const theme = useTheme()
-	const settings = useSettings()
-	const config = useConfig()
 	useDownloads()
 	const { status, progress } = getSongState(song.id)
-
-	React.useEffect(() => {
-		if (!settings.showCache) return
-		isSongCached(config, song.id, settings.streamFormat, settings.maxBitRate)
-			.then((res) => {
-				setIsCached(res)
-			})
-	}, [song.id, settings.showCache])
 
 	if (status === 'downloading') return (
 		<Text style={[mainStyles.smallText(theme.secondaryText), { paddingHorizontal: 5 }]}>
@@ -52,7 +40,7 @@ const Cached = ({ song }) => {
 			style={{ paddingHorizontal: 5 }}
 		/>
 	)
-	if ((status === 'done' || isCached) && settings.showCache) return (
+	if (status === 'done') return (
 		<Icon
 			name="cloud-download"
 			size={14}

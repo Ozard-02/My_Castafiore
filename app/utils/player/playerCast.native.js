@@ -100,12 +100,6 @@ const stopSong = async () => {
 	await client.stop()
 }
 
-const downloadSong = async (_song, _source = null) => {
-}
-
-const downloadNextSong = async (_queue, _currentIndex) => {
-}
-
 const loadSong = async (config, queue, index) => {
 	const track = queue[index]
 	const client = await getClient()
@@ -275,8 +269,7 @@ export default {
 	resetAudio,
 	switchServer,
 	saveState,
-	downloadNextSong,
-	downloadSong,
+
 	connect,
 	disconnect,
 }

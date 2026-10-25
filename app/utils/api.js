@@ -3,6 +3,7 @@ import React from "react"
 import { useConfig } from "~/contexts/config"
 import { getJsonCache, setJsonCache } from "~/utils/cache"
 import { useUpdateApi, useSetUpdateApi, isUpdatable } from "~/contexts/updateApi"
+import { getIsOffline } from "~/utils/offline"
 import logger from "~/utils/logger"
 
 // Monotonic version per cache key: bumped on explicit refreshes so an in-flight
@@ -129,6 +130,9 @@ export const getCachedAndApi = async (config, path, query = '', setData = () => 
 	let json = null
 	json = await getJsonCache('api', key)
 	if (json) setData(json, 'cache')
+	// Offline: the cache is the only source. Hitting the network here used to hang every
+	// screen until timeout on a connected-but-unreachable server before the fallback showed.
+	if (getIsOffline()) return
 	json = await getApi(config, path, query, true)
 		.then((json) => {
 			setData(json, 'api')
@@ -257,6 +261,12 @@ export const useCachedFirst = (initialState, path, query = '', setFunc = () => {
 export const getApiCacheFirst = (config, path, query = '') => {
 	return new Promise((resolve, reject) => {
 		const key = getUrl(config, path, query)
+		if (getIsOffline()) {
+			getJsonCache('api', key)
+				.then((json) => resolve(json || null))
+				.catch(() => resolve(null))
+			return
+		}
 		getJsonCache('api', key)
 			.then((json) => {
 				if (json) return resolve(json)
@@ -283,6 +293,12 @@ export const getApiCacheFirst = (config, path, query = '') => {
 export const getApiNetworkFirst = (config, path, query = '') => {
 	return new Promise((resolve, reject) => {
 		const key = getUrl(config, path, query)
+		if (getIsOffline()) {
+			getJsonCache('api', key)
+				.then((json) => (json ? resolve(json) : reject(new Error('offline and not cached'))))
+				.catch((error) => reject(error))
+			return
+		}
 		getApi(config, path, query)
 			.then((json) => {
 				setJsonCache('api', key, json)

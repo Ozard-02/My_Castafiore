@@ -7,7 +7,7 @@ import Icon from 'react-native-vector-icons/FontAwesome'
 import { useIsFocused } from '@react-navigation/native'
 
 import { useTheme } from '~/contexts/theme'
-import { useDownloads, getDownloadSpeed, formatSpeed, formatBytes, pauseDownload, resumeDownload, cancelDownload, retryDownload, removeSong, removeSource, clearAllDownloads, getDownloadedSongs, coverForCurrentServer } from '~/utils/downloadManager'
+import { useDownloads, getDownloadSpeed, formatSpeed, formatBytes, pauseDownload, resumeDownload, cancelDownload, retryDownload, removeSong, removeSource, clearAllDownloads, getDownloadedSongs, getLocalStats, coverForCurrentServer } from '~/utils/downloadManager'
 import { clearCache, getStatCache } from '~/utils/cache'
 import { useSettings, useSetSettings } from '~/contexts/settings'
 import { useConfig } from '~/contexts/config'
@@ -15,7 +15,6 @@ import { confirmAlert } from '~/utils/alert'
 import Header from '~/components/Header'
 import IconButton from '~/components/button/IconButton'
 import ImageError from '~/components/ImageError'
-import ButtonSwitch from '~/components/settings/ButtonSwitch'
 import ButtonMenu from '~/components/settings/ButtonMenu'
 import OptionInput from '~/components/settings/OptionInput'
 import ListMap from '~/components/lists/ListMap'
@@ -36,7 +35,6 @@ const Downloads = () => {
 	const setSettings = useSetSettings()
 	const { queue, index, collections } = useDownloads()
 	const [speed, setSpeed] = React.useState(0)
-	const [cacheNextSong, setCacheNextSong] = React.useState(settings.cacheNextSong.toString())
 	const [parallelDownloads, setParallelDownloads] = React.useState(settings.parallelDownloads.toString())
 	const [statCache, setStatCache] = React.useState([
 		{ name: 'Loading...', count: '' },
@@ -45,7 +43,11 @@ const Downloads = () => {
 	const getStat = () => {
 		getStatCache()
 			.then((res) => {
-				setStatCache(res)
+				const local = getLocalStats()
+				setStatCache([
+					...res,
+					{ name: t('Songs'), count: `${local.count} · ${formatBytes(local.size)}` },
+				])
 			})
 	}
 
@@ -55,19 +57,8 @@ const Downloads = () => {
 	}, [isFocused])
 
 	React.useEffect(() => {
-		setCacheNextSong(settings.cacheNextSong.toString())
-	}, [settings.cacheNextSong])
-
-	React.useEffect(() => {
 		setParallelDownloads(settings.parallelDownloads.toString())
 	}, [settings.parallelDownloads])
-
-	React.useEffect(() => {
-		if (cacheNextSong === '') return
-		const number = parseInt(cacheNextSong)
-		if (Number.isNaN(number) || number === settings.cacheNextSong) return
-		setSettings({ ...settings, cacheNextSong: number })
-	}, [cacheNextSong])
 
 	React.useEffect(() => {
 		if (parallelDownloads === '') return
@@ -172,24 +163,7 @@ const Downloads = () => {
 		<>
 			<Header title={t('Downloads')} />
 			<View style={settingStyles.contentMainContainer}>
-				<Text style={settingStyles.titleContainer(theme)}>{t('settings.cache.Song caching')}</Text>
 				<View style={[settingStyles.optionsContainer(theme), { marginBottom: 5 }]}>
-					<ButtonSwitch
-						title={t("settings.cache.Enable song caching")}
-						value={settings.isSongCaching}
-						onPress={() => setSettings({ ...settings, isSongCaching: !settings.isSongCaching })}
-					/>
-					<ButtonSwitch
-						title={t("settings.cache.Show cached songs")}
-						value={settings.showCache}
-						onPress={() => setSettings({ ...settings, showCache: !settings.showCache })}
-					/>
-					<OptionInput
-						title={t("settings.cache.Cache next song")}
-						value={cacheNextSong}
-						onChangeText={(text) => setCacheNextSong(text.replace(/[^0-9]/g, ''))}
-						inputMode="numeric"
-					/>
 					<OptionInput
 						title={t("settings.cache.Parallel downloads")}
 						value={parallelDownloads}
@@ -198,7 +172,6 @@ const Downloads = () => {
 						isLast
 					/>
 				</View>
-				<Text style={settingStyles.description(theme)}>{t('settings.cache.Cache next song description')}</Text>
 				<Text style={settingStyles.description(theme)}>{t('settings.cache.Parallel downloads description')}</Text>
 				{isEmpty && (
 					<View style={[styles.empty, { backgroundColor: theme.secondaryBack }]}>

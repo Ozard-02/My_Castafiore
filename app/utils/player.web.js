@@ -100,10 +100,6 @@ export const initPlayer = async (songDispatch) => {
 			nextSong(global.config, song, songDispatch)
 		}
 	})
-	sound.addEventListener('canplaythrough', () => {
-		downloadNextSong(global.config, global.song.queue, global.song.index)
-	})
-
 	navigator.mediaSession.setActionHandler("pause", () => {
 		pauseSong()
 	})
@@ -179,27 +175,6 @@ export const updateTime = () => {
 	}, [])
 
 	return time
-}
-
-export const downloadSong = async (song, _source = null) => {
-	return fetch(urlStream(global.config, song?.id, global.streamFormat, global.maxBitRate))
-}
-
-const downloadNextSong = async (config, queue, currentIndex) => {
-	if (!global.isSongCaching || !queue?.length) return
-	const maxIndex = Math.min(global.cacheNextSong, queue.length)
-
-	for (let i = -1; i < maxIndex; i++) {
-		const index = (currentIndex + queue.length + i) % queue.length
-		const track = queue[index]
-		// isLiveStream only exists on the stored track now (convertTrack keeps it) —
-		// without it this used to try to download a live radio stream, forever
-		if (track && !track.isLiveStream && !track.isDownloaded && track.id?.match(/^[a-zA-Z0-9-]*$/)) {
-			await fetch(urlStream(config, track.id, global.streamFormat, global.maxBitRate))
-				.then(() => { track.isDownloaded = true })
-				.catch(() => { })
-		}
-	}
 }
 
 const loadSong = async (config, queue, index) => {
@@ -341,8 +316,6 @@ export default {
 	resetAudio,
 	switchServer,
 	loadSong,
-	downloadSong,
-	downloadNextSong,
 	State,
 	...core,
 }

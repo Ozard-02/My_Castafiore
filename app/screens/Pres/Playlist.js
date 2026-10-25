@@ -1,5 +1,5 @@
 import React from 'react'
-import { View, TextInput, StyleSheet } from 'react-native'
+import { Platform, View, TextInput, StyleSheet } from 'react-native'
 import { LegendList } from "@legendapp/list"
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useNavigation } from '@react-navigation/native'
@@ -24,8 +24,7 @@ import OptionsPopup from '~/components/popup/OptionsPopup'
 import size from '~/styles/size'
 import { useSong, useSongDispatch } from '~/contexts/song'
 import { useOffline } from '~/utils/offline'
-import { useDownloads } from '~/utils/downloadManager'
-import { offlineCollectionSongs } from '~/utils/offlineContent'
+import { useCollectionSongs } from '~/utils/useLocalLibrary'
 import { playSong, addToQueue, addToUpNext } from '~/utils/player'
 
 const sortOptions = [
@@ -53,8 +52,7 @@ const Playlist = ({ route: { params } }) => {
 	const [isSortOpen, setIsSortOpen] = React.useState(false)
 	const song = useSong()
 	const songDispatch = useSongDispatch()
-	const offline = useOffline()
-	const downloads = useDownloads()
+	const offline = useOffline() && Platform.OS !== 'web'
 
 	const [songs, refresh] = useCachedAndApi([], 'getPlaylist', `id=${params.playlist.id}`, (json, setData) => {
 		setInfo(json?.playlist)
@@ -64,10 +62,7 @@ const Playlist = ({ route: { params } }) => {
 
 	// offline, a downloaded playlist whose getPlaylist cache is gone would open empty:
 	// rebuild its songs from the download index instead
-	const list = React.useMemo(() => {
-		if (songs.length || !offline) return songs
-		return offlineCollectionSongs(downloads, 'playlist', params.playlist.id)
-	}, [songs, offline, downloads, params.playlist.id])
+	const list = useCollectionSongs('playlist', params.playlist.id, songs, offline)
 
 	const filteredSortedSongs = React.useMemo(() => {
 		let result = list

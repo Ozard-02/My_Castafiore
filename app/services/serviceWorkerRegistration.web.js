@@ -99,20 +99,3 @@ export const unregister = () => {
 	}
 }
 
-export const clearCache = async () => {
-	caches.keys().then((names) => {
-		['coverArt', 'api'].forEach((key) => {
-			if (names.includes(key)) {
-				caches.delete(key)
-			}
-		})
-	})
-}
-
-export const clearAllCaches = async () => {
-	caches.keys().then((names) => {
-		names.forEach((key) => {
-			caches.delete(key)
-		})
-	})
-}

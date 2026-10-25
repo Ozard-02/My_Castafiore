@@ -1,5 +1,5 @@
 import React from 'react'
-import { ActivityIndicator, Pressable, Text, View, StyleSheet } from 'react-native'
+import { ActivityIndicator, Platform, Pressable, Text, View, StyleSheet } from 'react-native'
 import Icon from 'react-native-vector-icons/FontAwesome'
 
 import { useTheme } from '~/contexts/theme'
@@ -61,7 +61,8 @@ const DownloadButton = ({ type, id, name, artist = '', cover = null, songs = [],
 	const { t } = useTranslation()
 	const theme = useTheme()
 	useDownloads()
-	if (!id) return null
+	// Downloads are native-only; the web player has no download manager.
+	if (Platform.OS === 'web' || !id) return null
 	const source = { type, id, name }
 	const { status, progress } = getCollectionState(source)
 

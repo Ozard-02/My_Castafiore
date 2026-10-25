@@ -1,5 +1,5 @@
 import React from 'react'
-import { View, Text, TextInput, Pressable } from 'react-native'
+import { Platform, View, Text, TextInput, Pressable } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useTranslation } from 'react-i18next'
 import Icon from 'react-native-vector-icons/FontAwesome'
@@ -30,7 +30,7 @@ const Tracks = () => {
 	const theme = useTheme()
 	const settings = useSettings()
 	const setSettings = useSetSettings()
-	const offline = useOffline()
+	const offline = useOffline() && Platform.OS !== 'web'
 	const [view, setView] = React.useState('tracks')
 	const [layout, setLayout] = React.useState(settings.gridView ? 'grid' : 'list')
 	const [query, setQuery] = React.useState('')

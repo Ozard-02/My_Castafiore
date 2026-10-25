@@ -1,4 +1,5 @@
 import React from 'react'
+import { Platform } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { LegendList } from "@legendapp/list"
 import { useTranslation } from 'react-i18next'
@@ -27,7 +28,7 @@ const Favorited = () => {
 	const [favorited] = useCachedFirst([], 'getStarred2', null, (json, setData) => {
 		setData(json?.starred2?.song || [])
 	}, [])
-	const offline = useOffline()
+	const offline = useOffline() && Platform.OS !== 'web'
 	const downloads = useDownloads()
 
 	// offline only the starred songs that are actually downloaded can play, so the whole
